@@ -160,6 +160,16 @@ Because most small rehearsal sessions earn fewer than 20 minutes, percentage bon
 
 **Scope caveat:** The active rehearsal mini-game still accepts player-submitted hit grades and computes its server score from those counts; independent anti-cheat validation of the real-time rhythm actions is a separate requirement before considering the entire mini-game tamper-proof. Scheduled **band rehearsals** and other familiarisation paths are not modified by this slice. Recovery, songwriting polish and focus timed effects remain stored but are not yet connected to those game systems. Market offers and recipes remain intentionally inactive.
 
+## Timed food bonuses for final songwriting polish — 22 October 2026
+
+Deployed `20261022163000_cooking_songwriting_polish_bonus.sql` directly to Rockmundo's live Supabase. The migration preflights the exact existing `private.rockmundo_resolve_songwriting_polish` function checksum and preserves its deterministic success roll, project locking, single-use session, quality cap (1,000), historical duplicate response, cron processor and scheduled activity completion behaviour. Only when the normal polish succeeds can an immutable **songwriting_polish** meal receipt that covers the whole **scheduled** polish hour increase the gained quality by up to 5% (maximum ten points); the quality cap still applies. The session audit now records `food_bonus_percent` and **actual** `food_bonus_quality`, and the project `completion_quality_breakdown` and RPC response include the same numbers. The songwriting project card displays an earned bonus only after resolution.
+
+The new server-only function `cooking_internal.food_effect_percent_for_window(profile_id,effect_slug,start,end)` supports approved cooking-effect types and reads only immutable, effect-applied food consumption receipts spanning the entire scheduled interval. This fixes asynchronous completion discrepancies and is reusable by a future authoritative recovery settlement job. It is not executable by anonymous or authenticated clients. **This helper does not itself award any recovery benefits.**
+
+**Verification:** Migration deployed successfully. Rollback-only fixture test `supabase/tests/cooking_songwriting_polish_effect_smoke.sql` passed: +5% valid polish window, +4% valid recovery eligibility, retroactive food rejection, expired effect rejection, invalid effect rejection and 1,000 maximum quality. Fixture rolled back with zero live food consumption records. Verified backend-only helper privilege and installed resolver references `food_bonus_quality`. No existing player song/project records were changed during the fixture. A true completed/songwriting-polish end-to-end playthrough on a disposable test character is still outstanding, as are browser CI checks.
+
+**Remaining:** Recovery and focus are presently *stored food effect windows only*; much existing recovery handling is a UI forecast, not a trusted server-award path. Do not display them as applied until such a path is verified and tested. Market offers and recipes remain intentionally inactive.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.

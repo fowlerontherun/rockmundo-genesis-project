@@ -225,6 +225,12 @@ export const SimplifiedProjectCard = ({
                       (project.polish_success_chance ?? "?") +
                       "% chance of improving quality."}
               </p>
+              {project.polish_resolved_at && Number(project.completion_quality_breakdown?.food_bonus_quality ?? 0) > 0 && (
+                <p className="mt-2 text-xs text-primary" role="status">
+                  Meal boost: +{Number(project.completion_quality_breakdown.food_bonus_quality)} final quality
+                  {" "}({Number(project.completion_quality_breakdown.food_bonus_percent ?? 0)}% food effect).
+                </p>
+              )}
             </div>
           )}
 
