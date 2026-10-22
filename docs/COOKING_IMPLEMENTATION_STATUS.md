@@ -92,6 +92,16 @@ Deployed JWT-verified Supabase Edge Function `cooking-session`, with request act
 
 **Not yet complete:** No real authenticated browser-to-Edge integration test or UI wiring has been performed. Players cannot yet purchase ingredients, enable recipes, receive cooking rewards/XP, consume cooked food or trade items. Manual timing tests used controlled timestamps in rollback-only SQL fixtures, not physical real-time cooking or concurrent real-user sessions. Connect and validate the frontend against the authenticated gateway, then implement a safe ingredient supply economy and method-specific recipe interaction before activation.
 
+## Client cooking gateway integration — 22 October 2026
+
+The Cooking Career route now renders `CookingLiveKitchen` above the free practice experience. It queries activated `pan` recipes and each player's currently active session. **All recipes remain inactive**, so no player can start real crafting during this rollout. If recipes are activated later, the UI selects one, sends a UUID-keyed `start` request through the already JWT-verified `cooking-session` Edge Function and restores active sessions by character after page reloads.
+
+The pan interface implements draggable ingredient tiles plus selected-item pan/plate controls for touch/keyboard use, current heat controls, server action confirmation, live countdown, refresh/recovery and explicit finish. Each action waits for a server response before the accepted event log is used to project visuals. The read-only `liveCookingView.ts` animation and tests reconstruct temperature exposure and Raw/Ready/Overdone/Burnt stages from server action timestamps. This is visual guidance only: no local calculations mint food, buffs or XP. The gateway was updated to include `finished_at` so successful outcomes stop visually cooking. Edge version 2 deployed with JWT enforcement.
+
+Deployed `20261022094500_prevent_plated_reentry.sql`: once an ingredient has been plated, it cannot be returned to the pan. A rollback-only SQL test confirmed the invalid action was rejected and no fixtures remained. The UI likewise prohibits that transition.
+
+**Verification outstanding:** the frontend branch requires TypeScript, unit-test, browser drag-drop and authenticated Edge integration CI. No enabled production recipe, market ingredient purchase, food consumption or buffs exist. Manual production should not be activated before these tests and a trusted actor audit of the Edge gateway.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
