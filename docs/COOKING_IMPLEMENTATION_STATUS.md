@@ -150,6 +150,16 @@ Fractional bonuses are accumulated in `cooking_practice_xp_carry` by character. 
 
 **Scope limit:** This activates the *practice XP settlement calculation* only when an authentic consumed meal receipt covers the practice. Food markets and recipes are still disabled, so ordinary players cannot acquire these food bonuses yet. Rehearsal, songwriting, recovery and focus settlement paths do not yet consume the food-effect catalogue. Full purchase → cook → eat → practice end-to-end, migration regression, and browser tests must pass before production recipe activation.
 
+## Rehearsal food bonus integration — 22 October 2026
+
+Deployed `20261022144500_cooking_rehearsal_familiarity_bonus.sql` to live Supabase. The existing authenticated `submit_active_rehearsal_session` reward function now checks the character's trusted `cooking_active_food_effects` row for an unexpired, non-stacking `rehearsal` benefit. It caps the effect at +5% of **earned familiarity minutes**, after the existing 10-session daily cap and diminishing-return calculation. Food bonuses do **not** affect band cohesion, bypass the daily cap, change player-submitted beat grade validation or override the 360-minute max familiarity for the active-rehearsal pathway.
+
+Because most small rehearsal sessions earn fewer than 20 minutes, percentage bonuses would otherwise round to zero. A `cooking_rehearsal_minute_carry` table now tracks hundredths of a minute per character, locked and updated in the same transaction as the existing rehearsal reward. For example, five valid 8-minute sessions at +5% accumulate exactly two extra familiarity minutes. The `active_rehearsal_sessions` receipt stores `food_bonus_percent` and `food_bonus_minutes` to explain the reward. The UI toast displays the actual extra minutes or that fractional progress was saved, and kitchen inventory explains that only practice XP and active rehearsal familiarity have gameplay settlement integration so far.
+
+**Verification:** Migration deployed, no direct authenticated inserts/updates to the carry table, and the live installed function references server-owned food-effect records and fractional carry. `supabase/tests/cooking_rehearsal_food_bonus_smoke.sql` is a read-only arithmetic/permission test executed successfully on live Supabase. No active rehearsal food effects or actual food bonus sessions were present. The Supabase security advisor reported no new cooking-specific issues during initial verification. Actual authenticated rehearsal mini-game end-to-end and synthetic seeded transition tests have not been executed; no player records were modified during this development pass.
+
+**Scope caveat:** The active rehearsal mini-game still accepts player-submitted hit grades and computes its server score from those counts; independent anti-cheat validation of the real-time rhythm actions is a separate requirement before considering the entire mini-game tamper-proof. Scheduled **band rehearsals** and other familiarisation paths are not modified by this slice. Recovery, songwriting polish and focus timed effects remain stored but are not yet connected to those game systems. Market offers and recipes remain intentionally inactive.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.

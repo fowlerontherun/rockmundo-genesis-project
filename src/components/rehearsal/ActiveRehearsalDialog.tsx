@@ -13,7 +13,7 @@ import { toast } from "sonner";
 type ActiveRehearsalDialogProps = { open: boolean; onOpenChange: (open: boolean) => void; bandId: string; bandName: string };
 type HitGrade = "perfect" | "tight" | "recovery" | "lost";
 type RehearsalSong = { id: string; title: string | null };
-type RehearsalReward = { awarded: boolean; sessions_today?: number; diminishing?: boolean; score?: number; familiarity_minutes_gained?: number; cohesion_gained?: number };
+type RehearsalReward = { awarded: boolean; sessions_today?: number; diminishing?: boolean; score?: number; familiarity_minutes_gained?: number; cohesion_gained?: number; food_bonus_percent?: number; food_bonus_minutes?: number };
 type RpcError = { message?: string };
 type RpcClient = { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: RpcError | null }> };
 const rpcClient = supabase as unknown as RpcClient;
@@ -94,7 +94,12 @@ export function ActiveRehearsalDialog({ open, onOpenChange, bandId, bandName }: 
       else {
         const cohesion = result.cohesion_gained ? `, +${result.cohesion_gained} cohesion` : "";
         const diminishing = result.diminishing ? " (diminishing returns applied)" : "";
-        toast.success(`Active Rehearsal: score ${result.score ?? score}, +${result.familiarity_minutes_gained ?? 0} familiarity minutes${cohesion}${diminishing}`);
+        const food = result.food_bonus_percent
+          ? result.food_bonus_minutes
+            ? `, including +${result.food_bonus_minutes} from food (${result.food_bonus_percent}%)`
+            : `, food boost ${result.food_bonus_percent}% (fractional progress saved)`
+          : "";
+        toast.success(`Active Rehearsal: score ${result.score ?? score}, +${result.familiarity_minutes_gained ?? 0} familiarity minutes${food}${cohesion}${diminishing}`);
       }
       await Promise.all([queryClient.invalidateQueries({ queryKey: ["band-song-familiarity"] }), queryClient.invalidateQueries({ queryKey: ["user-bands"] })]);
       onOpenChange(false);
