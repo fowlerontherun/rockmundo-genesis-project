@@ -21,6 +21,7 @@
     "test:unit": "vitest run",
     "test:cooking": "vitest run src/features/cooking",
     "test:cooking:e2e": "playwright test --config=playwright.cooking.config.ts",
+    "test:cooking:staging": "playwright test --config=playwright.cooking.staging.config.ts",
     "test:crafting:phase3": "vitest run src/data/luthieryWorkbench.test.ts src/components/crafting/LuthieryWorkbench.test.tsx",
     "test:crafting:phase3:e2e": "playwright test tests/gig-experience/luthiery-workbench.spec.ts --project=chromium",
     "test:crafting:phase4": "vitest run src/data/luthieryWorkbench.test.ts src/components/crafting/LuthieryWorkbench.test.tsx",
