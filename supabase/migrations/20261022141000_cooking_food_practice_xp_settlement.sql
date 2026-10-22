@@ -183,7 +183,7 @@ BEGIN
     'food_bonus_xp', v_food_bonus_xp, 'food_bonus_percent', v_food_percent,
     'skill_progress', to_jsonb(v_progress));
 END;
-$function$
+$function$;
 
 -- Preserve the existing service-only execution gate.
 REVOKE ALL ON FUNCTION public.complete_skill_practice(uuid) FROM PUBLIC,anon,authenticated;
