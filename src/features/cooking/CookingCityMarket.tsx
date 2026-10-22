@@ -4,6 +4,7 @@ import { Store, RefreshCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
+import { CookingMarketMayorUpgrade } from "./CookingMarketMayorUpgrade";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface CityInfo { name: string; country: string }
@@ -131,6 +132,7 @@ export function CookingCityMarket() {
         {!marketOpen && <p role="status" className="text-sm text-muted-foreground">
           The city's market is being prepared. You can browse its future stock, but purchases are not open yet.
         </p>}
+        <CookingMarketMayorUpgrade cityId={cityId!} profileId={profileId} marketOpen={marketOpen} />
         <div className="flex flex-wrap gap-2" role="group" aria-label="Ingredient categories">
           {categories.map((item) => <Button key={item} size="sm"
             variant={category === item ? "default" : "outline"} aria-pressed={category === item}
