@@ -43,6 +43,17 @@ describe("cooking practice interactions", () => {
     click("Practise again");
     expect(screen.getByRole("button", { name: "Onion: Raw, tray" })).toBeEnabled();
   });
+  it("disables pan re-entry once food has been plated", () => {
+    render(<CookingPractice />);
+    click("Start practice");
+    add("Onion");
+    fireEvent.click(screen.getByRole("radio", { name: "Medium" }));
+    cookFor(12_000);
+    plate("Onion");
+    click("Onion: Ready, plate");
+    expect(screen.getByRole("button", { name: "Add selected ingredient to pan" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Onion: Ready, plate" })).toBeEnabled();
+  });
   it("supports keyboard selection and placement without dragging", async () => {
     vi.useRealTimers();
     const user = userEvent.setup();
