@@ -1,6 +1,7 @@
 // Authenticated cooking gateway: the browser never receives the service-role key.
 // Recipes remain inactive until the complete economy and live UX have been tested.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { validateCookingCharacterClaim } from "./requestContract.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -69,12 +70,13 @@ Deno.serve(async (request) => {
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
-  // During rollout the profile claim is optional for older installed clients,
-  // but when supplied it MUST match the server-selected current character.
-  // A browser-provided profile ID is never used as the source of authority.
-  if (payload.profileId !== undefined &&
-      (!isUuid(payload.profileId) || payload.profileId !== profile.id)) {
-    return json({ error: "active_character_mismatch" }, 403);
+  // Every cooking action binds the explicit selected-character claim to the
+  // authenticated server-selected ACTIVE character. Never use a browser ID
+  // as authorization for a service-role RPC, including legacy clients.
+  const characterError = validateCookingCharacterClaim(payload.profileId, profile.id);
+  if (characterError) {
+    return json({ error: characterError },
+      characterError === "character_id_required" ? 400 : 403);
   }
   const action = payload.action;
   const sessionId = payload.sessionId;
