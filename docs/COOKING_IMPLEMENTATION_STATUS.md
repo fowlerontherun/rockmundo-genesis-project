@@ -267,3 +267,8 @@ Rollback-only SQL integration testing has **passed on the connected database**: 
 
 **Release gate unchanged:** A real signed-in staging browser journey against a separate staging app/database and disposable account must pass before production activation. These new method recipes remain off.
 
+
+
+**Security follow-up:** An explicit service-only SELECT RLS policy for the method window table is committed and deployed in migration 20261022160500_cooking_method_windows_service_read_policy.sql. Database checks confirm that anonymous and authenticated roles have no SELECT access; service_role can read it. The Supabase security advisor now reports zero cooking-specific findings.
+
+**Session recovery fix:** The old live pan workstation now looks up the saved session's canonical recipe method before restoration, so an oven/soup/drink session cannot accidentally appear in the pan viewer. A method-scoped regression test is included. The manual staging certification workflow has an additional off-by-default non-pan toggle; no staging credentials or staging database are connected to run that browser test yet.
