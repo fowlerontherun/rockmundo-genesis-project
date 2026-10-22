@@ -126,3 +126,14 @@ The non-pan cooking release received a resilience hardening patch:
 Production deployed migration: `20261022221500_cooking_atomic_nonpan_serving.sql`. Gateway `cooking-session` **v6**, JWT verification enabled. A direct rollback-only SQL test `supabase/tests/cooking_atomic_serving_rollback.sql` passed, confirming normal serving, idempotency, failed partial-serve rollback, restricted privileges and zero persistent test batches. Vitest tests cover the disabled-recipe recovery and single gateway serving call; dedicated CI must pass.
 
 The separate signed-in non-production staging test was updated to capture a real `serve` request. It remains unexecuted because a disposable staging backend/account is not yet connected. **Do not activate any production recipe or city market offer.**
+
+
+## Expired sessions no longer block character cooking — 22 October 2026
+
+Cooking Edge Function `cooking-session` **v7** now asks a protected database operation to reconcile apparently expired sessions during a normal authenticated `status` poll. The browser and Edge instance cannot declare an attempt expired or award food: `public.expire_stale_cooking_session(session_id)` locks the same profile/session rows used by preparation and completion and compares expiry against the **database clock**. Only a genuinely expired `pending` or `running` attempt is marked `timed_out`; completed, failed, cancelled and unexpired sessions remain untouched. The caller then re-reads the authorized session so the player sees its actual status and may return to recipe selection.
+
+The RPC is available to `service_role` only; the gateway first validates a real JWT, active character and session ownership. It does not create food, XP, currency or ingredient allocations. React UI actions disable automatically when the server-anchored remaining time is zero. On return, the pan and non-pan React Query session caches both refresh to clear stale mutual blocking.
+
+Migration `20261022222500_cooking_status_expiry_reconciliation.sql` is deployed directly. Rollback-only regression `supabase/tests/cooking_stale_session_expiry_rollback.sql` passed in production DB: an expired attempt transitioned once and remained idempotently timed out, a future attempt remained active, anonymous/player RPC privileges were denied, and zero food batches were produced. All fixtures rolled back.
+
+**This is reliability repair, not cooking release certification.** Production recipes and market offers remain disabled; signed-in isolated staging browser testing is still required before launch.
