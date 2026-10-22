@@ -46,7 +46,7 @@ test.describe("staging-only signed-in cooking release gate", () => {
 
     // The dedicated staging character must have no active cooking session
     // and live in a city with three correctly seeded, affordable offers.
-    const required = ["Mushrooms", "Rice", "Soy seasoning"];
+    const required = ["Mushrooms", "Rice", "Soy Seasoning"];
     await expect(page.getByRole("button", { name: "Start cooking with ingredients" })).toBeVisible();
     await page.locator("#cooking-market-quantity").selectOption("1");
     for (const ingredient of required) {
