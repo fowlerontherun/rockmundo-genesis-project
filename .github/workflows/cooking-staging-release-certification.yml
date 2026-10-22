@@ -1,0 +1,70 @@
+name: Cooking Staging Release Certification
+
+# This workflow spends disposable STAGING character cash and stock.
+# It must never use the Rockmundo production Supabase project or domain.
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledge_staging_writes:
+        description: 'I confirm both the app and database are disposable staging environments'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cooking-staging-certification
+  cancel-in-progress: false
+
+jobs:
+  signed-in-cooking:
+    if: ${{ inputs.acknowledge_staging_writes == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: cooking-staging
+    env:
+      COOKING_STAGING_BASE_URL: ${{ vars.COOKING_STAGING_BASE_URL }}
+      COOKING_STAGING_SUPABASE_URL: ${{ vars.COOKING_STAGING_SUPABASE_URL }}
+      COOKING_STAGING_EMAIL: ${{ secrets.COOKING_STAGING_EMAIL }}
+      COOKING_STAGING_PASSWORD: ${{ secrets.COOKING_STAGING_PASSWORD }}
+      COOKING_STAGING_ALLOW_WRITES: YES_STAGING_ONLY
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Use repository npm
+        run: npm install --global npm@10.9.2
+      - name: Verify isolated staging configuration
+        shell: bash
+        run: |
+          if [[ -z "${COOKING_STAGING_BASE_URL}" || -z "${COOKING_STAGING_SUPABASE_URL}" ||
+                -z "${COOKING_STAGING_EMAIL}" || -z "${COOKING_STAGING_PASSWORD}" ]]; then
+            echo "::error::Configure cooking-staging environment variables and secrets before certifying"
+            exit 1
+          fi
+          # The Playwright config independently rejects production hosts/refs.
+          node -e 'const a=new URL(process.env.COOKING_STAGING_BASE_URL), b=new URL(process.env.COOKING_STAGING_SUPABASE_URL); if(/rockmundo\.uk$/i.test(a.hostname)||b.hostname.includes("yztogmdixmchsmimtent")||!/staging|test|preview|localhost/i.test(a.hostname)) process.exit(1);'
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Preflight cooking unit and character tests
+        run: npm run test:cooking
+      - name: Install isolated browser dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Signed-in browser purchase, cook and eat
+        run: npm run test:cooking:staging
+      - name: Keep failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cooking-staging-playwright-failures
+          path: |
+            test-results/cooking-staging
+            playwright-report/cooking-staging
+          if-no-files-found: ignore
+          retention-days: 7
