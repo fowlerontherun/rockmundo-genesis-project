@@ -24,9 +24,26 @@ begin
       ('__test_cooking_reservation','__test_cook_b',1);
     insert into public.cooking_ingredient_lots
       (profile_id,ingredient_slug,quantity,quality,acquired_at,expires_at)
-    values
-      (p,'__test_cook_a',1,80,clock_timestamp(),clock_timestamp()+interval '2 days'),
-      (p,'__test_cook_b',1,95,clock_timestamp(),clock_timestamp()+interval '2 days');
+    values (p,'__test_cook_a',1,80,clock_timestamp(),clock_timestamp()+interval '2 days');
+
+    -- Insufficient second ingredient: the earlier debit and session insert
+    -- must roll back inside the rejected begin_cooking_session statement.
+    begin
+      perform public.begin_cooking_session(p,'__test_cooking_reservation',request_id);
+      raise exception 'Partial stock allowed a cooking session';
+    exception when others then
+      if sqlerrm <> 'Insufficient fresh ingredient: __test_cook_b' then raise; end if;
+    end;
+    select sum(quantity) into remaining from public.cooking_ingredient_lots
+      where profile_id=p and ingredient_slug='__test_cook_a';
+    if remaining<>1 then raise exception 'Failed reservation consumed stock'; end if;
+    if exists (select 1 from public.cooking_sessions where id=request_id) then
+      raise exception 'Failed reservation left a session';
+    end if;
+
+    insert into public.cooking_ingredient_lots
+      (profile_id,ingredient_slug,quantity,quality,acquired_at,expires_at)
+    values (p,'__test_cook_b',1,95,clock_timestamp(),clock_timestamp()+interval '2 days');
 
     if public.begin_cooking_session(p,'__test_cooking_reservation',request_id) <> request_id
       or public.begin_cooking_session(p,'__test_cooking_reservation',request_id) <> request_id then
