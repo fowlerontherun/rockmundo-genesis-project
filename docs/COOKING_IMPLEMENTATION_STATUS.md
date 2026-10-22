@@ -128,6 +128,18 @@ Every city has a `cooking_city_market_levels` record (180 cities, initially leve
 
 **Remaining before launch:** Market activation and first pan-recipe launch decisions, trusted authenticated purchase/cook end-to-end certification, rolling stock observability and food consumption/buff balance. Do not open markets merely because daily restock is scheduled.
 
+## Prepared food consumption and timed-effect storage — 22 October 2026
+
+Deployed `20261022131000_cooking_food_consumption.sql` and `20261022132000_cooking_consumption_receipt_integrity.sql` to live Supabase. All **12 starter recipes** now have server-owned benefit definitions (recovery, practice XP, rehearsal effectiveness, songwriting polish or focus; 2–3 hours; maximum +5%). A player's finished food batch is consumed **one portion at a time** using `consume_cooking_food_atomic(profile_id,batch_id,request_id)`. The trusted implementation is in non-exposed `cooking_internal`, with an authenticated invoker RPC in public. Each request validates the logged-in, active, living owner, locks the character and food batch, rejects expired/empty/invalid batches, decrements one portion, and saves an immutable receipt atomically. Retrying an uncertain response with the same request UUID returns the original receipt and never consumes a second portion. A request collision for another batch/profile fails.
+
+The benefit value is **derived from recorded batch quality and the server-owned recipe**, never from browser arguments. Quality below 40 produces no timed benefit; otherwise the boost scales up to the recipe's 5% maximum. `cooking_active_food_effects` stores one effect slot per character and type with a bounded start/end time. Eating while the same type is already active still consumes the meal but **does not extend or stack** the effect. `get_active_cooking_food_percent` returns the current unexpired percentage via RLS for eventual settlement integration. No gameplay XP/recovery calculation yet consumes this value; the saved timer is not by itself a reward.
+
+The Cooking inventory UI now has `Eat 1 portion` controls on unexpired prepared food, a response-safe retry key, remaining-portion feedback and read-only active effect windows. Buttons are disabled for spoiled or empty food. Inventory and benefit queries refresh after a confirmed action. The UI explicitly warns that XP/recovery settlement wiring is still outstanding rather than falsely promising active bonuses.
+
+**Live verification:** Security adviser reports zero cooking-specific findings. Unauthenticated purchase/consumption is denied; authenticated players cannot insert consumption receipts or update effects directly. Twelve definitions, zero actual consumption receipts/active effects, zero produced food batches, zero enabled recipes or market offers as inspected. A rollback-only positive-path SQL integration harness is committed at `supabase/tests/cooking_food_consumption_smoke.sql` but **has not been executed against a disposable authenticated test instance yet**. The code is not production-certified or populated with player food until a safe browser and test-database end-to-end run is complete.
+
+**Next:** Verify the consumption harness and browser handling in CI. Integrate the effect lookup into real XP, rest, rehearsal and songwriting settlement paths (server-authoritative, bounded, tested) before describing timed buffs as active gameplay. Activate markets/recipes only after fully authenticated purchase → cook → eat certification.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
