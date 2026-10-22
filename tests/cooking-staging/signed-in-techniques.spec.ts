@@ -74,7 +74,15 @@ test.describe("signed-in staging certification for non-pan methods",()=>{
         await expect(page.getByTestId("cooking-equipment-scene"))
           .toHaveAttribute("data-stage","Ready");
       }
+      const servingRequest=page.waitForRequest(request=>{
+        if(!request.url().startsWith(stagingOrigin+"/functions/v1/cooking-session")
+          ||request.method()!=="POST")return false;
+        try{return request.postDataJSON()?.action==="serve";}catch{return false;}
+      });
       await page.getByRole("button",{name:"Plate all ingredients"}).click();
+      const plated=await servingRequest;
+      expect(plated.postDataJSON().profileId,
+        "Atomic serving must be bound to the active character").toBeTruthy();
       await expect(page.getByRole("button",{name:"Finish and save food"})).toBeEnabled();
       await page.getByRole("button",{name:"Finish and save food"}).click();
       await expect(page.getByText(/Cooked food saved to your inventory/)).toBeVisible();
