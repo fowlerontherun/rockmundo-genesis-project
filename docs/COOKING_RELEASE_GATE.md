@@ -90,3 +90,16 @@ Added `supabase/functions/cooking-session/requestContract.ts` with direct regres
 
 The production Edge Function was deployed with its imported contract module and `verify_jwt=true`. **Deploying this API does not activate any recipe or market offers.** The real browser E2E test still requires an isolated staging environment and must not be run against production player purchases. Previous clients that do not send `profileId` will now get an explicit error rather than silently cooking on a possibly unintended character.
 
+
+
+## One-click staging certification (manual GitHub Actions)
+
+Workflow `.github/workflows/cooking-staging-release-certification.yml` adds a **manual** `workflow_dispatch` button, guarded by an explicit acknowledgement that the browser will perform real staging purchases and cooking. Configure a dedicated GitHub Environment named `cooking-staging`, ideally with required reviewers, and populate the following **environment-scoped values**:
+
+- Variables: `COOKING_STAGING_BASE_URL` and `COOKING_STAGING_SUPABASE_URL` (both must point at nonproduction resources; the app must actually be built with the staging Supabase project)
+- Secrets: `COOKING_STAGING_EMAIL` and `COOKING_STAGING_PASSWORD` for a disposable authenticated staging user/character
+
+In Actions → **Cooking Staging Release Certification** → **Run workflow**, explicitly check `acknowledge_staging_writes`. The job installs pinned dependencies, runs the cooking suite, installs Chromium, and executes the real signed-in staging journey. The standalone Playwright config rejects production `rockmundo.uk` and Supabase project `yztogmdixmchsmimtent`; the browser also aborts any unexpected Supabase project URLs. Failure screenshots/traces are uploaded as a seven-day artifact. Credentials never appear in repository files.
+
+**This is a certification harness, not evidence of successful staging E2E.** Until a separate Supabase staging database, staged frontend and disposable user exist, the workflow cannot pass and production recipe/offers remain disabled.
+
