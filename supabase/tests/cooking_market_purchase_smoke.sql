@@ -7,7 +7,7 @@ declare
  other_offer public.cooking_city_market_offers%rowtype;
  first_receipt jsonb;
  second_receipt jsonb;
- request_id uuid := gen_random_uuid();
+ purchase_key uuid := gen_random_uuid();
  initial_cash bigint;
  initial_stock integer;
  after_cash bigint;
@@ -36,15 +36,15 @@ begin
    jsonb_build_object('sub',p.user_id::text,'role','authenticated','is_anonymous',false)::text,true);
  begin
    begin
-     perform public.purchase_cooking_market_ingredient(p.id,offer.id,2,request_id);
+     perform public.purchase_cooking_market_ingredient(p.id,offer.id,2,purchase_key);
      raise exception 'Closed market offer was purchasable';
    exception when others then
      if sqlerrm<>'COOKING_MARKET_OFFER_CLOSED' then raise; end if;
    end;
 
    update public.cooking_city_market_offers set is_active=true where id=offer.id;
-   first_receipt := public.purchase_cooking_market_ingredient(p.id,offer.id,2,request_id);
-   second_receipt := public.purchase_cooking_market_ingredient(p.id,offer.id,2,request_id);
+   first_receipt := public.purchase_cooking_market_ingredient(p.id,offer.id,2,purchase_key);
+   second_receipt := public.purchase_cooking_market_ingredient(p.id,offer.id,2,purchase_key);
    if first_receipt->>'status'<>'completed'
      or second_receipt->>'status'<>'already_completed'
      or first_receipt->>'purchaseId' is distinct from second_receipt->>'purchaseId' then
@@ -60,11 +60,11 @@ begin
      raise exception 'Stock did not decrement exactly twice';
    end if;
    select count(*) into sale_count from public.cooking_market_purchases
-   where request_id=request_id;
+   where request_id=purchase_key;
    if sale_count<>1 then raise exception 'Duplicate market receipt'; end if;
 
    begin
-     perform public.purchase_cooking_market_ingredient(p.id,offer.id,1,request_id);
+     perform public.purchase_cooking_market_ingredient(p.id,offer.id,1,purchase_key);
      raise exception 'Idempotency key accepted changed quantity';
    exception when others then
      if sqlerrm<>'COOKING_MARKET_REQUEST_CONFLICT' then raise; end if;
