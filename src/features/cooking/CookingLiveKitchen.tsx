@@ -43,10 +43,12 @@ interface GatewayReply {
 const SERVICE_NAME = "cooking-session";
 const heatChoices: CookingHeat[] = ["off", "low", "medium", "high"];
 const prettify = (slug: string) => slug.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-function getArtId(slug: string): "onion" | "mushroom" | "pepper" | null {
+function getArtId(slug: string): "onion" | "mushroom" | "pepper" | "rice" | "soy-seasoning" | null {
   if (slug === "onion") return "onion";
   if (slug === "mushrooms") return "mushroom";
   if (slug === "peppers") return "pepper";
+  if (slug === "rice") return "rice";
+  if (slug === "soy-seasoning") return "soy-seasoning";
   return null;
 }
 
