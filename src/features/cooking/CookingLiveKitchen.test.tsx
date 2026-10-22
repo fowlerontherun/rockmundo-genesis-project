@@ -15,7 +15,7 @@ vi.mock("@/hooks/useActiveProfile", () => ({
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
-      const query: Record<string, any> = {};
+      const query: Record<string, unknown> = {};
       for (const method of ["select", "eq", "in", "order", "limit", "gt", "is"]) {
         query[method] = () => query;
       }
