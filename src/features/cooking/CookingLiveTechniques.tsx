@@ -159,7 +159,8 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
   const plated=(ingredients.data??[]).filter(i=>view?.loaded.includes(i)&&!view?.served.includes(i));
   const fullyLoaded=Boolean(ingredients.data?.length&&view&&
     view.loaded.length===ingredients.data.length);
-  const canAct=Boolean(profileId&&sessionId&&running&&!snapshot.isError);
+  const canAct=Boolean(profileId&&sessionId&&running&&!snapshot.isError&&
+    (view?.deadlineSeconds??0)>0);
   const mutation=useMutation({
     mutationFn:async(request:Request)=>({request,reply:await callGateway<{sessionId?:string}>(request)}),
     onSuccess:({request,reply})=>{
@@ -260,6 +261,7 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
         {!running&&<Button variant="outline" onClick={()=>{
           setSessionId(null);setSelected(null);startKey.current=null;
           void qc.invalidateQueries({queryKey:["cooking-techniques-active-session",profileId]});
+          void qc.invalidateQueries({queryKey:["cooking-active-session",profileId]});
         }}>Return to recipe selection</Button>}
         {view&&recipe&&<DndContext sensors={sensors}
           onDragEnd={({active:drag,over})=>{
