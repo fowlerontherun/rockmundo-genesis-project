@@ -23,7 +23,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const clauses: Record<string, unknown> = {};
-      const query: Record<string, any> = {};
+      const query: Record<string, unknown> = {};
       query.select = () => query;
       query.eq = (column: string, value: unknown) => { clauses[column] = value; return query; };
       query.in = () => query;
