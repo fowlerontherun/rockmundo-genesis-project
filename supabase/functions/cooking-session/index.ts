@@ -80,7 +80,7 @@ Deno.serve(async (request) => {
   }
   const action = payload.action;
   const sessionId = payload.sessionId;
-  if (!isUuid(sessionId) || !["start", "status", "heat", "add", "remove", "finish"].includes(String(action))) {
+  if (!isUuid(sessionId) || !["start", "status", "heat", "add", "remove", "stir", "finish"].includes(String(action))) {
     return json({ error: "invalid_cooking_request" }, 400);
   }
 
@@ -122,8 +122,20 @@ Deno.serve(async (request) => {
       return json({ session, actions, serverNow: new Date().toISOString() });
     }
 
+    // Choose the processor from a server-owned recipe row, not from a
+    // browser-provided method. Both processors are service-role-only.
+    const { data: recipe, error: recipeError } = await admin
+      .from("cooking_recipes").select("method")
+      .eq("slug", session.recipe_slug).maybeSingle();
+    if (recipeError || !recipe ||
+      !["pan","oven","simmer","mix"].includes(recipe.method)) {
+      return json({ error: "cooking_method_unavailable" }, 503);
+    }
+
     if (action === "finish") {
-      const { data, error } = await admin.rpc("finalize_manual_cooking", {
+      const finishRpc = recipe.method === "pan"
+        ? "finalize_manual_cooking" : "finalize_cooking_technique";
+      const { data, error } = await admin.rpc(finishRpc, {
         _session_id: sessionId,
       });
       if (error) return json({ error: "cooking_finish_rejected", detail: error.message }, 409);
@@ -136,10 +148,15 @@ Deno.serve(async (request) => {
     if ((action === "add" || action === "remove") && !isSlug(payload.ingredientSlug)) {
       return json({ error: "invalid_ingredient" }, 400);
     }
-    const { data, error } = await admin.rpc("record_cooking_action", {
+    if (action === "stir" && recipe.method !== "mix") {
+      return json({ error: "stir_requires_drink_recipe" }, 400);
+    }
+    const actionRpc = recipe.method === "pan"
+      ? "record_cooking_action" : "record_cooking_technique_action";
+    const { data, error } = await admin.rpc(actionRpc, {
       _session_id: sessionId,
       _action_type: action,
-      _ingredient_slug: action === "heat" ? null : payload.ingredientSlug,
+      _ingredient_slug: action === "heat" || action === "stir" ? null : payload.ingredientSlug,
       _heat: action === "heat" ? payload.heat : null,
     });
     if (error) return json({ error: "cooking_action_rejected", detail: error.message }, 409);
