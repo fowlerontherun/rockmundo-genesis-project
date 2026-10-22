@@ -47,7 +47,7 @@ describe("free multi-method cooking techniques", () => {
       state = techniqueReducer(state, { type: "stir", now: i * 1000 });
     }
     expect(techniqueStage(state)).toBe("Ready");
-    expect(techniquePracticeResult(finish(state, 3000))).toEqual({
+    expect(techniquePracticeResult(finish(state, 3))).toEqual({
       score: 100, label: "Excellent technique",
     });
     expect(state.heat).toBe("off");
