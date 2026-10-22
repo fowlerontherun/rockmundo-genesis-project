@@ -111,6 +111,25 @@ Deno.serve(async (request) => {
     if (!session) return json({ error: "session_not_found" }, 404);
 
     if (action === "status") {
+      let statusSession = session;
+      // Reconcile abandoned sessions during ordinary authenticated status
+      // polling. The DB clock and row locks, not this Edge instance's clock,
+      // decide whether anything is expired. Neither food nor XP is minted.
+      if (["pending", "running"].includes(session.status)
+        && Date.parse(session.expires_at) <= Date.now()) {
+        const { error: expireError } = await admin.rpc("expire_stale_cooking_session", {
+          _session_id: sessionId,
+        });
+        if (expireError) return json({ error: "session_expiry_unavailable" }, 503);
+        const { data: reconciled, error: refreshError } = await publicClient
+          .from("cooking_sessions")
+          .select("id,status,mode,recipe_slug,started_at,expires_at,finished_at,execution_score,result_batch_id")
+          .eq("id", sessionId).eq("profile_id", profileId).maybeSingle();
+        if (refreshError || !reconciled) {
+          return json({ error: "session_refresh_unavailable" }, 503);
+        }
+        statusSession = reconciled;
+      }
       const { data: actions, error } = await publicClient
         .from("cooking_session_actions")
         .select("action_sequence,action_type,ingredient_slug,heat,recorded_at")
@@ -119,7 +138,7 @@ Deno.serve(async (request) => {
       if (error) return json({ error: "session_actions_unavailable" }, 503);
       // A server wall-clock anchor lets reconnecting clients render the
       // remaining cooking time correctly even when their device clock is off.
-      return json({ session, actions, serverNow: new Date().toISOString() });
+      return json({ session: statusSession, actions, serverNow: new Date().toISOString() });
     }
 
     // Choose the processor from a server-owned recipe row, not from a

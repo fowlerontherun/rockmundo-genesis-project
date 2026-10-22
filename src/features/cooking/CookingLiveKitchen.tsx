@@ -309,7 +309,10 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
         {session.status === "cancelled" && <p role="status">This cooking session was cancelled.</p>}
         {!running && <Button type="button" variant="outline"
           onClick={() => { setSessionId(null); setSelected(null); setMessage(null); pendingStartKey.current = null;
-            void queryClient.invalidateQueries({ queryKey: ["cooking-active-session", profileId] }); }}>
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["cooking-active-session", profileId] }),
+              queryClient.invalidateQueries({ queryKey: ["cooking-techniques-active-session", profileId] }),
+            ]); }}>
           Return to recipe selection
         </Button>}
         {view && <DndContext sensors={sensors} accessibility={{ screenReaderInstructions: {
