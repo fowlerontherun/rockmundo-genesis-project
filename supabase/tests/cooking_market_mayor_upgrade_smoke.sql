@@ -70,7 +70,7 @@ begin
       from public.cooking_city_market_offers where city_id=c;
     if current_offers<>original_offers+2 then
       raise exception 'Mayor upgrade did not add 2 new varieties'; end if;
-    if (select count(*) from public.cooking_city_market_investments where request_id=request_id)<>1
+    if (select count(*) from public.cooking_city_market_investments where cooking_city_market_investments.request_id=request_id)<>1
       then raise exception 'Investment ledger missing'; end if;
     if (select count(*) from public.city_treasury_ledger
       where reference_id=(result->>'investmentId')::uuid
