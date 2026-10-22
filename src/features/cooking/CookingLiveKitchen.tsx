@@ -204,12 +204,14 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["cooking-session-snapshot"] }),
         queryClient.invalidateQueries({ queryKey: ["cooking-active-session", profileId] }),
+        queryClient.invalidateQueries({ queryKey: ["cooking-techniques-active-session", profileId] }),
         queryClient.invalidateQueries({ queryKey: ["cooking-inventory", profileId] }),
       ]);
     },
     onError: (error: Error) => {
       setMessage(error.message);
       void queryClient.invalidateQueries({ queryKey: ["cooking-active-session", profileId] });
+      void queryClient.invalidateQueries({ queryKey: ["cooking-techniques-active-session", profileId] });
     },
   });
   const session = snapshot.data?.session;
