@@ -40,3 +40,17 @@ A read-only privilege audit confirmed unauthenticated users cannot execute the p
 - Run repository CI, TypeScript tests, RLS policy tests and Finance/DB advisors before activating any pilot.
 
 **Do not enable `sales_enabled` or production cooking recipes until all release gates pass.**
+
+## Continued implementation — 23 October 2026
+
+**Migration and repository alignment:** The original #4549 was merged to the already-merged feature branch behind #4548. The resulting live database changes were not represented by files on main. This replacement main-based branch restores #4549's three deployed migration files, rollback smoke test and release-gate document so future builds and migrations do not drift from deployed production.
+
+**Automatic abandoned-stall expiry:** Deployed `20261023080000_cooking_food_stall_expiry_sweep.sql` with a service-role-only `expire_cooking_food_stall_listings(100)` function and verified an **active every-minute cron job**. The sweep locks seller profile → listing → source batch, rechecks database-clock expiry, returns unsold portions if the food remains fresh, otherwise counts them as spoiled, marks the listing terminal and records immutable `cooking_food_stall_expiry_events`. Retries cannot revive portions. Authenticated/anonymous users have no EXECUTE privilege. A controlled rollback-only SQL test exercised one fresh-listing expiration, one spoiled-batch expiration and a repeated no-op sweep. Final production counts were zero listings/sales/expiry events; release remained OFF.
+
+**Local browsing and same-account protection:** Deployed `20261023082000_cooking_food_stall_local_browse_and_alt_protection.sql`. Its authenticated public invoker wrapper delegates to privileged `cooking_internal.browse_cooking_food_stalls`, which resolves the signed-in active character's actual city, caps results to 50, excludes expired/illegal offers, shows only server-authorised seller names and hides same-account offers. Reimplemented the existing purchase function so a second character owned by the same user cannot buy their own listing. The browsing RPC returns an explicitly disabled empty response while trading is OFF. A rollback-only SQL test exercised disabled browsing, city-scoped visibility, owner exclusion, expired-listing filtering and cross-account ownership rejection.
+
+**Player-facing presentation:** New `CookingPlayerStalls` panel on Cooking Career uses the existing illustrated dish catalogue for regional marketplace cards, permits server-confirmed listing/reservation, purchase and cancellation when enabled, and always allows an owner to cancel an old open listing if sales are paused. It shows expiry/quality, remaining portions, unit prices, seller names and server-confirmed totals. Browser retries retain request UUIDs for the current tab across reloads; the database remains the authority for charges, stock and receipts. A query failure never unlocks purchase controls. **No signed-in browser testing has been run.**
+
+### Outstanding gates
+
+Run TypeScript, lint and cooking UI tests in CI. Connect an isolated staging database and disposable two-user test accounts. Certify list, same-city browse, buy, concurrent consumers, expiry, disconnect and cancellation through real signed-in app sessions. Verify the annualized game economy/treasury journal and city restriction policy in staging. No production food stall listing creation, live recipe unlocking or market activation is authorised by rollback-only SQL testing.
