@@ -86,6 +86,12 @@ begin
    and food_expires_at=v_batch.expires_at) then
    raise exception 'Sale receipt failed immutable recipe/quality/expiry provenance';
  end if;
+ begin
+   update public.cooking_food_stall_sales set recipe_slug='apple-pie'
+   where purchase_id=v_request;
+   raise exception 'Sale provenance was editable';
+ exception when insufficient_privilege then null;
+ end;
  if (select cash from public.profiles where id=v_buyer.id)<>v_before_buyer-200
    or (select cash from public.profiles where id=v_seller.id)<>v_before_seller+190
    or coalesce((select balance from public.city_treasury where city_id=v_seller.current_city_id),0)<>v_before_city+10 then
