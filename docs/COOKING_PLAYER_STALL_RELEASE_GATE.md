@@ -76,3 +76,15 @@ Added the illustrated, **read-only** `CookingStallHistory` panel beneath the pla
 Each source returns at most 30 recent rows. The UI explicitly labels totals as recent, **not lifetime**, preventing misleading historic income displays. The read-only history remains visible after trading pauses, to support seller reconciliation and eventual support cases.
 
 Added Vitest tests for duplicate receipt de-duplication, rejecting unrelated profile rows, filtered history and selected-character query isolation. Frontend CI and real signed-in staging remain mandatory before considering trading release. No new SQL or production feature flags were changed.
+
+## Permanent illustrated receipt provenance — 23 October 2026
+
+After PR #4552 merged the player-facing read-only food trade history, the next slice fixes the missing dish identity in historic sale and expiry receipts.
+
+- Applied `20261023122500_cooking_stall_receipt_food_provenance.sql` to the connected Rockmundo database. The existing `cooking_food_stall_sales` and `cooking_food_stall_expiry_events` tables now store immutable, server-derived `recipe_slug`, `quality`, and `food_expires_at` values. Migration backfills existing rows from the original listed food batch before applying NOT NULL and quality checks; authenticated roles still cannot write these records.
+- A single secured BEFORE INSERT trigger derives those values from the source listing and batch, and for sales also checks the buyer's destination batch matches its original recipe, quality and expiry. Supplied client fields cannot forge the metadata. BEFORE UPDATE blocks later changes to food identity and original expiry.
+- The initial trigger exposed a real bug in the expired-listing rollback test: PL/pgSQL did not short-circuit an expression that referenced sale-only fields for expiry records. Applied a separate, auditable migration `20261023123000_cooking_stall_receipt_expiry_trigger_fix.sql` using a nested table-specific IF instead. **Both purchase and expiry rollback-only SQL regression tests subsequently passed**, verifying dish provenance and zero persisted trading rows.
+- Updated `CookingStallHistory` to read these receipt fields and display the **actual named dish with the corresponding illustrated SVG**, quality, and *original* food expiry for bought/sold/expired entries. No new public write endpoints or gameplay rewards are introduced.
+- Added focused UI regression assertions for the correct dish names and freshness details. Full frontend CI remains a separate check and must not be assumed green from SQL tests alone.
+
+The live release flag `cooking_food_stall_controls.sales_enabled` remains false. No actual player receipts, live trade balances, or production recipe/offer flags were changed. Signed-in disposable staging browser certification and genuine multi-connection purchase races are still outstanding.
