@@ -9,10 +9,12 @@ const sale: CookingStallSale = {
   id: "sale-1", listing_id: "listing-1", buyer_profile_id: otherId, seller_profile_id: profileId,
   portions: 2, subtotal: 200, city_fee: 10, seller_proceeds: 190,
   purchased_at: "2026-10-23T12:00:00Z",
+  recipe_slug: "rice-bowl",quality: 80,food_expires_at: "2026-10-24T13:00:00Z",
 };
 const expiry: CookingStallExpiry = {
   id: "expiry-1", listing_id: "listing-2", seller_profile_id: profileId,
   returned_portions: 2, spoiled_portions: 0, processed_at: "2026-10-23T13:00:00Z",
+  recipe_slug: "apple-pie",quality: 90,food_expires_at: "2026-10-25T13:00:00Z",
 };
 const state = vi.hoisted(() => ({
   selectedProfile: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -33,11 +35,13 @@ vi.mock("@/integrations/supabase/client", () => ({
       };
       const data = table === "cooking_food_stall_expiry_events"
         ? [{ id: "expiry-1", listing_id: "listing-2", seller_profile_id: state.selectedProfile,
-          returned_portions: 2, spoiled_portions: 0, processed_at: "2026-10-23T13:00:00Z" }]
+          returned_portions: 2, spoiled_portions: 0, processed_at: "2026-10-23T13:00:00Z",
+          recipe_slug: "apple-pie",quality: 90,food_expires_at: "2026-10-25T13:00:00Z" }]
         : table === "cooking_food_stall_sales"
           ? [{ id: "sale-1", listing_id: "listing-1", buyer_profile_id: otherId,
             seller_profile_id: state.selectedProfile, portions: 2,subtotal: 200,
-            city_fee: 10,seller_proceeds: 190,purchased_at: "2026-10-23T12:00:00Z" }]
+            city_fee: 10,seller_proceeds: 190,purchased_at: "2026-10-23T12:00:00Z",
+            recipe_slug: "rice-bowl",quality: 80,food_expires_at: "2026-10-24T13:00:00Z" }]
           : [];
       const response = Promise.resolve({ data, error: null });
       query.then = response.then.bind(response);
@@ -72,8 +76,9 @@ describe("food stall history receipts", () => {
   it("loads only selected-character transactions and displays recent earnings", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><CookingStallHistory /></QueryClientProvider>);
-    await screen.findByText("Food sold");
+    await screen.findByText(/Food sold · Mushroom rice bowl/);
     expect(screen.getByText("$190")).toBeInTheDocument();
+    expect(screen.getByText(/Quality 80\/100/)).toBeInTheDocument();
     expect(screen.getByText("$10", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("2 portions")).toBeInTheDocument();
     expect(state.calls).toEqual(expect.arrayContaining([
@@ -82,8 +87,8 @@ describe("food stall history receipts", () => {
       { table: "cooking_food_stall_expiry_events",column: "seller_profile_id",profileId },
     ]));
     fireEvent.click(screen.getByRole("button", { name: "Expired listings" }));
-    expect(screen.getByText("Listing expired")).toBeInTheDocument();
-    expect(screen.queryByText("Food sold")).toBeNull();
+    expect(screen.getByText(/Listing expired · Apple pie/)).toBeInTheDocument();
+    expect(screen.queryByText(/Food sold · Mushroom rice bowl/)).toBeNull();
     client.clear();
   });
 });
