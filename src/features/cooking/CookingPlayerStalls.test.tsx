@@ -101,7 +101,7 @@ describe("illustrated player cooking stalls", () => {
     }];
     const { client } = renderStalls();
     await screen.findByRole("region", { name: "Local food trading restrictions" });
-    expect(screen.getByText("Apple Pie")).toBeInTheDocument();
+    expect(screen.getByText("Apple pie")).toBeInTheDocument();
     expect(screen.getByText("Not permitted at food stalls in this city")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Buy \$/ })).toBeNull();
     client.clear();
