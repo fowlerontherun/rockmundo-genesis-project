@@ -144,6 +144,11 @@ export function CookingPlayerStalls() {
     ]);
   };
   const active = Boolean(market.data?.enabled && market.data.cityId === cityId);
+  // Fail closed if two fields of a server response conflict. The database is
+  // still authoritative at checkout; this only prevents a misleading Buy UI.
+  const blockedSlugs = new Set(market.data?.blockedRecipes?.map(rule => rule.recipeSlug) ?? []);
+  const visibleListings = (market.data?.listings ?? [])
+    .filter(listing => !blockedSlugs.has(listing.recipeSlug));
   const freshFood = (ownFood.data ?? []).filter(food => {
     const batch: FoodBatch = {
       id: food.id, profileId: food.profile_id, recipeSlug: food.recipe_slug,
@@ -267,11 +272,11 @@ export function CookingPlayerStalls() {
             </article>)}
           </div>
         </section>}
-      {active && market.data?.listings.length === 0 && <p className="text-sm text-muted-foreground">
+      {active && visibleListings.length === 0 && <p className="text-sm text-muted-foreground">
         No fresh cooked-food listings in this city right now.
       </p>}
       {active && <div className="grid gap-3 sm:grid-cols-2">
-        {market.data?.listings.map(listing => {
+        {visibleListings.map(listing => {
           const quantity = buyCounts[listing.id] ?? 1;
           const canBuy = listing.portions >= quantity &&
             Date.parse(listing.expiresAt) > Date.now() &&
