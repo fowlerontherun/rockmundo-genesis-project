@@ -84,6 +84,13 @@ begin
       where r->>'id'=v_listing::text) then
    raise exception 'City-banned food remained discoverable';
  end if;
+ if not exists(
+   select 1 from jsonb_array_elements(v_json->'blockedRecipes') notice
+   where notice->>'recipeSlug'='rice-bowl'
+     and notice->>'reason'='Rollback-only test city ban'
+ ) then
+   raise exception 'Local food restriction missing from authenticated browse: %',v_json;
+ end if;
  begin
    perform public.purchase_cooking_food_stall_listing(
      v_buyer.id,v_listing,1,gen_random_uuid());
@@ -98,7 +105,16 @@ begin
    raise exception 'Denied purchase changed stock or cash';
  end if;
 
- -- Sellers may reclaim fresh portions under a new city ban.
+ -- Pausing live trading must also hide the otherwise-authorised policy
+ -- notice; players should never interpret the banner as a live offer.
+ update public.cooking_food_stall_controls set sales_enabled=false where singleton;
+ v_json:=public.browse_cooking_food_stalls(v_buyer.id,40);
+ if (v_json->>'enabled')::boolean is distinct from false
+   or jsonb_array_length(v_json->'blockedRecipes')<>0
+   or jsonb_array_length(v_json->'listings')<>0 then
+   raise exception 'Paused city market leaked trading restrictions: %',v_json;
+ end if;
+ -- Sellers may reclaim fresh portions despite the ban AND paused trading.
  perform set_config('request.jwt.claim.sub',v_seller.user_id::text,true);
  perform set_config('request.jwt.claims',jsonb_build_object(
    'sub',v_seller.user_id,'role','authenticated','is_anonymous',false)::text,true);
