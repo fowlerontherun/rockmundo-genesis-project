@@ -87,7 +87,7 @@ describe("illustrated player cooking stalls", () => {
       call.args.p_portions === 1 &&
       typeof call.args.p_request_id === "string",
     )).toBe(true));
-    expect(screen.getByText(/Food purchased for \$150/)).toBeInTheDocument();
+    await screen.findByText(/Food purchased for \$150/);
     client.clear();
   });
 
