@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock3, Coins, History, PackageCheck, RefreshCcw, ShoppingBag, Store, Trash2 } from "lucide-react";
+import { Coins, History, PackageCheck, RefreshCcw, ShoppingBag, Trash2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DishIllustration } from "./CookingIllustrations";
+import { COOKING_RECIPES } from "./recipeCatalogue";
 
 export interface CookingStallSale {
   id: string;
@@ -17,6 +18,9 @@ export interface CookingStallSale {
   city_fee: number;
   seller_proceeds: number;
   purchased_at: string;
+  recipe_slug: string;
+  quality: number;
+  food_expires_at: string;
 }
 
 export interface CookingStallExpiry {
@@ -26,6 +30,9 @@ export interface CookingStallExpiry {
   returned_portions: number;
   spoiled_portions: number;
   processed_at: string;
+  recipe_slug: string;
+  quality: number;
+  food_expires_at: string;
 }
 
 type HistoryFilter = "all" | "bought" | "sold" | "expired";
@@ -37,6 +44,8 @@ const money = (amount: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
     .format(amount);
 const dateLabel = (value: string) => new Date(value).toLocaleString();
+const dishName = (slug: string) => COOKING_RECIPES.find(recipe => recipe.slug === slug)?.name
+  ?? slug.replace(/[-_]/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 
 export function deriveCookingStallHistory(
   profileId: string,
@@ -86,13 +95,13 @@ export function CookingStallHistory() {
       if (!profileId) return [];
       const [bought, sold, expired] = await Promise.all([
         (supabase as any).from("cooking_food_stall_sales")
-          .select("id,listing_id,buyer_profile_id,seller_profile_id,portions,subtotal,city_fee,seller_proceeds,purchased_at")
+          .select("id,listing_id,buyer_profile_id,seller_profile_id,portions,subtotal,city_fee,seller_proceeds,purchased_at,recipe_slug,quality,food_expires_at")
           .eq("buyer_profile_id", profileId).order("purchased_at", { ascending: false }).limit(30),
         (supabase as any).from("cooking_food_stall_sales")
-          .select("id,listing_id,buyer_profile_id,seller_profile_id,portions,subtotal,city_fee,seller_proceeds,purchased_at")
+          .select("id,listing_id,buyer_profile_id,seller_profile_id,portions,subtotal,city_fee,seller_proceeds,purchased_at,recipe_slug,quality,food_expires_at")
           .eq("seller_profile_id", profileId).order("purchased_at", { ascending: false }).limit(30),
         (supabase as any).from("cooking_food_stall_expiry_events")
-          .select("id,listing_id,seller_profile_id,returned_portions,spoiled_portions,processed_at")
+          .select("id,listing_id,seller_profile_id,returned_portions,spoiled_portions,processed_at,recipe_slug,quality,food_expires_at")
           .eq("seller_profile_id", profileId).order("processed_at", { ascending: false }).limit(30),
       ]);
       if (bought.error) throw bought.error;
@@ -190,16 +199,21 @@ export function CookingStallHistory() {
         </p>}
         <ul className="space-y-2" aria-label="Cooking stall receipts">
           {visible.map(entry => <li key={entry.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
-            <div className="mt-0.5" aria-hidden="true">
-              {entry.kind === "bought" ? <ShoppingBag className="h-5 w-5" />
-                : entry.kind === "sold" ? <Store className="h-5 w-5" />
-                : <Clock3 className="h-5 w-5" />}
+            <div className="w-20 shrink-0 overflow-hidden rounded-md border" aria-hidden="true">
+              <DishIllustration
+                recipeSlug={entry.kind === "expired" ? entry.expiry.recipe_slug : entry.sale.recipe_slug}
+                className="h-16 w-20"
+              />
             </div>
             <div className="min-w-0 flex-1">
               <strong>{entry.kind === "bought" ? "Food bought"
                 : entry.kind === "sold" ? "Food sold"
-                : "Listing expired"}</strong>
+                : "Listing expired"} · {dishName(entry.kind === "expired" ? entry.expiry.recipe_slug : entry.sale.recipe_slug)}</strong>
               <p className="text-xs text-muted-foreground">{dateLabel(entry.at)}</p>
+              <p className="text-xs text-muted-foreground">
+                Quality {entry.kind === "expired" ? entry.expiry.quality : entry.sale.quality}/100
+                {" · "}Original expiry {dateLabel(entry.kind === "expired" ? entry.expiry.food_expires_at : entry.sale.food_expires_at)}
+              </p>
               {entry.kind === "expired"
                 ? <p>{entry.expiry.returned_portions} fresh portion(s) returned
                   {" · "}{entry.expiry.spoiled_portions} portion(s) spoiled</p>
