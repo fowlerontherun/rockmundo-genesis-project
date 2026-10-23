@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   cityId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   rpcCalls: [] as Array<{ name: string; args: Record<string, unknown> }>,
   listings: [] as Array<Record<string, unknown>>,
+  blockedRecipes: [] as Array<{ recipeSlug: string; reason: string }>,
 }));
 
 vi.mock("@/hooks/useActiveProfile", () => ({
@@ -22,7 +23,8 @@ vi.mock("@/integrations/supabase/client", () => ({
     rpc: async (name: string, args: Record<string, unknown>) => {
       state.rpcCalls.push({ name, args });
       if (name === "browse_cooking_food_stalls") {
-        return { data: { enabled: state.enabled, cityId: state.cityId, listings: state.listings }, error: null };
+        return { data: { enabled: state.enabled, cityId: state.cityId,
+          listings: state.listings, blockedRecipes: state.enabled ? state.blockedRecipes : [] }, error: null };
       }
       if (name === "purchase_cooking_food_stall_listing") {
         return { data: { status: "completed", subtotal: 150, fee: 7, batchId: "new" }, error: null };
@@ -49,6 +51,7 @@ afterEach(() => {
   cleanup();
   state.enabled = false;
   state.listings = [];
+  state.blockedRecipes = [];
   state.rpcCalls = [];
   state.profileId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   state.cityId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -88,6 +91,29 @@ describe("illustrated player cooking stalls", () => {
       typeof call.args.p_request_id === "string",
     )).toBe(true));
     await screen.findByText(/Food purchased for \$150/);
+    client.clear();
+  });
+
+  it("shows illustrated city-only restrictions only when the server enables trading", async () => {
+    state.enabled = true;
+    state.blockedRecipes = [{
+      recipeSlug: "apple-pie", reason: "Not permitted at food stalls in this city",
+    }];
+    const { client } = renderStalls();
+    await screen.findByRole("region", { name: "Local food trading restrictions" });
+    expect(screen.getByText("Apple Pie")).toBeInTheDocument();
+    expect(screen.getByText("Not permitted at food stalls in this city")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Buy \$/ })).toBeNull();
+    client.clear();
+  });
+
+  it("keeps restriction metadata hidden while the server closes food trading", async () => {
+    state.enabled = false;
+    state.blockedRecipes = [{ recipeSlug: "rice-bowl", reason: "Hidden rule" }];
+    const { client } = renderStalls();
+    await screen.findByText(/Player food trading is being prepared/);
+    expect(screen.queryByText("Hidden rule")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Local food trading restrictions" })).toBeNull();
     client.clear();
   });
 
