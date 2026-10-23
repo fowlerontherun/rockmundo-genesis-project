@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DishIllustration } from "./CookingIllustrations";
+import { COOKING_RECIPES } from "./recipeCatalogue";
 import { foodAvailability, type FoodBatch } from "./foodBatchRules";
 
 interface SellerFood {
@@ -51,6 +52,8 @@ interface Receipt {
 const titleCase = (value: string) =>
   value.replace(/[-_]/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 const showDate = (date: string) => new Date(date).toLocaleString();
+const approvedStarterSlugs = new Set(COOKING_RECIPES.map(recipe => recipe.slug));
+const dishName = (slug: string) => COOKING_RECIPES.find(recipe => recipe.slug === slug)?.name ?? titleCase(slug);
 
 /**
  * UUIDs survive reloads and uncertain HTTP responses in the current tab.
@@ -144,7 +147,7 @@ export function CookingPlayerStalls() {
       portions: food.portions, quality: food.quality,
       preparedAt: food.prepared_at, expiresAt: food.expires_at,
     };
-    return foodAvailability(batch, Date.now()) === "fresh";
+    return foodAvailability(batch, Date.now()) === "fresh" && approvedStarterSlugs.has(food.recipe_slug);
   });
   const selected = freshFood.find(food => food.id === selectedBatchId) ?? freshFood[0];
 
@@ -250,7 +253,7 @@ export function CookingPlayerStalls() {
             <div className="flex items-center gap-3">
               <DishIllustration recipeSlug={listing.recipeSlug} className="h-20 w-28 shrink-0 rounded-md" />
               <div>
-                <h4 className="font-semibold">{titleCase(listing.recipeSlug)}</h4>
+                <h4 className="font-semibold">{dishName(listing.recipeSlug)}</h4>
                 <p className="text-xs text-muted-foreground">Cooked by {listing.sellerName}</p>
                 <p className="text-sm">Quality {listing.quality}/100 · ${listing.pricePerPortion} per portion</p>
               </div>
@@ -285,7 +288,7 @@ export function CookingPlayerStalls() {
               <select value={selected.id} onChange={e => setSelectedBatchId(e.target.value)}
                 className="rounded-md border bg-background p-2">
                 {freshFood.map(food => <option key={food.id} value={food.id}>
-                  {titleCase(food.recipe_slug)} · {food.portions} portions
+                  {dishName(food.recipe_slug)} · {food.portions} portions
                 </option>)}
               </select>
             </label>
