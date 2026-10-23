@@ -68,3 +68,11 @@ When `certify_player_stalls` is selected, the test logs in each account through 
 The special Playwright config already blocks `rockmundo.uk` and production Supabase reference `yztogmdixmchsmimtent`. Staging-only credentials are protected by the GitHub environment. The test must be run and reviewed before considering production player trading; a rollback-only SQL fixture is not sufficient to certify real multi-connection races.
 
 **Current gate: NOT EXECUTED.** No separate staging app, Supabase project or disposable three-account credentials were available in the connected environment for this task. Keep `cooking_food_stall_controls.sales_enabled=false` on production.
+
+## Player food trading receipts — 23 October 2026
+
+Added the illustrated, **read-only** `CookingStallHistory` panel beneath the player stalls in Cooking Career. It queries existing owner-RLS-protected `cooking_food_stall_sales` rows twice (buy and sell) and seller-owned `cooking_food_stall_expiry_events` rows. Results are de-duplicated by immutable receipt ID, verified again against the currently selected profile and sorted by transaction time. Tabs filter recent buys, sales and expired listings; a summary displays seller net earnings after city fees, purchase outlay, fresh returned portions and spoiled portions. Quantities come from server receipts rather than local buyer/seller predictions. The component does not call any write RPC or alter any food, money or market availability.
+
+Each source returns at most 30 recent rows. The UI explicitly labels totals as recent, **not lifetime**, preventing misleading historic income displays. The read-only history remains visible after trading pauses, to support seller reconciliation and eventual support cases.
+
+Added Vitest tests for duplicate receipt de-duplication, rejecting unrelated profile rows, filtered history and selected-character query isolation. Frontend CI and real signed-in staging remain mandatory before considering trading release. No new SQL or production feature flags were changed.
