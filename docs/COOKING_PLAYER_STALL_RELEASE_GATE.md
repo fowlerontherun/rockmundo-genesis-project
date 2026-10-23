@@ -88,3 +88,17 @@ After PR #4552 merged the player-facing read-only food trade history, the next s
 - Added focused UI regression assertions for the correct dish names and freshness details. Full frontend CI remains a separate check and must not be assumed green from SQL tests alone.
 
 The live release flag `cooking_food_stall_controls.sales_enabled` remains false. No actual player receipts, live trade balances, or production recipe/offer flags were changed. Signed-in disposable staging browser certification and genuine multi-connection purchase races are still outstanding.
+
+## Cancellation history and manual expiry audit — 23 October 2026
+
+New server-side migration `20261023131000_cooking_stall_cancellation_receipt_ledger.sql` is deployed, **without activating food trading**. The `cooking_food_stall_cancellation_events` table holds an immutable, original-batch-derived receipt for every successful seller cancellation of an *open and still-fresh* food listing. It records the seller, listing ID, exact unsold portions returned, original recipe, quality, batch expiry and cancellation timestamp. The cancellation RPC already updates stock and listing state atomically; it now inserts this receipt in the **same transaction**. A unique listing constraint plus idempotent cancellation response ensures retries cannot duplicate returned portions or receipts. The new table uses authenticated owner-only SELECT RLS; anonymous access and authenticated DML are denied.
+
+The same cancellation RPC had a history gap if a seller clicked cancel **after the listing deadline or food expiry**. Such manual closures report status `expired` and now write the existing owner-visible food stall **expiry** ledger, distinguishing fresh portions returned from expired portions spoiled. The automatic cron expiry worker is unchanged and profile/listing locks prevent a manual cancellation and cron from both processing the same open listing.
+
+The Cooking Career history panel now offers an additional **Cancelled** filter. It uses the real dish artwork and original expiry for these receipts. The recent *Fresh food returned* summary now includes both cron/manual expirations and seller cancellations. Checkout and cancellation invalidate the history cache on success.
+
+Verification: two transaction-scoped rollback SQL checks passed on the live connected database:
+- `cooking_food_stall_purchase_rollback.sql`: completed partial sale, exactly one fresh cancellation refund receipt, repeated cancellation idempotency and immutable receipt tamper rejection.
+- `cooking_food_stall_manual_expiry_rollback.sql`: seller closed an expired listing with fresh food (2 portions returned), then a listing with spoiled food (0 returned, 2 spoiled), and verified exactly one expiry receipt per listing, no duplicate cancellation receipts and no revival of spoiled stock.
+
+Both tests rolled back all fixtures and the temporary release flag change. Production currently has **zero sales, listings, cancellation events or expiry events**; live cooking and trade flags remain closed. Real signed-in staging / concurrent connection certification and CI are **still outstanding**.

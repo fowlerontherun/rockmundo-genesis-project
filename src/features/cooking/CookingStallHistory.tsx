@@ -35,10 +35,22 @@ export interface CookingStallExpiry {
   food_expires_at: string;
 }
 
-type HistoryFilter = "all" | "bought" | "sold" | "expired";
+export interface CookingStallCancellation {
+  id: string;
+  listing_id: string;
+  seller_profile_id: string;
+  returned_portions: number;
+  cancelled_at: string;
+  recipe_slug: string;
+  quality: number;
+  food_expires_at: string;
+}
+
+type HistoryFilter = "all" | "bought" | "sold" | "expired" | "cancelled";
 type HistoryEntry =
   | { kind: "bought" | "sold"; at: string; id: string; sale: CookingStallSale }
-  | { kind: "expired"; at: string; id: string; expiry: CookingStallExpiry };
+  | { kind: "expired"; at: string; id: string; expiry: CookingStallExpiry }
+  | { kind: "cancelled"; at: string; id: string; cancellation: CookingStallCancellation };
 
 const money = (amount: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
@@ -46,12 +58,16 @@ const money = (amount: number) =>
 const dateLabel = (value: string) => new Date(value).toLocaleString();
 const dishName = (slug: string) => COOKING_RECIPES.find(recipe => recipe.slug === slug)?.name
   ?? slug.replace(/[-_]/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
+const receiptFood = (entry: HistoryEntry) =>
+  entry.kind === "expired" ? entry.expiry :
+    entry.kind === "cancelled" ? entry.cancellation : entry.sale;
 
 export function deriveCookingStallHistory(
   profileId: string,
   purchases: readonly CookingStallSale[],
   sales: readonly CookingStallSale[],
   expiries: readonly CookingStallExpiry[],
+  cancellations: readonly CookingStallCancellation[] = [],
 ): HistoryEntry[] {
   const distinct = new Map<string, CookingStallSale>();
   for (const sale of [...purchases, ...sales]) distinct.set(sale.id, sale);
@@ -69,6 +85,11 @@ export function deriveCookingStallHistory(
     if (expiry.seller_profile_id !== profileId) continue;
     events.push({ kind: "expired", at: expiry.processed_at, id: `expired:${expiry.id}`, expiry });
   }
+  for (const cancellation of cancellations) {
+    if (cancellation.seller_profile_id !== profileId) continue;
+    events.push({ kind: "cancelled", at: cancellation.cancelled_at,
+      id: `cancelled:${cancellation.id}`, cancellation });
+  }
   return events.sort((a, b) => {
     const left = Date.parse(a.at);
     const right = Date.parse(b.at);
@@ -81,9 +102,10 @@ const tabs: Array<{ value: HistoryFilter; label: string }> = [
   { value: "bought", label: "Bought" },
   { value: "sold", label: "Sold" },
   { value: "expired", label: "Expired listings" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
-/** Read-only trade receipts. All three tables enforce owner SELECT RLS. */
+/** Read-only trade receipts. All four tables enforce owner SELECT RLS. */
 export function CookingStallHistory() {
   const { profileId } = useActiveProfile();
   const [filter, setFilter] = useState<HistoryFilter>("all");
@@ -93,7 +115,7 @@ export function CookingStallHistory() {
     enabled: Boolean(profileId),
     queryFn: async (): Promise<HistoryEntry[]> => {
       if (!profileId) return [];
-      const [bought, sold, expired] = await Promise.all([
+      const [bought, sold, expired, cancelled] = await Promise.all([
         (supabase as any).from("cooking_food_stall_sales")
           .select("id,listing_id,buyer_profile_id,seller_profile_id,portions,subtotal,city_fee,seller_proceeds,purchased_at,recipe_slug,quality,food_expires_at")
           .eq("buyer_profile_id", profileId).order("purchased_at", { ascending: false }).limit(30),
@@ -103,15 +125,20 @@ export function CookingStallHistory() {
         (supabase as any).from("cooking_food_stall_expiry_events")
           .select("id,listing_id,seller_profile_id,returned_portions,spoiled_portions,processed_at,recipe_slug,quality,food_expires_at")
           .eq("seller_profile_id", profileId).order("processed_at", { ascending: false }).limit(30),
+        (supabase as any).from("cooking_food_stall_cancellation_events")
+          .select("id,listing_id,seller_profile_id,returned_portions,cancelled_at,recipe_slug,quality,food_expires_at")
+          .eq("seller_profile_id", profileId).order("cancelled_at", { ascending: false }).limit(30),
       ]);
       if (bought.error) throw bought.error;
       if (sold.error) throw sold.error;
       if (expired.error) throw expired.error;
+      if (cancelled.error) throw cancelled.error;
       return deriveCookingStallHistory(
         profileId,
         (bought.data ?? []) as CookingStallSale[],
         (sold.data ?? []) as CookingStallSale[],
         (expired.data ?? []) as CookingStallExpiry[],
+        (cancelled.data ?? []) as CookingStallCancellation[],
       );
     },
     staleTime: 30_000,
@@ -127,7 +154,8 @@ export function CookingStallHistory() {
   const spent = recentPurchases.reduce((sum, event) =>
     sum + (event.kind === "bought" ? event.sale.subtotal : 0), 0);
   const returned = events.reduce((sum, event) =>
-    sum + (event.kind === "expired" ? event.expiry.returned_portions : 0), 0);
+    sum + (event.kind === "expired" ? event.expiry.returned_portions :
+      event.kind === "cancelled" ? event.cancellation.returned_portions : 0), 0);
   const spoiled = events.reduce((sum, event) =>
     sum + (event.kind === "expired" ? event.expiry.spoiled_portions : 0), 0);
 
@@ -137,7 +165,7 @@ export function CookingStallHistory() {
         <History className="h-5 w-5" />Food trading history
       </CardTitle>
       <CardDescription>
-        Recent confirmed purchases, sales and expired listings for your selected character.
+        Recent confirmed purchases, sales, cancellations and expired listings for your selected character.
         Seller earnings are shown after city fees. This history is read-only.
       </CardDescription>
     </CardHeader>
@@ -179,7 +207,7 @@ export function CookingStallHistory() {
             <p className="font-semibold">{spoiled} portions</p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Totals cover only your most recent 30 receipts of each type, not lifetime earnings.</p>
+        <p className="text-xs text-muted-foreground">Totals cover only your most recent 30 receipts of each type, including cancelled returns, not lifetime earnings.</p>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Filter food trading history">
             {tabs.map(tab =>
@@ -201,22 +229,25 @@ export function CookingStallHistory() {
           {visible.map(entry => <li key={entry.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
             <div className="w-20 shrink-0 overflow-hidden rounded-md border" aria-hidden="true">
               <DishIllustration
-                recipeSlug={entry.kind === "expired" ? entry.expiry.recipe_slug : entry.sale.recipe_slug}
+                recipeSlug={receiptFood(entry).recipe_slug}
                 className="h-16 w-20"
               />
             </div>
             <div className="min-w-0 flex-1">
               <strong>{entry.kind === "bought" ? "Food bought"
                 : entry.kind === "sold" ? "Food sold"
-                : "Listing expired"} · {dishName(entry.kind === "expired" ? entry.expiry.recipe_slug : entry.sale.recipe_slug)}</strong>
+                : entry.kind === "cancelled" ? "Listing cancelled"
+                : "Listing expired"} · {dishName(receiptFood(entry).recipe_slug)}</strong>
               <p className="text-xs text-muted-foreground">{dateLabel(entry.at)}</p>
               <p className="text-xs text-muted-foreground">
-                Quality {entry.kind === "expired" ? entry.expiry.quality : entry.sale.quality}/100
-                {" · "}Original expiry {dateLabel(entry.kind === "expired" ? entry.expiry.food_expires_at : entry.sale.food_expires_at)}
+                Quality {receiptFood(entry).quality}/100
+                {" · "}Original expiry {dateLabel(receiptFood(entry).food_expires_at)}
               </p>
               {entry.kind === "expired"
                 ? <p>{entry.expiry.returned_portions} fresh portion(s) returned
                   {" · "}{entry.expiry.spoiled_portions} portion(s) spoiled</p>
+                : entry.kind === "cancelled"
+                  ? <p>{entry.cancellation.returned_portions} fresh portion(s) returned to your kitchen</p>
                 : <>
                   <p>{entry.sale.portions} portion(s) · Total {money(entry.sale.subtotal)}</p>
                   {entry.kind === "sold"

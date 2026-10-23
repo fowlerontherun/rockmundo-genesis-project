@@ -105,13 +105,30 @@ begin
 
  perform set_config('request.jwt.claim.sub',v_seller.user_id::text,true);
  perform set_config('request.jwt.claims',jsonb_build_object('sub',v_seller.user_id::text,'role','authenticated','is_anonymous',false)::text,true);
+ -- Sellers must recover still-fresh unsold escrow after an emergency trading pause.
+ update public.cooking_food_stall_controls set sales_enabled=false where singleton;
  v_closed:=public.cancel_cooking_food_stall_listing(v_seller.id,v_listing);
  if v_closed->>'status'<>'closed' or (v_closed->>'returnedPortions')::int<>1
     or (select portions from public.cooking_food_batches where id=v_id)<>3 then
    raise exception 'Unsold escrow not returned: %',v_closed;
  end if;
+ if not exists(select 1 from public.cooking_food_stall_cancellation_events
+    where listing_id=v_listing and seller_profile_id=v_seller.id
+      and returned_portions=1 and recipe_slug=v_batch.recipe_slug
+      and quality=v_batch.quality and food_expires_at=v_batch.expires_at) then
+   raise exception 'Fresh cancellation refund receipt missing or incorrect';
+ end if;
+ begin
+   update public.cooking_food_stall_cancellation_events
+   set quality=1 where listing_id=v_listing;
+   raise exception 'Cancellation receipt tampering succeeded';
+ exception when insufficient_privilege then null;
+ end;
  if public.cancel_cooking_food_stall_listing(v_seller.id,v_listing)->>'status'<> 'already_closed' then
    raise exception 'Duplicate cancellation reopened listing';
+ end if;
+ if (select count(*) from public.cooking_food_stall_cancellation_events where listing_id=v_listing)<>1 then
+   raise exception 'Duplicate cancellation issued a second receipt';
  end if;
  raise notice 'cooking_stall_test_passed (all fixture transactions will rollback)';
 end;
@@ -120,4 +137,5 @@ rollback;
 select jsonb_build_object(
   'remaining_listings',(select count(*) from public.cooking_food_stall_listings),
   'remaining_sales',(select count(*) from public.cooking_food_stall_sales),
+  'remaining_cancellations',(select count(*) from public.cooking_food_stall_cancellation_events),
   'release_enabled',(select sales_enabled from public.cooking_food_stall_controls where singleton)) as rollback_verified;
