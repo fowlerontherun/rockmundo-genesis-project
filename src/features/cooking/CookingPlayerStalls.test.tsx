@@ -107,6 +107,22 @@ describe("illustrated player cooking stalls", () => {
     client.clear();
   });
 
+  it("fails closed on conflicting offers and local ban notices from the same response", async () => {
+    state.enabled = true;
+    state.blockedRecipes = [{ recipeSlug: "apple-pie", reason: "Local trade restricted" }];
+    state.listings = [{
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      recipeSlug: "apple-pie", sellerName: "Neighbour", quality: 70,
+      portions: 1, pricePerPortion: 100,
+      expiresAt: "2099-10-23T10:00:00Z", batchExpiresAt: "2099-10-23T10:00:00Z",
+    }];
+    const { client } = renderStalls();
+    await screen.findByText("Local trade restricted");
+    expect(screen.queryByRole("button", { name: /Buy \$/ })).toBeNull();
+    expect(screen.getByText(/No fresh cooked-food listings in this city/)).toBeInTheDocument();
+    client.clear();
+  });
+
   it("keeps restriction metadata hidden while the server closes food trading", async () => {
     state.enabled = false;
     state.blockedRecipes = [{ recipeSlug: "rice-bowl", reason: "Hidden rule" }];
