@@ -256,7 +256,7 @@ export function CookingPlayerStalls() {
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            {market.data!.blockedRecipes!.map(rule => <article key={rule.recipeSlug}
+            {market.data?.blockedRecipes?.map(rule => <article key={rule.recipeSlug}
               className="flex items-center gap-3 rounded-lg border bg-secondary/20 p-2">
               <DishIllustration recipeSlug={rule.recipeSlug}
                 className="h-14 w-20 shrink-0 rounded-md" />
