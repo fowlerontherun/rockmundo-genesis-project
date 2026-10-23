@@ -63,6 +63,12 @@ begin
     where listing_id=v_second_listing and recipe_slug='rice-bowl' and quality=85
       and food_expires_at=(select expires_at from public.cooking_food_batches where id=v_second))
  then raise exception 'Expiry receipt failed immutable recipe/quality/expiry provenance'; end if;
+ begin
+   update public.cooking_food_stall_expiry_events set quality=1
+   where listing_id=v_first_listing;
+   raise exception 'Expiry receipt quality was editable';
+ exception when insufficient_privilege then null;
+ end;
  if exists(select 1 from public.cooking_food_stall_listings
     where id in(v_first_listing,v_second_listing)
      and (status<>'expired' or portions_remaining<>0 or closed_at is null)) then
