@@ -15,6 +15,11 @@ on:
         required: true
         default: false
         type: boolean
+      certify_player_stalls:
+        description: 'Also test staging-only food stall race with one seller and two distinct buyers'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -36,6 +41,13 @@ jobs:
       COOKING_STAGING_PASSWORD: ${{ secrets.COOKING_STAGING_PASSWORD }}
       COOKING_STAGING_ALLOW_WRITES: YES_STAGING_ONLY
       COOKING_STAGING_TECHNIQUES: ${{ inputs.certify_nonpan_techniques && 'YES_STAGING_ONLY' || 'NO' }}
+      COOKING_STAGING_STALL_TRADES: ${{ inputs.certify_player_stalls && 'YES_STAGING_ONLY' || 'NO' }}
+      COOKING_STAGING_STALL_SELLER_EMAIL: ${{ secrets.COOKING_STAGING_STALL_SELLER_EMAIL }}
+      COOKING_STAGING_STALL_SELLER_PASSWORD: ${{ secrets.COOKING_STAGING_STALL_SELLER_PASSWORD }}
+      COOKING_STAGING_STALL_BUYER_A_EMAIL: ${{ secrets.COOKING_STAGING_STALL_BUYER_A_EMAIL }}
+      COOKING_STAGING_STALL_BUYER_A_PASSWORD: ${{ secrets.COOKING_STAGING_STALL_BUYER_A_PASSWORD }}
+      COOKING_STAGING_STALL_BUYER_B_EMAIL: ${{ secrets.COOKING_STAGING_STALL_BUYER_B_EMAIL }}
+      COOKING_STAGING_STALL_BUYER_B_PASSWORD: ${{ secrets.COOKING_STAGING_STALL_BUYER_B_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,6 +68,16 @@ jobs:
           fi
           # The Playwright config independently rejects production hosts/refs.
           node -e 'const a=new URL(process.env.COOKING_STAGING_BASE_URL), b=new URL(process.env.COOKING_STAGING_SUPABASE_URL); if(/rockmundo\.uk$/i.test(a.hostname)||b.hostname.includes("yztogmdixmchsmimtent")||!/staging|test|preview|localhost/i.test(a.hostname)) process.exit(1);'
+      - name: Require independent staging-only stall accounts
+        if: ${{ inputs.certify_player_stalls == true }}
+        shell: bash
+        run: |
+          for key in COOKING_STAGING_STALL_SELLER_EMAIL COOKING_STAGING_STALL_SELLER_PASSWORD COOKING_STAGING_STALL_BUYER_A_EMAIL COOKING_STAGING_STALL_BUYER_A_PASSWORD COOKING_STAGING_STALL_BUYER_B_EMAIL COOKING_STAGING_STALL_BUYER_B_PASSWORD; do
+            if [[ -z "${!key}" ]]; then
+              echo "::error::Missing dedicated staging-only secret: ${key}"
+              exit 1
+            fi
+          done
       - name: Install pinned dependencies
         run: npm ci
       - name: Preflight cooking unit and character tests
