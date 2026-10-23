@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCcw, ShoppingBag, Store } from "lucide-react";
+import { RefreshCcw, ScrollText, ShoppingBag, Store } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ interface MarketResponse {
   enabled: boolean;
   cityId: string;
   listings: CityListing[];
+  /** Trusted, city-scoped legal notice; absent on older server deployments. */
+  blockedRecipes?: Array<{ recipeSlug: string; reason: string }>;
 }
 interface MyListing {
   id: string;
@@ -241,6 +243,30 @@ export function CookingPlayerStalls() {
           <RefreshCcw className="mr-2 h-4 w-4" />Refresh
         </Button>
       </div>
+      {active && Boolean(market.data?.blockedRecipes?.length) &&
+        <section aria-label="Local food trading restrictions" className="space-y-3 rounded-xl border p-3">
+          <div className="flex items-start gap-2">
+            <ScrollText className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div>
+              <h4 className="font-semibold">Local food trading rules</h4>
+              <p className="text-xs text-muted-foreground">
+                These dishes cannot be sold at stalls in your current city.
+                Local rules do not remove meals already in your kitchen.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {market.data!.blockedRecipes!.map(rule => <article key={rule.recipeSlug}
+              className="flex items-center gap-3 rounded-lg border bg-secondary/20 p-2">
+              <DishIllustration recipeSlug={rule.recipeSlug}
+                className="h-14 w-20 shrink-0 rounded-md" />
+              <div className="min-w-0 text-sm">
+                <p className="font-medium">{dishName(rule.recipeSlug)}</p>
+                <p className="text-xs text-muted-foreground">{rule.reason}</p>
+              </div>
+            </article>)}
+          </div>
+        </section>}
       {active && market.data?.listings.length === 0 && <p className="text-sm text-muted-foreground">
         No fresh cooked-food listings in this city right now.
       </p>}
