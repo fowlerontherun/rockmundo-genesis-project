@@ -133,6 +133,7 @@ export function CookingPlayerStalls() {
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: ["cooking-player-stalls", profileId, cityId] }),
       queryClient.invalidateQueries({ queryKey: ["cooking-stall-own-listings", profileId] }),
+      queryClient.invalidateQueries({ queryKey: ["cooking-stall-history", profileId] }),
       queryClient.invalidateQueries({ queryKey: ["cooking-stall-owned-food", profileId] }),
       queryClient.invalidateQueries({ queryKey: ["cooking-inventory", profileId] }),
       queryClient.invalidateQueries({ queryKey: ["cooking-food-effects", profileId] }),
