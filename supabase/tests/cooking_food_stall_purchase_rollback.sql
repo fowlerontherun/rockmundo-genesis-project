@@ -105,6 +105,8 @@ begin
 
  perform set_config('request.jwt.claim.sub',v_seller.user_id::text,true);
  perform set_config('request.jwt.claims',jsonb_build_object('sub',v_seller.user_id::text,'role','authenticated','is_anonymous',false)::text,true);
+ -- Sellers must recover still-fresh unsold escrow after an emergency trading pause.
+ update public.cooking_food_stall_controls set sales_enabled=false where singleton;
  v_closed:=public.cancel_cooking_food_stall_listing(v_seller.id,v_listing);
  if v_closed->>'status'<>'closed' or (v_closed->>'returnedPortions')::int<>1
     or (select portions from public.cooking_food_batches where id=v_id)<>3 then
