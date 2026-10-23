@@ -18,7 +18,7 @@ revoke all on public.cooking_food_stall_controls from public,anon,authenticated;
 create or replace function public.reject_unsecured_cooking_stall_open()
 returns trigger language plpgsql set search_path='' as $guard$
 begin
-  if new.status='open' and (
+  if new.status='open' and (TG_OP='INSERT' or old.status is distinct from 'open') and (
      current_setting('app.cooking_stall_escrow_verified',true) is distinct from 'yes'
      or not exists(select 1 from public.cooking_food_stall_controls
        where singleton=true and sales_enabled=true)
