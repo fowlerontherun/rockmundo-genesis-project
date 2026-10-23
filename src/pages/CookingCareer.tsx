@@ -8,6 +8,7 @@ import { CookingInventory } from "@/features/cooking/CookingInventory";
 import { CookingLiveKitchen } from "@/features/cooking/CookingLiveKitchen";
 import { CookingCityMarket } from "@/features/cooking/CookingCityMarket";
 import { CookingPlayerStalls } from "@/features/cooking/CookingPlayerStalls";
+import { CookingStallHistory } from "@/features/cooking/CookingStallHistory";
 import { CookingRecipeShoppingList } from "@/features/cooking/CookingRecipeShoppingList";
 
 export default function CookingCareer() {
@@ -16,6 +17,7 @@ export default function CookingCareer() {
     backTo="/career" backLabel="Back to Career">
     <CookingCityMarket />
     <CookingPlayerStalls />
+    <CookingStallHistory />
     <CookingRecipeShoppingList />
     <CookingLiveKitchen />
     <CookingLiveTechniques />
