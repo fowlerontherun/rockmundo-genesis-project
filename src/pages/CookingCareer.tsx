@@ -7,6 +7,7 @@ import { CookingRecipeBook } from "@/features/cooking/CookingRecipeBook";
 import { CookingInventory } from "@/features/cooking/CookingInventory";
 import { CookingLiveKitchen } from "@/features/cooking/CookingLiveKitchen";
 import { CookingCityMarket } from "@/features/cooking/CookingCityMarket";
+import { CookingPlayerStalls } from "@/features/cooking/CookingPlayerStalls";
 import { CookingRecipeShoppingList } from "@/features/cooking/CookingRecipeShoppingList";
 
 export default function CookingCareer() {
@@ -14,6 +15,7 @@ export default function CookingCareer() {
     subtitle="Practise pan timing or prepare real food when local ingredients and recipes are available."
     backTo="/career" backLabel="Back to Career">
     <CookingCityMarket />
+    <CookingPlayerStalls />
     <CookingRecipeShoppingList />
     <CookingLiveKitchen />
     <CookingLiveTechniques />
