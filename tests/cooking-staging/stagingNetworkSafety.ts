@@ -71,3 +71,54 @@ export function forbiddenCookingStagingRequest(requestUrl: string, approvedApiOr
   return (providerDomain(url.hostname) || apiPath(url.pathname)) &&
     url.origin !== allowed.origin;
 }
+
+
+/**
+ * Direct Playwright APIRequestContext calls are NOT intercepted by page.route.
+ * Validate every target BEFORE sending any bearer token, and disable redirect
+ * following so a malicious/misconfigured staging API cannot forward it.
+ */
+export function trustedCookingStagingApiUrl(
+  approvedApiOrigin: string, absoluteUrlOrPath: string,
+): string {
+  const root = new URL(approvedApiOrigin);
+  if (root.pathname !== "/" || root.search || root.hash || root.username ||
+      root.password || !["http:", "https:"].includes(root.protocol) ||
+      (root.protocol === "http:" && !localHost(root.hostname)) ||
+      gameDomain(root.hostname) ||
+      root.hostname.includes(ROCKMUNDO_PRODUCTION_SUPABASE_REF)) {
+    throw new Error("Untrusted cooking staging API origin");
+  }
+  const url = new URL(absoluteUrlOrPath, root.origin);
+  if (url.origin !== root.origin || !apiPath(url.pathname) || url.hash ||
+      url.username || url.password ||
+      forbiddenCookingStagingRequest(url.href, root.origin)) {
+    throw new Error("Cooking staging API request points outside approved API");
+  }
+  return url.href;
+}
+
+import type { APIRequestContext, APIResponse } from "@playwright/test";
+
+export async function cookingStagingApiGet(
+  request: APIRequestContext,
+  apiOrigin: string,
+  path: string,
+  headers: Record<string,string>,
+): Promise<APIResponse> {
+  return request.get(trustedCookingStagingApiUrl(apiOrigin, path), {
+    headers, maxRedirects: 0, timeout: 30_000,
+  });
+}
+
+export async function cookingStagingApiPost(
+  request: APIRequestContext,
+  apiOrigin: string,
+  path: string,
+  headers: Record<string,string>,
+  data: Record<string,unknown>,
+): Promise<APIResponse> {
+  return request.post(trustedCookingStagingApiUrl(apiOrigin, path), {
+    headers, data, maxRedirects: 0, timeout: 30_000,
+  });
+}
