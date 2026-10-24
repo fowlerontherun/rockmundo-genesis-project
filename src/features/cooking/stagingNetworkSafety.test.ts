@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  cookingStagingApiGet,
+  cookingStagingApiPost,
+  trustedCookingStagingApiUrl,
   forbiddenCookingStagingRequest,
   validateCookingStagingOrigins,
 } from "../../../tests/cooking-staging/stagingNetworkSafety";
@@ -58,6 +61,43 @@ describe("isolated cooking staging host safety", () => {
     ]) {
       expect(forbiddenCookingStagingRequest(url,api),url).toBe(true);
     }
+  });
+
+  it("validates direct API request URL and blocks production targets before sending a bearer token", async () => {
+    const post = vi.fn(async () => ({ status: () => 403 }));
+    const request = { post } as unknown as Parameters<typeof cookingStagingApiPost>[0];
+    const headers = { Authorization: "Bearer staging-only-jwt" };
+    for (const url of [
+      "https://yztogmdixmchsmimtent.supabase.co/rest/v1/rpc/withdraw",
+      "https://api.rockmundo.uk/functions/v1/cooking-session",
+      "https://foreign.supabase.co/rest/v1/profiles",
+      "https://foreign.example.test/auth/v1/token",
+      "https://unknown.example.test/not-an-api",
+      "http://isolated-test.supabase.co/rest/v1/profiles",
+      "https://someone:secret@isolated-test.supabase.co/rest/v1/profiles",
+    ]) {
+      expect(() => trustedCookingStagingApiUrl(api,url), url).toThrow();
+      await expect(cookingStagingApiPost(request,api,url,headers,{})).rejects.toThrow();
+    }
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("uses only the approved staging API with redirects disabled for reads and writes", async () => {
+    const get = vi.fn(async () => ({ status: () => 200 }));
+    const post = vi.fn(async () => ({ status: () => 400 }));
+    const request = { get,post } as unknown as Parameters<typeof cookingStagingApiGet>[0];
+    const headers = { Authorization: "Bearer test-value", apikey: "disposable-key" };
+    const body = { p_profile_id: "disposable" };
+    await cookingStagingApiGet(request, api, "/rest/v1/profiles?select=cash", headers);
+    await cookingStagingApiPost(request, api, "/rest/v1/rpc/browse_cooking_food_stalls", headers, body);
+    expect(get).toHaveBeenCalledWith(`${api}/rest/v1/profiles?select=cash`, {
+      headers, maxRedirects: 0, timeout: 30_000,
+    });
+    expect(post).toHaveBeenCalledWith(`${api}/rest/v1/rpc/browse_cooking_food_stalls`, {
+      headers, data: body, maxRedirects: 0, timeout: 30_000,
+    });
+    expect(trustedCookingStagingApiUrl(api, `${api}/functions/v1/cooking-session`))
+      .toBe(`${api}/functions/v1/cooking-session`);
   });
 
   it("allows only the configured API and harmless third-party assets", () => {
