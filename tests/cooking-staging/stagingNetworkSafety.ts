@@ -16,6 +16,8 @@ const gameDomain = (hostname: string) =>
   hostname === "rockmundo.uk" || hostname.endsWith(".rockmundo.uk");
 const localHost = (hostname: string) =>
   hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+const namedStagingHost = (hostname: string) =>
+  /(?:^|[.-])(?:staging|test|preview)(?:[.-]|$)/i.test(hostname);
 const apiPath = (pathname: string) =>
   /^\/(?:auth|rest|functions|storage|realtime|graphql|pg)\/v1(?:\/|$)/i.test(pathname);
 
@@ -35,7 +37,7 @@ export function validateCookingStagingOrigins(appInput: string, apiInput: string
   }
   // The UI must be an explicitly named disposable staging/preview/local host.
   // A production app pointed at staging auth is still a dangerous test target.
-  if (!localHost(app.hostname) && !/(?:^|[.-])(?:staging|test|preview)(?:[.-]|$)/i.test(app.hostname)) {
+  if (!localHost(app.hostname) && !namedStagingHost(app.hostname)) {
     throw new Error("Cooking staging frontend must be a staging/test/preview origin");
   }
   if (providerDomain(app.hostname)) {
@@ -43,6 +45,10 @@ export function validateCookingStagingOrigins(appInput: string, apiInput: string
   }
   if (providerDomain(api.hostname) && api.hostname.split(".").length < 3) {
     throw new Error("Cooking staging API must name an isolated Supabase project");
+  }
+  if (!providerDomain(api.hostname) && !localHost(api.hostname) &&
+      !namedStagingHost(api.hostname)) {
+    throw new Error("Custom-domain staging API must explicitly identify staging/preview");
   }
   // A protected GitHub environment and the manually verified isolated DB are
   // still required: no URL-only heuristic can certify a production clone.
