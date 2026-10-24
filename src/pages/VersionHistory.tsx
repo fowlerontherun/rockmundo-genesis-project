@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.798",
+    date: "2026-10-24",
+    changes: [
+      { type: "fix", description: "Record sales, daily streams, charts and 24 other scheduled game jobs had been refused since 13 Oct because of an outdated job key; they now run again, so new releases (e.g. Shockmaster's album) start selling." },
+    ],
+  },
+  {
     version: "1.1.797",
     date: "2026-10-21",
     changes: [
