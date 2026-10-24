@@ -23,7 +23,12 @@ function required(name: string): string {
 }
 
 async function login(browser: Browser, role: "SELLER" | "BUYER_A" | "BUYER_B"): Promise<StagingActor> {
-  const context = await browser.newContext();
+  // browser.newContext() does not inherit Playwright's test.use(baseURL).
+  // These three isolated contexts need the verified staging app origin
+  // explicitly or page.goto("/auth") fails before any race assertions run.
+  const context = await browser.newContext({
+    baseURL: new URL(required("COOKING_STAGING_BASE_URL")).origin,
+  });
   const page = await context.newPage();
   const email = required(`COOKING_STAGING_STALL_${role}_EMAIL`);
   const password = required(`COOKING_STAGING_STALL_${role}_PASSWORD`);
