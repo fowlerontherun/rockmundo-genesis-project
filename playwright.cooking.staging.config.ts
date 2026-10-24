@@ -31,6 +31,9 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "playwright-report/cooking-staging", open: "never" }]],
   use: {
     baseURL: appOrigin,
+    // Playwright page.route() does not intercept service-worker-owned requests.
+    // Blocking service workers makes the staging network guard effective.
+    serviceWorkers: "block",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     actionTimeout: 12_000,
