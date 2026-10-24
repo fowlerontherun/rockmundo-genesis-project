@@ -16,7 +16,7 @@ on:
         default: false
         type: boolean
       certify_player_stalls:
-        description: 'Also test staging-only food stall race with one seller and two distinct buyers'
+        description: 'Also test staging-only buyer/buyer and seller/cancel race (3 accounts)'
         required: true
         default: false
         type: boolean
