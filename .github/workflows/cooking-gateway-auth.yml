@@ -36,3 +36,18 @@ jobs:
         run: npm run test:cooking
       - name: Typecheck
         run: npm run typecheck
+      - name: Parse opt-in staging Playwright contracts (no browser or network)
+        # These .invalid hosts and throwaway credentials are deliberately not
+        # usable. --list compiles/discovers specifications without executing
+        # tests, launching browsers, spending game cash or calling a server.
+        env:
+          COOKING_STAGING_BASE_URL: https://cooking-staging-tests.invalid
+          COOKING_STAGING_SUPABASE_URL: https://cooking-staging-api.invalid
+          COOKING_STAGING_EMAIL: unused@example.invalid
+          COOKING_STAGING_PASSWORD: never-used
+          COOKING_STAGING_ALLOW_WRITES: YES_STAGING_ONLY
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright test --config=playwright.cooking.staging.config.ts --list | tee /tmp/cooking-staging-test-list.txt
+          grep -q 'concurrent seller cancellation settle food escrow exactly once' /tmp/cooking-staging-test-list.txt
