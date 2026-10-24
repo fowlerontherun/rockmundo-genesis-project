@@ -1,9 +1,9 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
+import { cookingStagingApiGet, cookingStagingApiPost, forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
 
 // Opt-in only: requires an ISOLATED staging app+Supabase project and three
 // disposable, independently authenticated user accounts in the same city.
-// The seller must own a fresh unlisted legal recipe batch with >=1 portion.
+// The seller must own a fresh unlisted legal recipe batch with >=2 portions.
 // All three accounts should have no unrelated cash-generating jobs running.
 // This file never runs as part of normal CI or against production.
 const stagingApi = new URL(process.env.COOKING_STAGING_SUPABASE_URL!).origin;
@@ -86,18 +86,13 @@ async function login(browser: Browser, role: "SELLER" | "BUYER_A" | "BUYER_B"): 
 
 async function rpc(actor: StagingActor, name: string, body: Record<string, unknown>) {
   // Deliberately construct every API URL from the verified staging-only origin.
-  return actor.page.request.post(`${stagingApi}/rest/v1/rpc/${name}`, {
-    headers: actor.headers,
-    data: body,
-    timeout: 30_000,
-  });
+  return cookingStagingApiPost(actor.page.request, stagingApi,
+    `/rest/v1/rpc/${name}`, actor.headers, body);
 }
 
 async function readOriginalBatch(actor: StagingActor, batchId: string) {
-  const result = await actor.page.request.get(
-    `${stagingApi}/rest/v1/cooking_food_batches?select=id,profile_id,recipe_slug,quality,portions,prepared_at,expires_at&id=eq.${batchId}`,
-    { headers: actor.headers },
-  );
+  const result = await cookingStagingApiGet(actor.page.request, stagingApi,
+        `/rest/v1/cooking_food_batches?select=id,profile_id,recipe_slug,quality,portions,prepared_at,expires_at&id=eq.${batchId}`, actor.headers);
   expect(result.ok(), "The seller must be able to read the original food batch").toBe(true);
   const rows = await result.json() as Array<{
     id: string; profile_id: string; recipe_slug: string; quality: number;
@@ -109,10 +104,8 @@ async function readOriginalBatch(actor: StagingActor, batchId: string) {
 }
 
 async function readCash(actor: StagingActor): Promise<number> {
-  const result = await actor.page.request.get(
-    `${stagingApi}/rest/v1/profiles?select=id,cash&id=eq.${actor.profileId}`,
-    { headers: actor.headers },
-  );
+  const result = await cookingStagingApiGet(actor.page.request, stagingApi,
+        `/rest/v1/profiles?select=id,cash&id=eq.${actor.profileId}`, actor.headers);
   expect(result.ok(), "The signed-in staging character must read its own cash").toBe(true);
   const rows = await result.json() as Array<{ id: string; cash: number }>;
   expect(rows).toHaveLength(1);
@@ -211,10 +204,8 @@ test("two buyers and concurrent seller cancellation settle food escrow exactly o
       status: "already_completed", saleId: settlement.saleId, batchId: settlement.batchId,
     });
 
-    const sellerSales = await seller.page.request.get(
-      `${stagingApi}/rest/v1/cooking_food_stall_sales?select=id,purchase_id,buyer_profile_id,portions,subtotal,city_fee&listing_id=eq.${listed.listingId}`,
-      { headers: seller.headers },
-    );
+    const sellerSales = await cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_sales?select=id,purchase_id,buyer_profile_id,portions,subtotal,city_fee&listing_id=eq.${listed.listingId}`, seller.headers);
     expect(sellerSales.ok()).toBe(true);
     const sales = await sellerSales.json() as Array<{
       id: string; buyer_profile_id: string; portions: number; subtotal: number; city_fee: number;
@@ -230,19 +221,15 @@ test("two buyers and concurrent seller cancellation settle food escrow exactly o
     expect(after[1] - before[1]).toBe(winnerIndex === 0 ? -150 : 0);
     expect(after[2] - before[2]).toBe(winnerIndex === 1 ? -150 : 0);
 
-    const source = await seller.page.request.get(
-      `${stagingApi}/rest/v1/cooking_food_stall_listings?select=status,portions_remaining&id=eq.${listed.listingId}`,
-      { headers: seller.headers },
-    );
+    const source = await cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_listings?select=status,portions_remaining&id=eq.${listed.listingId}`, seller.headers);
     expect(source.ok()).toBe(true);
     expect(await source.json()).toEqual([{ status: "sold",portions_remaining: 0 }]);
 
     // The first sale's destination batch must keep the original recipe,
     // quality and exact food expiry. Trading cannot reset a meal's freshness.
-    const winningBatch = await winner.page.request.get(
-      `${stagingApi}/rest/v1/cooking_food_batches?select=recipe_slug,quality,prepared_at,expires_at,portions,profile_id&id=eq.${settlement.batchId}`,
-      { headers: winner.headers },
-    );
+    const winningBatch = await cookingStagingApiGet(winner.page.request, stagingApi,
+        `/rest/v1/cooking_food_batches?select=recipe_slug,quality,prepared_at,expires_at,portions,profile_id&id=eq.${settlement.batchId}`, winner.headers);
     expect(winningBatch.ok()).toBe(true);
     expect(await winningBatch.json()).toEqual([{
       recipe_slug: original.recipe_slug, quality: original.quality,
@@ -311,18 +298,12 @@ test("two buyers and concurrent seller cancellation settle food escrow exactly o
     }
 
     const [finalListingResponse, finalSalesResponse, finalCancelResponse] = await Promise.all([
-      seller.page.request.get(
-        `${stagingApi}/rest/v1/cooking_food_stall_listings?select=status,portions_remaining&id=eq.${second.listingId}`,
-        { headers: seller.headers },
-      ),
-      seller.page.request.get(
-        `${stagingApi}/rest/v1/cooking_food_stall_sales?select=id,portions,subtotal,city_fee,recipe_slug,food_expires_at&listing_id=eq.${second.listingId}`,
-        { headers: seller.headers },
-      ),
-      seller.page.request.get(
-        `${stagingApi}/rest/v1/cooking_food_stall_cancellation_events?select=id,returned_portions,recipe_slug,quality,food_expires_at&listing_id=eq.${second.listingId}`,
-        { headers: seller.headers },
-      ),
+      cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_listings?select=status,portions_remaining&id=eq.${second.listingId}`, seller.headers),
+      cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_sales?select=id,portions,subtotal,city_fee,recipe_slug,food_expires_at&listing_id=eq.${second.listingId}`, seller.headers),
+      cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_cancellation_events?select=id,returned_portions,recipe_slug,quality,food_expires_at&listing_id=eq.${second.listingId}`, seller.headers),
     ]);
     for (const result of [finalListingResponse, finalSalesResponse, finalCancelResponse]) {
       expect(result.ok()).toBe(true);
@@ -383,10 +364,8 @@ test("two buyers and concurrent seller cancellation settle food escrow exactly o
     expect((await cancelAgain.json() as { status: string }).status).toBe("already_closed");
     expect((await readOriginalBatch(seller, selectedBatchId)).portions)
       .toBe(finalOriginal.portions);
-    const secondSalesAfterRetry = await seller.page.request.get(
-      `${stagingApi}/rest/v1/cooking_food_stall_sales?select=id&listing_id=eq.${second.listingId}`,
-      { headers: seller.headers },
-    );
+    const secondSalesAfterRetry = await cookingStagingApiGet(seller.page.request, stagingApi,
+        `/rest/v1/cooking_food_stall_sales?select=id&listing_id=eq.${second.listingId}`, seller.headers);
     expect(secondSalesAfterRetry.ok()).toBe(true);
     expect(await secondSalesAfterRetry.json()).toHaveLength(buyWon ? 1 : 0);
   } finally {

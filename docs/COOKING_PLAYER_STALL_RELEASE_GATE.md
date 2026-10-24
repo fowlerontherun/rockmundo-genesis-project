@@ -158,3 +158,13 @@ New `stagingNetworkSafety.test.ts` under the ordinary cooking Vitest suite verif
 This change is tests/CI-only; no live schema, player funds, recipes or feature flags were modified. Production cooking and stalls must remain off until separate genuine signed-in staging certification.
 
 **Service-worker bypass protection:** Playwright's page-level request routing does not intercept requests handled by service workers. The staging config now specifies `serviceWorkers: "block"` for its standard Playwright pages, and the three-account race test passes that option independently into every `browser.newContext()` it creates. This prevents a previously installed frontend service worker from circumventing the custom-domain API guard. The staging suite remains opt-in and network-free in ordinary CI (which only parses/discovers specs).
+
+## Redirect-safe authenticated staging API calls — 24 October 2026
+
+A follow-on security gap remained after the custom-domain browser-guard change: `page.route()` protects Chromium page requests, **not** direct `page.request.get/post` (Playwright `APIRequestContext`) calls. By default the direct request methods can follow HTTP redirects, which could forward disposable staging bearer credentials to an unexpected destination. The staging test suite now exclusively uses two shared direct-API helpers, `cookingStagingApiGet` and `cookingStagingApiPost`, each of which **validates the API endpoint origin and known-production host BEFORE sending** and specifies `maxRedirects: 0` on every authenticated direct API request.
+
+Coverage includes every direct read and purchase/cancellation RPC in the three-account food stall races, plus both unauthorised-character checks in the signed-in cooking journey. Passing a captured cooking-session Edge Function URL into a direct request is now explicitly verified against the configured staging API origin; a browser-level guard alone is not treated as permission to send credentials. Unit tests assert that attempts to address a foreign Supabase project, custom API, live domain or unrelated web URL throw before calling the mock HTTP client, while valid same-origin reads/posts set `maxRedirects: 0`.
+
+The cooking journey's browser route guard also had a latent exception-path bug: it appended `url.origin` after removing its `url` declaration in the preceding safety pass. This is corrected to derive the origin from `route.request().url()`, ensuring that blocked unexpected requests cause a meaningful failure rather than a `ReferenceError`.
+
+These are certification-harness and documentation changes only. They do not establish an isolated staging environment, do not execute live multiplayer tests, and do not change production cash, recipe availability or marketplace flags.

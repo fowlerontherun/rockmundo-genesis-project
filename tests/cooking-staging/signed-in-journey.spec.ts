@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
+import { cookingStagingApiPost, forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
 
 // A real signed-in browser journey, NOT a synthetic database-local JWT test.
 // Test account and its current city must be seeded in an isolated staging
@@ -13,7 +13,7 @@ async function signInToIsolatedStaging(page: Page) {
   // frontend accidentally configured for production must never be used.
   await page.route("**/*", async (route) => {
     if (forbiddenCookingStagingRequest(route.request().url(), stagingSupabase)) {
-      foreignSupabaseCalls.push(url.origin);
+      foreignSupabaseCalls.push(new URL(route.request().url()).origin);
       await route.abort("blockedbyclient");
     } else {
       await route.continue();
@@ -88,16 +88,14 @@ test.describe("staging-only signed-in cooking release gate", () => {
       apikey: apiKey,
       "Content-Type": "application/json",
     };
-    const stolenCharacter = await page.request.post(startedBy.url(), {
-      headers: requestHeaders,
-      data: { action: "status", sessionId: startBody.sessionId, profileId: badProfile },
-    });
+    const stolenCharacter = await cookingStagingApiPost(
+      page.request, stagingSupabase, startedBy.url(), requestHeaders, { action: "status", sessionId: startBody.sessionId, profileId: badProfile },
+    );
     expect(stolenCharacter.status(), "A valid JWT must not authorize another character ID").toBe(403);
     expect((await stolenCharacter.json()).error).toBe("active_character_mismatch");
-    const missingCharacter = await page.request.post(startedBy.url(), {
-      headers: requestHeaders,
-      data: { action: "status", sessionId: startBody.sessionId },
-    });
+    const missingCharacter = await cookingStagingApiPost(
+      page.request, stagingSupabase, startedBy.url(), requestHeaders, { action: "status", sessionId: startBody.sessionId },
+    );
     expect(missingCharacter.status(), "A missing character claim must fail closed").toBe(400);
     expect((await missingCharacter.json()).error).toBe("character_id_required");
 
