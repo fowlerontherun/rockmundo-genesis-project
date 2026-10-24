@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { validateCookingStagingOrigins } from "./tests/cooking-staging/stagingNetworkSafety";
 
 const required = [
   "COOKING_STAGING_BASE_URL",
@@ -13,17 +14,13 @@ if (missing.length) {
 if (process.env.COOKING_STAGING_ALLOW_WRITES !== "YES_STAGING_ONLY") {
   throw new Error("Cooking browser purchase/cook/eat test requires explicit staging-only write acknowledgement");
 }
-const appUrl = new URL(process.env.COOKING_STAGING_BASE_URL!);
-const apiUrl = new URL(process.env.COOKING_STAGING_SUPABASE_URL!);
-const productionSupabase = "yztogmdixmchsmimtent";
-if (!["http:", "https:"].includes(appUrl.protocol) ||
-    !["http:", "https:"].includes(apiUrl.protocol) ||
-    /(^|\.)rockmundo\.uk$/i.test(appUrl.hostname) ||
-    /(^|\.)rockmundo\.uk$/i.test(apiUrl.hostname) ||
-    apiUrl.hostname.includes(productionSupabase) ||
-    !/(staging|test|localhost|127\.0\.0\.1|preview)/i.test(appUrl.hostname)) {
-  throw new Error("Cooking E2E must use a clearly named staging/preview app and a nonproduction Supabase project");
-}
+const { appOrigin, apiOrigin } = validateCookingStagingOrigins(
+  process.env.COOKING_STAGING_BASE_URL!,
+  process.env.COOKING_STAGING_SUPABASE_URL!,
+);
+// The API origin is validated at config load, before running any test.
+// Individual browser tests also refuse HTTP calls to a different API.
+void apiOrigin;
 
 export default defineConfig({
   testDir: "./tests/cooking-staging",
@@ -33,7 +30,10 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report/cooking-staging", open: "never" }]],
   use: {
-    baseURL: appUrl.origin,
+    baseURL: appOrigin,
+    // Playwright page.route() does not intercept service-worker-owned requests.
+    // Blocking service workers makes the staging network guard effective.
+    serviceWorkers: "block",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     actionTimeout: 12_000,

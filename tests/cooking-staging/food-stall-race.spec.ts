@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
 
 // Opt-in only: requires an ISOLATED staging app+Supabase project and three
 // disposable, independently authenticated user accounts in the same city.
@@ -6,7 +7,7 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 // All three accounts should have no unrelated cash-generating jobs running.
 // This file never runs as part of normal CI or against production.
 const stagingApi = new URL(process.env.COOKING_STAGING_SUPABASE_URL!).origin;
-const productionProjectId = "yztogmdixmchsmimtent";
+
 
 interface StagingActor {
   page: Page;
@@ -28,16 +29,16 @@ async function login(browser: Browser, role: "SELLER" | "BUYER_A" | "BUYER_B"): 
   // explicitly or page.goto("/auth") fails before any race assertions run.
   const context = await browser.newContext({
     baseURL: new URL(required("COOKING_STAGING_BASE_URL")).origin,
+    // Standalone browser contexts do not inherit test fixture settings.
+    serviceWorkers: "block",
   });
   const page = await context.newPage();
   const email = required(`COOKING_STAGING_STALL_${role}_EMAIL`);
   const password = required(`COOKING_STAGING_STALL_${role}_PASSWORD`);
   const foreignApiHosts: string[] = [];
   await page.route("**/*", async route => {
-    const url = new URL(route.request().url());
-    const supabaseHost = url.hostname === "supabase.co" || url.hostname.endsWith(".supabase.co");
-    if (url.hostname.includes(productionProjectId) || (supabaseHost && url.origin !== stagingApi)) {
-      foreignApiHosts.push(url.origin);
+    if (forbiddenCookingStagingRequest(route.request().url(), stagingApi)) {
+      foreignApiHosts.push(new URL(route.request().url()).origin);
       await route.abort("blockedbyclient");
       return;
     }

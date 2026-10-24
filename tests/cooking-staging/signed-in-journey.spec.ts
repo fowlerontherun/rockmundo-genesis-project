@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
 
 // A real signed-in browser journey, NOT a synthetic database-local JWT test.
 // Test account and its current city must be seeded in an isolated staging
@@ -11,8 +12,7 @@ async function signInToIsolatedStaging(page: Page) {
   // Abort unexpected Supabase targets BEFORE the first write. A staging
   // frontend accidentally configured for production must never be used.
   await page.route("**/*", async (route) => {
-    const url = new URL(route.request().url());
-    if (/(^|\.)supabase\.co$/.test(url.hostname) && url.origin !== stagingSupabase) {
+    if (forbiddenCookingStagingRequest(route.request().url(), stagingSupabase)) {
       foreignSupabaseCalls.push(url.origin);
       await route.abort("blockedbyclient");
     } else {
