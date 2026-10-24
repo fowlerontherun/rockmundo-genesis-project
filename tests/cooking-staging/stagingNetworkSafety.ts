@@ -16,8 +16,12 @@ const gameDomain = (hostname: string) =>
   hostname === "rockmundo.uk" || hostname.endsWith(".rockmundo.uk");
 const localHost = (hostname: string) =>
   hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-const namedStagingHost = (hostname: string) =>
-  /(?:^|[.-])(?:staging|test|preview)(?:[.-]|$)/i.test(hostname);
+const namedStagingHost = (hostname: string) => {
+  // Ignore the public suffix. A generic game.example.test is NOT an
+  // explicitly staged app merely because its TLD happens to be ".test".
+  const labelsWithoutSuffix = hostname.split(".").slice(0, -1).join(".");
+  return /(?:^|[.-])(?:staging|test|preview)(?:[.-]|$)/i.test(labelsWithoutSuffix);
+};
 const apiPath = (pathname: string) =>
   /^\/(?:auth|rest|functions|storage|realtime|graphql|pg)\/v1(?:\/|$)/i.test(pathname);
 
