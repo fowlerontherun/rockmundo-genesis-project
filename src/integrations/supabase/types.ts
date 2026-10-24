@@ -313,6 +313,8 @@ export type Database = {
           band_id: string
           cohesion_gained: number
           familiarity_minutes_gained: number
+          food_bonus_minutes: number
+          food_bonus_percent: number
           id: string
           lost_hits: number
           perfect_hits: number
@@ -328,6 +330,8 @@ export type Database = {
           band_id: string
           cohesion_gained?: number
           familiarity_minutes_gained?: number
+          food_bonus_minutes?: number
+          food_bonus_percent?: number
           id?: string
           lost_hits?: number
           perfect_hits?: number
@@ -343,6 +347,8 @@ export type Database = {
           band_id?: string
           cohesion_gained?: number
           familiarity_minutes_gained?: number
+          food_bonus_minutes?: number
+          food_bonus_percent?: number
           id?: string
           lost_hits?: number
           perfect_hits?: number
@@ -13293,6 +13299,1253 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_active_food_effects: {
+        Row: {
+          effect_percent: number
+          effect_slug: string
+          expires_at: string
+          profile_id: string
+          source_consumption_id: string
+          started_at: string
+        }
+        Insert: {
+          effect_percent: number
+          effect_slug: string
+          expires_at: string
+          profile_id: string
+          source_consumption_id: string
+          started_at: string
+        }
+        Update: {
+          effect_percent?: number
+          effect_slug?: string
+          expires_at?: string
+          profile_id?: string
+          source_consumption_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_active_food_effects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_active_food_effects_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_active_food_effects_source_consumption_id_fkey"
+            columns: ["source_consumption_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_consumptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_city_market_investments: {
+        Row: {
+          city_id: string
+          cost: number
+          id: string
+          invested_at: string
+          mayor_id: string
+          new_level: number
+          old_level: number
+          profile_id: string
+          request_id: string
+        }
+        Insert: {
+          city_id: string
+          cost: number
+          id?: string
+          invested_at?: string
+          mayor_id: string
+          new_level: number
+          old_level: number
+          profile_id: string
+          request_id: string
+        }
+        Update: {
+          city_id?: string
+          cost?: number
+          id?: string
+          invested_at?: string
+          mayor_id?: string
+          new_level?: number
+          old_level?: number
+          profile_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_city_market_investments_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_city_market_investments_mayor_id_fkey"
+            columns: ["mayor_id"]
+            isOneToOne: false
+            referencedRelation: "city_mayors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_city_market_investments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_city_market_investments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_city_market_levels: {
+        Row: {
+          city_id: string
+          last_upgraded_at: string | null
+          level: number
+          total_invested: number
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          last_upgraded_at?: string | null
+          level?: number
+          total_invested?: number
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          last_upgraded_at?: string | null
+          level?: number
+          total_invested?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_city_market_levels_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_city_market_offers: {
+        Row: {
+          baseline_max_stock: number
+          baseline_quality: number
+          city_id: string
+          id: string
+          ingredient_slug: string
+          is_active: boolean
+          local_speciality: boolean
+          max_stock: number
+          quality: number
+          stock: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          baseline_max_stock?: number
+          baseline_quality?: number
+          city_id: string
+          id?: string
+          ingredient_slug: string
+          is_active?: boolean
+          local_speciality?: boolean
+          max_stock: number
+          quality: number
+          stock: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          baseline_max_stock?: number
+          baseline_quality?: number
+          city_id?: string
+          id?: string
+          ingredient_slug?: string
+          is_active?: boolean
+          local_speciality?: boolean
+          max_stock?: number
+          quality?: number
+          stock?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_city_market_offers_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_city_market_offers_ingredient_slug_fkey"
+            columns: ["ingredient_slug"]
+            isOneToOne: false
+            referencedRelation: "cooking_market_ingredients"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      cooking_food_batches: {
+        Row: {
+          crafting_session_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          origin_city_id: string | null
+          portions: number
+          prepared_at: string
+          profile_id: string
+          quality: number
+          recipe_slug: string
+        }
+        Insert: {
+          crafting_session_id?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          origin_city_id?: string | null
+          portions: number
+          prepared_at: string
+          profile_id: string
+          quality: number
+          recipe_slug: string
+        }
+        Update: {
+          crafting_session_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          origin_city_id?: string | null
+          portions?: number
+          prepared_at?: string
+          profile_id?: string
+          quality?: number
+          recipe_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_batches_origin_city_id_fkey"
+            columns: ["origin_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_batches_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_batches_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_consumptions: {
+        Row: {
+          consumed_at: string
+          effect_applied: boolean
+          effect_expires_at: string | null
+          effect_percent: number
+          effect_slug: string | null
+          food_batch_id: string
+          id: string
+          profile_id: string
+          quality: number
+          recipe_slug: string
+          remaining_portions: number
+          request_id: string
+        }
+        Insert: {
+          consumed_at?: string
+          effect_applied?: boolean
+          effect_expires_at?: string | null
+          effect_percent?: number
+          effect_slug?: string | null
+          food_batch_id: string
+          id?: string
+          profile_id: string
+          quality: number
+          recipe_slug: string
+          remaining_portions: number
+          request_id: string
+        }
+        Update: {
+          consumed_at?: string
+          effect_applied?: boolean
+          effect_expires_at?: string | null
+          effect_percent?: number
+          effect_slug?: string | null
+          food_batch_id?: string
+          id?: string
+          profile_id?: string
+          quality?: number
+          recipe_slug?: string
+          remaining_portions?: number
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_consumptions_food_batch_id_fkey"
+            columns: ["food_batch_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_consumptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_consumptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_stall_approved_recipes: {
+        Row: {
+          approved_at: string
+          recipe_slug: string
+        }
+        Insert: {
+          approved_at?: string
+          recipe_slug: string
+        }
+        Update: {
+          approved_at?: string
+          recipe_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_approved_recipes_recipe_slug_fkey"
+            columns: ["recipe_slug"]
+            isOneToOne: true
+            referencedRelation: "cooking_recipes"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      cooking_food_stall_cancellation_events: {
+        Row: {
+          cancelled_at: string
+          food_expires_at: string
+          id: string
+          listing_id: string
+          quality: number
+          recipe_slug: string
+          returned_portions: number
+          seller_profile_id: string
+        }
+        Insert: {
+          cancelled_at?: string
+          food_expires_at: string
+          id?: string
+          listing_id: string
+          quality: number
+          recipe_slug: string
+          returned_portions: number
+          seller_profile_id: string
+        }
+        Update: {
+          cancelled_at?: string
+          food_expires_at?: string
+          id?: string
+          listing_id?: string
+          quality?: number
+          recipe_slug?: string
+          returned_portions?: number
+          seller_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_cancellation_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "cooking_food_stall_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_cancellation_events_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_cancellation_events_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_stall_city_recipe_blocks: {
+        Row: {
+          blocked: boolean
+          city_id: string
+          reason: string
+          recipe_slug: string
+          updated_at: string
+        }
+        Insert: {
+          blocked?: boolean
+          city_id: string
+          reason?: string
+          recipe_slug: string
+          updated_at?: string
+        }
+        Update: {
+          blocked?: boolean
+          city_id?: string
+          reason?: string
+          recipe_slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_city_recipe_blocks_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_stall_controls: {
+        Row: {
+          fee_basis_points: number
+          sales_enabled: boolean
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          fee_basis_points?: number
+          sales_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          fee_basis_points?: number
+          sales_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cooking_food_stall_expiry_events: {
+        Row: {
+          food_expires_at: string
+          id: string
+          listing_id: string
+          processed_at: string
+          quality: number
+          recipe_slug: string
+          returned_portions: number
+          seller_profile_id: string
+          spoiled_portions: number
+        }
+        Insert: {
+          food_expires_at: string
+          id?: string
+          listing_id: string
+          processed_at?: string
+          quality: number
+          recipe_slug: string
+          returned_portions: number
+          seller_profile_id: string
+          spoiled_portions: number
+        }
+        Update: {
+          food_expires_at?: string
+          id?: string
+          listing_id?: string
+          processed_at?: string
+          quality?: number
+          recipe_slug?: string
+          returned_portions?: number
+          seller_profile_id?: string
+          spoiled_portions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_expiry_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "cooking_food_stall_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_expiry_events_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_expiry_events_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_stall_listings: {
+        Row: {
+          city_id: string
+          closed_at: string | null
+          created_at: string
+          expires_at: string
+          food_batch_id: string
+          id: string
+          opened_at: string | null
+          portions_remaining: number
+          portions_reserved: number
+          price_per_portion: number
+          seller_profile_id: string
+          status: string
+        }
+        Insert: {
+          city_id: string
+          closed_at?: string | null
+          created_at?: string
+          expires_at: string
+          food_batch_id: string
+          id?: string
+          opened_at?: string | null
+          portions_remaining: number
+          portions_reserved: number
+          price_per_portion: number
+          seller_profile_id: string
+          status?: string
+        }
+        Update: {
+          city_id?: string
+          closed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          food_batch_id?: string
+          id?: string
+          opened_at?: string | null
+          portions_remaining?: number
+          portions_reserved?: number
+          price_per_portion?: number
+          seller_profile_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_listings_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_listings_food_batch_id_fkey"
+            columns: ["food_batch_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_food_stall_sales: {
+        Row: {
+          buyer_profile_id: string
+          city_fee: number
+          city_id: string
+          destination_batch_id: string
+          food_expires_at: string
+          id: string
+          listing_id: string
+          portions: number
+          purchase_id: string
+          purchased_at: string
+          quality: number
+          recipe_slug: string
+          seller_proceeds: number
+          seller_profile_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          buyer_profile_id: string
+          city_fee: number
+          city_id: string
+          destination_batch_id: string
+          food_expires_at: string
+          id?: string
+          listing_id: string
+          portions: number
+          purchase_id: string
+          purchased_at?: string
+          quality: number
+          recipe_slug: string
+          seller_proceeds: number
+          seller_profile_id: string
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          buyer_profile_id?: string
+          city_fee?: number
+          city_id?: string
+          destination_batch_id?: string
+          food_expires_at?: string
+          id?: string
+          listing_id?: string
+          portions?: number
+          purchase_id?: string
+          purchased_at?: string
+          quality?: number
+          recipe_slug?: string
+          seller_proceeds?: number
+          seller_profile_id?: string
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_food_stall_sales_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_destination_batch_id_fkey"
+            columns: ["destination_batch_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_stall_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_food_stall_sales_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_ingredient_cook_windows: {
+        Row: {
+          burnt_seconds: number
+          ingredient_slug: string
+          overdone_seconds: number
+          ready_seconds: number
+        }
+        Insert: {
+          burnt_seconds: number
+          ingredient_slug: string
+          overdone_seconds: number
+          ready_seconds: number
+        }
+        Update: {
+          burnt_seconds?: number
+          ingredient_slug?: string
+          overdone_seconds?: number
+          ready_seconds?: number
+        }
+        Relationships: []
+      }
+      cooking_ingredient_lots: {
+        Row: {
+          acquired_at: string
+          created_at: string
+          expires_at: string
+          id: string
+          ingredient_slug: string
+          origin_city_id: string | null
+          profile_id: string
+          quality: number
+          quantity: number
+        }
+        Insert: {
+          acquired_at?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          ingredient_slug: string
+          origin_city_id?: string | null
+          profile_id: string
+          quality: number
+          quantity: number
+        }
+        Update: {
+          acquired_at?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ingredient_slug?: string
+          origin_city_id?: string | null
+          profile_id?: string
+          quality?: number
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_ingredient_lots_origin_city_id_fkey"
+            columns: ["origin_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_ingredient_lots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_ingredient_lots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_market_ingredients: {
+        Row: {
+          base_price: number
+          category: string
+          created_at: string
+          display_name: string
+          shelf_life_hours: number
+          slug: string
+        }
+        Insert: {
+          base_price: number
+          category: string
+          created_at?: string
+          display_name: string
+          shelf_life_hours: number
+          slug: string
+        }
+        Update: {
+          base_price?: number
+          category?: string
+          created_at?: string
+          display_name?: string
+          shelf_life_hours?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      cooking_market_purchases: {
+        Row: {
+          city_id: string
+          id: string
+          ingredient_lot_id: string
+          offer_id: string
+          profile_id: string
+          purchased_at: string
+          quantity: number
+          request_id: string
+          total_price: number
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          city_id: string
+          id?: string
+          ingredient_lot_id: string
+          offer_id: string
+          profile_id: string
+          purchased_at?: string
+          quantity: number
+          request_id: string
+          total_price: number
+          unit_price: number
+          user_id: string
+        }
+        Update: {
+          city_id?: string
+          id?: string
+          ingredient_lot_id?: string
+          offer_id?: string
+          profile_id?: string
+          purchased_at?: string
+          quantity?: number
+          request_id?: string
+          total_price?: number
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_market_purchases_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_market_purchases_ingredient_lot_id_fkey"
+            columns: ["ingredient_lot_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_ingredient_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_market_purchases_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_city_market_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_market_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_market_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_method_windows: {
+        Row: {
+          burnt_seconds: number
+          method: string
+          overdone_seconds: number
+          ready_seconds: number
+        }
+        Insert: {
+          burnt_seconds: number
+          method: string
+          overdone_seconds: number
+          ready_seconds: number
+        }
+        Update: {
+          burnt_seconds?: number
+          method?: string
+          overdone_seconds?: number
+          ready_seconds?: number
+        }
+        Relationships: []
+      }
+      cooking_pilot_release_events: {
+        Row: {
+          affected_cities: number
+          changed_at: string
+          enabled: boolean
+          id: string
+          pilot: string
+          reason: string
+        }
+        Insert: {
+          affected_cities: number
+          changed_at?: string
+          enabled: boolean
+          id?: string
+          pilot: string
+          reason: string
+        }
+        Update: {
+          affected_cities?: number
+          changed_at?: string
+          enabled?: boolean
+          id?: string
+          pilot?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      cooking_practice_xp_carry: {
+        Row: {
+          profile_id: string
+          updated_at: string
+          xp_hundredths: number
+        }
+        Insert: {
+          profile_id: string
+          updated_at?: string
+          xp_hundredths?: number
+        }
+        Update: {
+          profile_id?: string
+          updated_at?: string
+          xp_hundredths?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_practice_xp_carry_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_practice_xp_carry_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_recipe_effects: {
+        Row: {
+          duration_hours: number
+          effect_slug: string
+          max_percent: number
+          recipe_slug: string
+        }
+        Insert: {
+          duration_hours: number
+          effect_slug: string
+          max_percent?: number
+          recipe_slug: string
+        }
+        Update: {
+          duration_hours?: number
+          effect_slug?: string
+          max_percent?: number
+          recipe_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_recipe_effects_recipe_slug_fkey"
+            columns: ["recipe_slug"]
+            isOneToOne: true
+            referencedRelation: "cooking_recipes"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      cooking_recipe_ingredients: {
+        Row: {
+          ingredient_slug: string
+          recipe_slug: string
+          units_required: number
+        }
+        Insert: {
+          ingredient_slug: string
+          recipe_slug: string
+          units_required: number
+        }
+        Update: {
+          ingredient_slug?: string
+          recipe_slug?: string
+          units_required?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_recipe_ingredients_recipe_slug_fkey"
+            columns: ["recipe_slug"]
+            isOneToOne: false
+            referencedRelation: "cooking_recipes"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      cooking_recipes: {
+        Row: {
+          category: string
+          created_at: string
+          is_active: boolean
+          method: string
+          name: string
+          origin_region: string
+          portions: number
+          shelf_life_hours: number
+          slug: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          is_active?: boolean
+          method: string
+          name: string
+          origin_region: string
+          portions: number
+          shelf_life_hours: number
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          is_active?: boolean
+          method?: string
+          name?: string
+          origin_region?: string
+          portions?: number
+          shelf_life_hours?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      cooking_rehearsal_minute_carry: {
+        Row: {
+          minute_hundredths: number
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          minute_hundredths?: number
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          minute_hundredths?: number
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_rehearsal_minute_carry_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_rehearsal_minute_carry_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_session_actions: {
+        Row: {
+          action_sequence: number
+          action_type: string
+          heat: string | null
+          id: number
+          ingredient_slug: string | null
+          recorded_at: string
+          session_id: string
+        }
+        Insert: {
+          action_sequence: number
+          action_type: string
+          heat?: string | null
+          id?: never
+          ingredient_slug?: string | null
+          recorded_at?: string
+          session_id: string
+        }
+        Update: {
+          action_sequence?: number
+          action_type?: string
+          heat?: string | null
+          id?: never
+          ingredient_slug?: string | null
+          recorded_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_session_actions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_session_ingredients: {
+        Row: {
+          ingredient_lot_id: string
+          ingredient_slug: string
+          original_expires_at: string
+          quality: number
+          quantity: number
+          reserved_at: string
+          session_id: string
+        }
+        Insert: {
+          ingredient_lot_id: string
+          ingredient_slug: string
+          original_expires_at: string
+          quality: number
+          quantity: number
+          reserved_at?: string
+          session_id: string
+        }
+        Update: {
+          ingredient_lot_id?: string
+          ingredient_slug?: string
+          original_expires_at?: string
+          quality?: number
+          quantity?: number
+          reserved_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_session_ingredients_ingredient_lot_id_fkey"
+            columns: ["ingredient_lot_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_ingredient_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_session_ingredients_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cooking_sessions: {
+        Row: {
+          execution_score: number | null
+          expires_at: string
+          finished_at: string | null
+          id: string
+          mode: string
+          profile_id: string
+          recipe_slug: string
+          result_batch_id: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          execution_score?: number | null
+          expires_at: string
+          finished_at?: string | null
+          id?: string
+          mode: string
+          profile_id: string
+          recipe_slug: string
+          result_batch_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          execution_score?: number | null
+          expires_at?: string
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          profile_id?: string
+          recipe_slug?: string
+          result_batch_id?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cooking_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cooking_sessions_recipe_slug_fkey"
+            columns: ["recipe_slug"]
+            isOneToOne: false
+            referencedRelation: "cooking_recipes"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "cooking_sessions_result_batch_id_fkey"
+            columns: ["result_batch_id"]
+            isOneToOne: false
+            referencedRelation: "cooking_food_batches"
             referencedColumns: ["id"]
           },
         ]
@@ -58417,6 +59670,8 @@ export type Database = {
         Row: {
           activity_id: string
           awarded_at: string
+          food_bonus_percent: number
+          food_bonus_xp: number
           id: string
           idempotency_key: string
           profile_id: string
@@ -58426,6 +59681,8 @@ export type Database = {
         Insert: {
           activity_id: string
           awarded_at?: string
+          food_bonus_percent?: number
+          food_bonus_xp?: number
           id?: string
           idempotency_key: string
           profile_id: string
@@ -58435,6 +59692,8 @@ export type Database = {
         Update: {
           activity_id?: string
           awarded_at?: string
+          food_bonus_percent?: number
+          food_bonus_xp?: number
           id?: string
           idempotency_key?: string
           profile_id?: string
@@ -61418,6 +62677,8 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
+          food_bonus_percent: number
+          food_bonus_quality: number
           id: string
           polish_gain: number
           profile_id: string
@@ -61434,6 +62695,8 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
+          food_bonus_percent?: number
+          food_bonus_quality?: number
           id?: string
           polish_gain?: number
           profile_id: string
@@ -61450,6 +62713,8 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
+          food_bonus_percent?: number
+          food_bonus_quality?: number
           id?: string
           polish_gain?: number
           profile_id?: string
@@ -72810,6 +74075,10 @@ export type Database = {
         Args: { p_gig_id: string; p_profile_id: string }
         Returns: Json
       }
+      begin_cooking_session: {
+        Args: { _profile_id: string; _recipe_slug: string; _session_id: string }
+        Returns: string
+      }
       begin_festival_launch_review: {
         Args: {
           p_expected_version: number
@@ -73067,6 +74336,10 @@ export type Database = {
           sponsorship_revenue: number
           ticket_revenue: number
         }[]
+      }
+      browse_cooking_food_stalls: {
+        Args: { p_limit?: number; p_profile_id: string }
+        Returns: Json
       }
       browse_luthiery_shop_listings: { Args: never; Returns: Json }
       buy_lottery_ticket_atomic: {
@@ -73465,6 +74738,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      cancel_cooking_food_stall_listing: {
+        Args: { p_listing_id: string; p_profile_id: string }
+        Returns: Json
       }
       cancel_dj_booking_internal: {
         Args: { p_booking_id: string }
@@ -74063,6 +75340,10 @@ export type Database = {
         Returns: undefined
       }
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
+      complete_cooking_batch: {
+        Args: { _profile_id: string; _recipe_slug: string; _session_id: string }
+        Returns: string
+      }
       complete_due_city_projects: { Args: never; Returns: number }
       complete_due_merch_production: { Args: never; Returns: number }
       complete_due_music_video_productions_atomic: {
@@ -74310,6 +75591,14 @@ export type Database = {
           p_scheduled_start: string
           p_setlist_id: string
           p_song_id: string
+        }
+        Returns: Json
+      }
+      consume_cooking_food_atomic: {
+        Args: {
+          p_food_batch_id: string
+          p_profile_id: string
+          p_request_id: string
         }
         Returns: Json
       }
@@ -74567,6 +75856,17 @@ export type Database = {
       create_chart_entry_notification: {
         Args: { p_chart_entry_id: string; p_profile_id: string }
         Returns: string
+      }
+      create_cooking_food_stall_listing: {
+        Args: {
+          p_expires_at: string
+          p_food_batch_id: string
+          p_listing_id: string
+          p_portions: number
+          p_price_per_portion: number
+          p_profile_id: string
+        }
+        Returns: Json
       }
       create_custom_luthiery_instrument: {
         Args: {
@@ -75430,7 +76730,16 @@ export type Database = {
         }[]
       }
       expire_band_recruitment_records: { Args: never; Returns: number }
+      expire_cooking_food_stall_listings: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      expire_cooking_sessions: { Args: { _limit?: number }; Returns: number }
       expire_old_gig_offers: { Args: never; Returns: undefined }
+      expire_stale_cooking_session: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
       expire_stale_music_video_preparations: { Args: never; Returns: Json }
       expire_stale_pr_offers: { Args: never; Returns: number }
       fail_clothing_preview_job: {
@@ -75963,6 +77272,11 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_cooking_technique: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      finalize_manual_cooking: { Args: { _session_id: string }; Returns: Json }
       finalize_recording_completion: {
         Args: { p_claim_id: string; p_session_id: string }
         Returns: boolean
@@ -76287,6 +77601,10 @@ export type Database = {
           billed_company_id: string
           billed_period: string
         }[]
+      }
+      get_active_cooking_food_percent: {
+        Args: { p_effect_slug: string; p_profile_id: string }
+        Returns: number
       }
       get_active_recording_polished_session_ids: {
         Args: { p_profile_id: string; p_recording_session_ids: string[] }
@@ -78814,6 +80132,24 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_cooking_food_stall_listing: {
+        Args: {
+          p_buyer_profile_id: string
+          p_listing_id: string
+          p_portions: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      purchase_cooking_market_ingredient: {
+        Args: {
+          p_offer_id: string
+          p_profile_id: string
+          p_quantity: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
       purchase_crafting_material_atomic: {
         Args: {
           p_material_id: string
@@ -79134,6 +80470,24 @@ export type Database = {
         }
         Returns: Json
       }
+      record_cooking_action: {
+        Args: {
+          _action_type: string
+          _heat?: string
+          _ingredient_slug?: string
+          _session_id: string
+        }
+        Returns: number
+      }
+      record_cooking_technique_action: {
+        Args: {
+          _action_type: string
+          _heat?: string
+          _ingredient_slug?: string
+          _session_id: string
+        }
+        Returns: number
+      }
       record_dj_mix_event_internal: {
         Args: {
           p_booking_id: string
@@ -79388,6 +80742,14 @@ export type Database = {
       replace_chart_entries_atomic: {
         Args: { p_chart_date: string; p_entries: Json }
         Returns: number
+      }
+      replay_cooking_technique: {
+        Args: { _as_of?: string; _session_id: string }
+        Returns: Json
+      }
+      replay_manual_cooking: {
+        Args: { _as_of?: string; _session_id: string }
+        Returns: Json
       }
       reply_to_bug_report: {
         Args: {
@@ -80064,6 +81426,10 @@ export type Database = {
           p_royalty_percentage?: number
         }
         Returns: Json
+      }
+      restock_cooking_city_markets: {
+        Args: { p_max_rows?: number }
+        Returns: number
       }
       restore_release_inventory_claim: {
         Args: {
@@ -80864,6 +82230,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      serve_cooking_technique: { Args: { _session_id: string }; Returns: Json }
       set_band_member_travel: {
         Args: { p_member_id: string; p_travels_with_band: boolean }
         Returns: {
@@ -81024,6 +82391,10 @@ export type Database = {
           p_slot_index: number
           p_song_id?: string
         }
+        Returns: Json
+      }
+      set_japan_rice_bowl_pilot: {
+        Args: { p_enable: boolean; p_reason: string }
         Returns: Json
       }
       set_label_marketing_budget: {
@@ -83424,6 +84795,10 @@ export type Database = {
       update_song_hype_for_pr: {
         Args: { p_hype_boost: number; p_song_id: string }
         Returns: undefined
+      }
+      upgrade_cooking_city_market: {
+        Args: { p_city_id: string; p_profile_id: string; p_request_id: string }
+        Returns: Json
       }
       upgrade_label_marketing: {
         Args: { p_label_id: string }
