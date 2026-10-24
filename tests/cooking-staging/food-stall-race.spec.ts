@@ -29,6 +29,8 @@ async function login(browser: Browser, role: "SELLER" | "BUYER_A" | "BUYER_B"): 
   // explicitly or page.goto("/auth") fails before any race assertions run.
   const context = await browser.newContext({
     baseURL: new URL(required("COOKING_STAGING_BASE_URL")).origin,
+    // Standalone browser contexts do not inherit test fixture settings.
+    serviceWorkers: "block",
   });
   const page = await context.newPage();
   const email = required(`COOKING_STAGING_STALL_${role}_EMAIL`);
