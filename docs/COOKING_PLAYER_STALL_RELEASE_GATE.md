@@ -127,3 +127,20 @@ The strengthened `cooking_food_stall_city_recipe_ban_rollback.sql` now proves th
 Two focused UI assertions cover illustrated city restrictions when trading is active and no disclosure or clickable trades when the server closes the market. This remains a *read-only player education* feature: it does not grant mayors or players ban-management access and never enables recipes or the marketplace. Full CI and three-user isolated staging certification are still required before release.
 
 **Additional defence-in-depth:** The illustrated stall component filters any offer whose recipe slug is also present in the same response's `blockedRecipes` array. This cannot replace the mandatory backend policy check (stale clients and malicious callers still need server-side rejection), but prevents a misleading Buy button when response fields conflict. A further UI regression test sends a deliberately inconsistent local market response and verifies the banned recipe never renders a purchase control.
+
+## Concurrent seller cancellation / purchase staging gate — 24 October 2026
+
+The opt-in `tests/cooking-staging/food-stall-race.spec.ts` now certifies **two distinct real multi-connection races with the same three signed-in disposable staging accounts**:
+
+1. **Buyer A vs buyer B:** exactly one can buy the first of two available fresh portions for $150; the losing request is denied. The winner's original request ID returns the same immutable receipt and owned destination batch on replay, with exactly one buyer debit, one seller net credit, one city fee and the original recipe/quality/preparation/expiry timestamps.
+2. **Seller cancellation vs the losing buyer:** the seller creates a *second, separate* single-portion listing from the **same original fresh batch**. Before racing, the test proves another user cannot cancel the seller's listing, and the seller cannot purchase it from their own account. Independent signed-in RPCs simultaneously attempt seller cancellation and buyer purchase. Exactly one final outcome is permitted:
+   - **Purchase wins:** one sale, one new buyer batch, no cancellation receipt or returned stock, seller earns price minus fee; seller cancellation observes `already_closed`.
+   - **Cancellation wins:** buyer is rejected, zero sale, exactly one immutable cancellation receipt, one fresh portion returned to the original source batch, no buyer debit or seller credit.
+   
+   Both outcomes must end in a terminal listing with zero remaining escrow; a replayed buyer purchase ID must not charge again or mint food, and a repeated seller cancellation must never restore another portion.
+
+**Stage fixture requirements:** The seller's **UI-selected eligible original food batch** must contain **at least two unlisted, unexpired portions** and have more than five minutes of freshness remaining. Buyers need distinct Supabase user IDs, same-city active characters and at least $150 in quiet staging cash. The test explicitly verifies the original batch quantities and that the winning buyer's meal keeps the original expiry. No account secrets or production SQL mutations are involved.
+
+The regular `Cooking Gateway Authentication Contract` GitHub workflow additionally performs a **nonexecuting Playwright `--list` discovery/parse** using `.invalid` fake URLs and inert credentials; this ensures newly edited staging test files are syntactically loadable and the two-race test is registered, without starting browsers, making network requests, spending money, or claiming a real staging test has run. The separate manual `Cooking Staging Release Certification` workflow remains opt-in, staging-protected, and requires the explicit `certify_player_stalls` flag.
+
+**Gate remains blocked until an actual isolated staging Supabase project/frontend and disposable signed-in accounts are connected and the real Playwright suite executes successfully.** No production trading, recipes, NPC offers, city bans or user cash were activated by this PR.
