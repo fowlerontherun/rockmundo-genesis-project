@@ -1,3 +1,5 @@
+import type { APIRequestContext, APIResponse } from "@playwright/test";
+
 /**
  * Shared, side-effect-free guards for disposable staging browser certification.
  *
@@ -98,7 +100,6 @@ export function trustedCookingStagingApiUrl(
   return url.href;
 }
 
-import type { APIRequestContext, APIResponse } from "@playwright/test";
 
 export async function cookingStagingApiGet(
   request: APIRequestContext,
