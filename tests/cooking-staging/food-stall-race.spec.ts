@@ -345,6 +345,20 @@ test("two buyers and concurrent seller cancellation settle food escrow exactly o
         quality: original.quality, food_expires_at: original.expires_at,
       });
     }
+    // Replaying the buyer's original request after the race may only
+    // retrieve the already-completed sale or remain rejected. It must
+    // never create a new sale after a cancellation.
+    const buyerReplay = await rpc(buyer, "purchase_cooking_food_stall_listing", {
+      p_buyer_profile_id: buyer.profileId, p_listing_id: second.listingId,
+      p_portions: 1, p_request_id: racePurchaseId,
+    });
+    expect(buyerReplay.ok()).toBe(buyWon);
+    if (buyWon) {
+      expect(await buyerReplay.json()).toMatchObject({
+        status: "already_completed", saleId: purchase!.saleId,
+        batchId: purchase!.batchId,
+      });
+    }
     const afterCancelRace = await Promise.all(actors.map(readCash));
     const buyerIndex = actors.indexOf(buyer);
     expect(afterCancelRace[0] - beforeCancelRace[0])
