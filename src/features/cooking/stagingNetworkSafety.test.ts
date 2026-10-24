@@ -31,6 +31,8 @@ describe("isolated cooking staging host safety", () => {
       ["https://cooking-staging.example.test/unexpected",api],
       [app,"https://yztogmdixmchsmimtent.supabase.co"],
       [app,"https://api.rockmundo.uk"],
+      [app,"https://auth-production.example.test"],
+      [app,"https://unlabelled.example.test"],
       [app,"http://api-staging.example.test"],
       [app,"https://cooking-staging.example.test/api/v1"],
     ] as const) {
