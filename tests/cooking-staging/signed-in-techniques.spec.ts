@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { forbiddenCookingStagingRequest } from "./stagingNetworkSafety";
 
 // Extra certification only after staging database is seeded with three active
 // technique recipes and disposable perishable ingredient lots. NO production writes.
@@ -17,7 +18,7 @@ async function signedInStaging(page:Page){
   const unexpected:string[]=[];
   await page.route("**/*",async route=>{
     const origin=new URL(route.request().url());
-    if(/(^|\.)supabase\.co$/.test(origin.hostname)&&origin.origin!==stagingOrigin){
+    if(forbiddenCookingStagingRequest(route.request().url(),stagingOrigin)){
       unexpected.push(origin.origin);
       await route.abort("blockedbyclient");
     }else await route.continue();
