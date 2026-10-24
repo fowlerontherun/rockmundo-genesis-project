@@ -113,7 +113,7 @@ async function readCash(actor: StagingActor): Promise<number> {
   return Number(rows[0].cash);
 }
 
-test("two buyers racing for one food portion settle exactly one sale", async ({ browser }) => {
+test("two buyers and concurrent seller cancellation settle food escrow exactly once", async ({ browser }) => {
   test.skip(process.env.COOKING_STAGING_STALL_TRADES !== "YES_STAGING_ONLY",
     "Opt-in staging-only food stall transaction certification is disabled");
   test.setTimeout(180_000);
@@ -259,7 +259,7 @@ test("two buyers racing for one food portion settle exactly one sale", async ({ 
     expect(secondResponse.ok(), "Seller must reserve the second fresh portion").toBe(true);
     const second = await secondResponse.json() as { status: string; listingId: string };
     expect(second.status).toBe("created");
-    expect(second.listingId).toMatch(/^[a-f\\d-]{36}$/i);
+    expect(second.listingId).toMatch(/^[a-f\d-]{36}$/i);
     expect(second.listingId).not.toBe(listed.listingId);
     const afterSecondEscrow = await readOriginalBatch(seller, selectedBatchId);
     expect(afterSecondEscrow.portions).toBe(original.portions - 2);
