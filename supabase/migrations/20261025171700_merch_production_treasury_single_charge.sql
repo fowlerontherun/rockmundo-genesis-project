@@ -115,7 +115,7 @@ begin
   new.updated_at := now();
   return new;
 end;
-$function$
+$function$;
 
 -- Runs after trg_prepare_merch_production_insert (alphabetical trigger order):
 -- preparation moves initial stock_quantity into pending_quantity; charge the
