@@ -15,10 +15,6 @@ const corsHeaders = {
 
 // Wall-clock safety: if we approach the edge function timeout, finish gracefully
 const WALL_CLOCK_LIMIT_MS = 95_000; // leave time to flush batches and record completion
-const functionStartedAt = Date.now();
-function isNearTimeout() {
-  return Date.now() - functionStartedAt > WALL_CLOCK_LIMIT_MS;
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -333,7 +329,7 @@ Deno.serve(async (req) => {
     const rotation = streamingReleases.length ? (Math.floor(Date.now() / 86_400_000) % streamingReleases.length) : 0;
     const rotatedReleases = [...streamingReleases.slice(rotation), ...streamingReleases.slice(0, rotation)];
     for (const release of rotatedReleases) {
-      if (isNearTimeout()) {
+      if (Date.now() - startedAt > WALL_CLOCK_LIMIT_MS) {
         console.warn(`[update-daily-streams] Approaching timeout after ${streamUpdates} stream updates. Finishing early.`);
         break;
       }
