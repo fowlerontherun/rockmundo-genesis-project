@@ -465,13 +465,13 @@ serve(async (req) => {
           : 0;
         // Regional fan rows improve territory weighting, but missing/stale rows
         // must never erase the band's known global audience.
-        const totalFans = Math.max(regionalFans, Number((band as any)?.total_fans || 0));
+        const totalFans = Math.max(regionalFans, Number(band?.total_fans || 0));
         // Old: sqrt(500K)*0.005 = 3.5x. New: log10-based with cap — 1K→4x, 100K→6x, 1M→7x
         const fansMultiplier = totalFans > 0 ? 1 + Math.min(Math.log10(totalFans) * 1.5, 10) : 1.0;
 
         // ── Label contract lookup for this release ──
-        const releaseContractId = (release as any).label_contract_id;
-        const releaseSharePct = (release as any).label_revenue_share_pct;
+        const releaseContractId = release.label_contract_id;
+        const releaseSharePct = release.label_revenue_share_pct;
         const contract = releaseContractId ? contractMap.get(releaseContractId) : null;
         // Effective label cut percentage (from release override or contract)
         const labelCutPct = contract
@@ -503,9 +503,9 @@ serve(async (req) => {
               break;
           }
 
-          const hypeScore = (release as any).hype_score || 0;
+          const hypeScore = release.hype_score || 0;
           const hypeMultiplier = 1 + (hypeScore / 500);
-          const releasedDate = (release as any).manufacturing_complete_at || release.created_at;
+          const releasedDate = release.manufacturing_complete_at || release.created_at;
           const realDaysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
           const gameDaysSinceRelease = realDaysSinceRelease * 3;
           const ageDecay = gameDaysSinceRelease <= 7 ? 1.5
@@ -521,17 +521,17 @@ serve(async (req) => {
           // paid reach. Popular artists already convert this reach through fame/fans,
           // while the independent quality multiplier allows exceptional songs to break out.
           const labelMarketingBonus = contract ? 1 + (contract.marketing_support / 10000) : 1.0;
-          const labelMarketingPower = Math.max(0, Math.min(100, Number((release as any).label_marketing_power || 0)));
+          const labelMarketingPower = Math.max(0, Math.min(100, Number(release.label_marketing_power || 0)));
           const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5;
 
           // Earned/owned PR is separate from paid label reach and naturally fades.
-          const storedPrReach = Math.max(0, Math.min(100, Number((release as any).pr_reach_power || 0)));
-          const prUpdatedAt = (release as any).pr_reach_updated_at ? new Date((release as any).pr_reach_updated_at).getTime() : Date.now();
+          const storedPrReach = Math.max(0, Math.min(100, Number(release.pr_reach_power || 0)));
+          const prUpdatedAt = release.pr_reach_updated_at ? new Date(release.pr_reach_updated_at).getTime() : Date.now();
           const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
           const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
           const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
-          const marketingFocus = String((release as any).label_marketing_focus || "balanced");
-          const saturation = Math.max(0, Math.min(100, Number((release as any).label_marketing_saturation || 0)));
+          const marketingFocus = String(release.label_marketing_focus || "balanced");
+          const saturation = Math.max(0, Math.min(100, Number(release.label_marketing_saturation || 0)));
           const saturationEfficiency = 1 - (saturation / 100) * 0.35;
           const focusSalesMultiplier = marketingFocus === "retail" ? 1.25
             : marketingFocus === "radio" ? 1.08
@@ -845,9 +845,9 @@ serve(async (req) => {
         }
 
         // Hype decay: 5% per day after first week
-        const hypeScoreVal = (release as any).hype_score || 0;
+        const hypeScoreVal = release.hype_score || 0;
         let resultingHype = hypeScoreVal;
-        const releaseDateVal = (release as any).manufacturing_complete_at || release.created_at;
+        const releaseDateVal = release.manufacturing_complete_at || release.created_at;
         const daysSinceVal = releaseDateVal ? (Date.now() - new Date(releaseDateVal).getTime()) / (1000 * 60 * 60 * 24) : 999;
         if (daysSinceVal > 7 && hypeScoreVal > 0) {
           const decayedHype = Math.floor(hypeScoreVal * 0.95);
