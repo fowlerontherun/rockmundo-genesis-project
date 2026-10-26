@@ -39,6 +39,52 @@ CREATE TABLE IF NOT EXISTS venue_relationships (
   UNIQUE(band_id, venue_id)
 );
 
+-- September 19 created venue_relationships for PLAYER-user venue scores,
+-- while this November migration introduced a distinct BAND loyalty model.
+-- On clean replay CREATE TABLE IF NOT EXISTS preserves the original shape,
+-- so reconcile its columns without dropping records or pretending that a
+-- user_id can be safely converted to band_id.
+ALTER TABLE public.venue_relationships
+  ADD COLUMN IF NOT EXISTS band_id uuid REFERENCES public.bands(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS loyalty_points integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS gigs_performed integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_performance_date timestamptz,
+  ADD COLUMN IF NOT EXISTS relationship_tier text DEFAULT 'newcomer',
+  ADD COLUMN IF NOT EXISTS payout_bonus numeric DEFAULT 0;
+
+DO $reconcile_venue_loyalty$
+BEGIN
+  -- Legacy rows keep their user_id and relationship_score. Band-scoped
+  -- loyalty rows have a band ID rather than an account ID.
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='venue_relationships'
+      AND column_name='user_id'
+  ) THEN
+    ALTER TABLE public.venue_relationships
+      ALTER COLUMN user_id DROP NOT NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.venue_relationships'::regclass
+      AND conname='venue_relationships_band_id_venue_id_key'
+  ) THEN
+    ALTER TABLE public.venue_relationships
+      ADD CONSTRAINT venue_relationships_band_id_venue_id_key
+      UNIQUE (band_id,venue_id);
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.venue_relationships'::regclass
+      AND conname='venue_relationships_relationship_tier_check'
+  ) THEN
+    ALTER TABLE public.venue_relationships
+      ADD CONSTRAINT venue_relationships_relationship_tier_check
+      CHECK (relationship_tier IN ('newcomer','regular','favorite','legendary'));
+  END IF;
+END $reconcile_venue_loyalty$;
+
 -- AI-generated gig offers
 CREATE TABLE IF NOT EXISTS gig_offers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
