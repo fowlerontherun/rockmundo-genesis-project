@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 // One-shot daily tick for the acting career layer.
@@ -17,6 +17,16 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Refuse unauthenticated callers before touching privileged acting data.
+  const suppliedCronSecret = req.headers.get("x-cron-secret");
+  if (!suppliedCronSecret || suppliedCronSecret.length < 32) {
+    return new Response(JSON.stringify({ error: "Privileged authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const verifier = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: allowed, error: verificationError } = await verifier.rpc("verify_internal_cron_secret", { p_secret: suppliedCronSecret });
+  if (verificationError || allowed !== true) {
+    return new Response(JSON.stringify({ error: "Invalid scheduler authentication" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
   try {
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,

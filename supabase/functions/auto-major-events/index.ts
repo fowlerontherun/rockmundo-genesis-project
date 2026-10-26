@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 serve(async (req) => {
@@ -14,6 +14,15 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
+  // Only the authenticated internal scheduler may process event performances.
+  const suppliedCronSecret = req.headers.get("x-cron-secret");
+  if (!suppliedCronSecret || suppliedCronSecret.length < 32) {
+    return new Response(JSON.stringify({ error: "Privileged authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const { data: authorized, error: authorizationError } = await supabase.rpc("verify_internal_cron_secret", { p_secret: suppliedCronSecret });
+  if (authorizationError || authorized !== true) {
+    return new Response(JSON.stringify({ error: "Invalid scheduler authentication" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   try {
     const now = new Date();
