@@ -73,7 +73,19 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const streamingReleases: any[] = [];
+    const streamingReleases: Array<{
+      id: string;
+      song_id: string;
+      platform_id: string;
+      total_streams: number | null;
+      total_revenue: number | null;
+      band_id: string | null;
+      user_id: string | null;
+      created_at: string | null;
+      release_date: string | null;
+      release_id: string | null;
+      songs: { band_id: string | null; quality_score: number | null; status: string } | null;
+    }> = [];
     for (let offset = 0; ; offset += 500) {
     const { data: page, error: streamingError } = await supabase
       .from('song_releases')
@@ -123,7 +135,7 @@ Deno.serve(async (req) => {
 
     // Pre-fetch all territories for releases linked to these song_releases
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
-    const allTerritories: any[] = [];
+    const allTerritories: Array<{ release_id: string; country: string; is_active: boolean }> = [];
     // All releases on one label contract share the same recoupment balance.
     // Per-release copies can otherwise recoup the same advance multiple times.
     const contractRecoupedToday = new Map<string, number>();
@@ -212,7 +224,7 @@ Deno.serve(async (req) => {
       
       if (releaseSongData) {
         for (const rs of releaseSongData) {
-          const rel = (rs as any).release;
+          const rel = rs.release;
           // Marketing and hype must come from the canonical released edition,
           // not an unrelated future draft containing the same song.
           if (rel && rel.release_status === "released" && eligibleReleaseIds.has(rs.release_id)) {
@@ -247,7 +259,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-fetch band country fans for territory weighting
-    const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || (r.songs as any)?.band_id).filter(Boolean))];
+    const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || r.songs?.band_id).filter(Boolean))];
     const bandCountryFansMap = new Map<string, Map<string, number>>();
     if (bandIds.length > 0) {
       const { data: bcf } = await supabase
@@ -317,8 +329,8 @@ Deno.serve(async (req) => {
         .in('id', bandIds);
       for (const b of bandExtras || []) {
         if (b.genre) bandGenreMap.set(b.id, b.genre);
-        bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
-        bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
+        bandSentimentMap.set(b.id, b.fan_sentiment_score ?? 0);
+        bandReputationMap.set(b.id, b.reputation_score ?? 0);
       }
     }
 
@@ -334,7 +346,7 @@ Deno.serve(async (req) => {
         break;
       }
       try {
-        const bandId = release.band_id || (release.songs as any)?.band_id;
+        const bandId = release.band_id || release.songs?.band_id;
         const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
         const bandFame = bandStats?.fame || 0;
         const bandTotalFans = bandStats?.totalFans || 0;
@@ -367,7 +379,7 @@ Deno.serve(async (req) => {
         // Marketing buys reach; quality determines how strongly listeners convert and
         // whether a song can break out organically. Support both the current 0-100
         // quality scale and the expanded 0-1000 scale used by newer songwriting data.
-        const rawQuality = Number((release.songs as any)?.quality_score ?? 50);
+        const rawQuality = Number(release.songs?.quality_score ?? 50);
         const quality100 = Math.max(0, Math.min(100, rawQuality > 100 ? rawQuality / 10 : rawQuality));
         const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9; // 0.7x-1.6x
         const breakoutT = Math.max(0, (quality100 - 75) / 25);
@@ -564,10 +576,10 @@ Deno.serve(async (req) => {
       try {
         const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
         if (bd) {
-          const curM = (bd as any).morale ?? 50;
+          const curM = bd.morale ?? 50;
           const moraleBoost = totalRevenue >= 500 ? 4 : totalRevenue >= 100 ? 3 : totalRevenue >= 20 ? 2 : 1;
           const newMorale = Math.min(100, curM + moraleBoost);
-          await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bandId);
+          await supabase.from('bands').update({ morale: newMorale }).eq('id', bandId);
           console.log(`Streaming revenue morale: band ${bandId} earned $${totalRevenue} → morale +${moraleBoost}`);
           try {
             await supabase.from('band_health_events').insert({
