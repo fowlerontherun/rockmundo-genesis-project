@@ -46,11 +46,11 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_offers (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- The earlier sponsorship-types migration predates canonical offer creation
--- on clean installs. Restore its deferred FK enrichment here as well.
-ALTER TABLE public.sponsorship_offers
-  ADD COLUMN IF NOT EXISTS sponsorship_type_id uuid
-  REFERENCES public.sponsorship_types(id);
+-- The sponsorship_types table is introduced in April 2026, after this
+-- November 2025 offer table on chronological clean replay. Its April creator
+-- migration (20260416161439) already conditionally adds sponsorship_type_id
+-- with a foreign key when sponsorship_offers exists. Do NOT refer to that
+-- future table here; doing so aborts fresh Supabase stacks with SQLSTATE 42P01.
 
 -- Notifications for sponsorship lifecycle
 CREATE TABLE IF NOT EXISTS public.sponsorship_notifications (
