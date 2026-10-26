@@ -1,10 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Clock3, PackageCheck, Utensils } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { foodAvailability, type FoodBatch } from "./foodBatchRules";
+import { COOKING_RECIPES } from "./recipeCatalogue";
+import {
+  freshnessUrgency, remainingFreshnessPercent, summarizeKitchenFreshness, timeUntilSpoiled,
+  type FreshnessUrgency,
+} from "./foodFreshnessPresentation";
 import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
 
 interface IngredientRow {
@@ -39,11 +45,35 @@ interface ConsumptionResult {
 }
 const formatExpiry = (iso: string) => new Date(iso).toLocaleString();
 const prettyName = (name: string) => name.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+const dishName = (slug: string) => COOKING_RECIPES.find(recipe => recipe.slug === slug)?.name ?? prettyName(slug);
+const freshnessTone = (status: FreshnessUrgency) =>
+  status === "expired" ? "text-destructive" :
+  status === "urgent" ? "text-amber-700 dark:text-amber-300" :
+  status === "soon" ? "text-orange-700 dark:text-orange-300" :
+  "text-emerald-700 dark:text-emerald-300";
+const freshnessBar = (status: FreshnessUrgency) =>
+  status === "expired" ? "bg-destructive" :
+  status === "urgent" ? "bg-amber-500" :
+  status === "soon" ? "bg-orange-500" : "bg-emerald-600";
 
 export function CookingInventory() {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState<string | null>(null);
+  // Recalculate freshness on the minute and when returning to the tab:
+  // a meal must not remain visually "ready" after its actual expiry time.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(update, 60_000);
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
   // A timed-out browser response may still have consumed a portion.
   // Keep the request ID for a safe retry, never create a second debit.
   const pendingConsumptionIds = useRef(new Map<string, string>());
@@ -118,7 +148,10 @@ export function CookingInventory() {
     },
   });
 
-  const now = Date.now();
+  const freshness = inventory.data
+    ? summarizeKitchenFreshness(inventory.data.ingredients, inventory.data.food, now)
+    : null;
+  const activeEffects = (effects.data ?? []).filter(effect => Date.parse(effect.expires_at) > now);
   return <Card>
     <CardHeader>
       <CardTitle>Your kitchen inventory</CardTitle>
