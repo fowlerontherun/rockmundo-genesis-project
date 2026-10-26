@@ -199,10 +199,10 @@ Deno.serve(async (req) => {
     // Pre-fetch release hype and today's paid label-marketing power. Marketing
     // remains effective even when ordinary hype has already reached its cap.
     const songIds = (streamingReleases || []).map(r => r.song_id).filter(Boolean);
-    let releaseHypeMap = new Map<string, number>();
-    let releaseMarketingPowerMap = new Map<string, number>();
-    let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
-    let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
+    const releaseHypeMap = new Map<string, number>();
+    const releaseMarketingPowerMap = new Map<string, number>();
+    const releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
+    const releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
     if (songIds.length > 0) {
       const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
 
     // Pre-fetch band country fans for territory weighting
     const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || (r.songs as any)?.band_id).filter(Boolean))];
-    let bandCountryFansMap = new Map<string, Map<string, number>>();
+    const bandCountryFansMap = new Map<string, Map<string, number>>();
     if (bandIds.length > 0) {
       const { data: bcf } = await supabase
         .from('band_country_fans')
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-fetch band fame and total fans for fame-based stream scaling
-    let bandFameMap = new Map<string, { fame: number; totalFans: number }>();
+    const bandFameMap = new Map<string, { fame: number; totalFans: number }>();
     if (bandIds.length > 0) {
       const { data: bandData } = await supabase
         .from('bands')
@@ -307,9 +307,9 @@ Deno.serve(async (req) => {
     const SEASONAL_STREAM_MOD: Record<string, number> = { spring: 1.05, summer: 0.9, autumn: 1.1, winter: 1.25 };
     const seasonalStreamMod = SEASONAL_STREAM_MOD[season] || 1.0;
 
-    let bandGenreMap = new Map<string, string>();
-    let bandSentimentMap = new Map<string, number>();
-    let bandReputationMap = new Map<string, number>();
+    const bandGenreMap = new Map<string, string>();
+    const bandSentimentMap = new Map<string, number>();
+    const bandReputationMap = new Map<string, number>();
     if (bandIds.length > 0) {
       const { data: bandExtras } = await supabase
         .from('bands')
