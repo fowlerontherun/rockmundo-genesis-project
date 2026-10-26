@@ -166,6 +166,28 @@ export function CookingInventory() {
         </div>
         <p className="text-sm text-muted-foreground">Keep an eye on freshness: pantry ingredients and prepared meals expire on the dates shown below.</p>
       </div>
+      {freshness && <section aria-label="Kitchen freshness overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><PackageCheck className="h-4 w-4" />Pantry units</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.usableIngredients}</p>
+          <p className="text-xs text-muted-foreground">{freshness.soonIngredientUnits} need using within 24h</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Utensils className="h-4 w-4" />Edible portions</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.readyPortions}</p>
+          <p className="text-xs text-muted-foreground">Ready to eat</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-4 w-4" />Use soon</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.soonPortions}</p>
+          <p className="text-xs text-muted-foreground">Meals expiring within 24h</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><AlertTriangle className="h-4 w-4" />Spoiled portions</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.spoiledPortions}</p>
+          <p className="text-xs text-muted-foreground">Cannot be eaten or traded</p>
+        </div>
+      </section>}
       {!profileId && <p role="status">Select a character to see your inventory.</p>}
       {inventory.isLoading && <p role="status">Loading kitchen inventory…</p>}
       {inventory.isError && <p role="alert">Could not load kitchen inventory. Please try again later.</p>}
@@ -177,9 +199,13 @@ export function CookingInventory() {
             : <ul className="space-y-1">{inventory.data.ingredients.filter(lot => lot.quantity > 0).map(lot =>
               <li key={lot.id} className="flex items-center gap-3 rounded-lg border p-2 text-sm">
                 <div className="cooking-market-product-art"><IngredientIllustration slug={lot.ingredient_slug} size="small" /></div>
-                <div><strong>{prettyName(lot.ingredient_slug)}</strong>
-                  <p>{lot.quantity} units · Quality {lot.quality}/100 ·{" "}
-                    {Date.parse(lot.expires_at) <= now ? "Expired" : `Expires ${formatExpiry(lot.expires_at)}`}</p>
+                <div className="min-w-0">
+                  <strong>{prettyName(lot.ingredient_slug)}</strong>
+                  <p>{lot.quantity} units · Quality {lot.quality}/100</p>
+                  <p className={`font-medium ${freshnessTone(freshnessUrgency(lot.expires_at, now))}`}>
+                    {timeUntilSpoiled(lot.expires_at, now)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Expires {formatExpiry(lot.expires_at)}</p>
                 </div>
               </li>)}</ul>}
         </section>
