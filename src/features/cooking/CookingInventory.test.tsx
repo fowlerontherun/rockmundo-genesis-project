@@ -65,9 +65,10 @@ describe("live cooking kitchen freshness display", () => {
     expect(area).toHaveTextContent("3");
     expect(screen.getByText("1 hr 30 min left")).toBeVisible();
     expect(screen.getByText("2 hr left")).toBeVisible();
-    expect(screen.getByRole("progressbar", { name: "Apple pie shelf life remaining" })).toHaveAttribute(
-      "aria-valuenow","60",
-    );
+    const shelfBars = screen.getAllByRole("progressbar", { name: "Apple pie shelf life remaining" });
+    expect(shelfBars).toHaveLength(2);
+    expect(shelfBars[0]).toHaveAttribute("aria-valuenow","60");
+    expect(shelfBars[1]).toHaveAttribute("aria-valuenow","0");
     expect(screen.getByRole("button", { name: "Eat 1 portion" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Spoiled" })).toBeDisabled();
     expect(screen.getAllByRole("img",{name: /apple pie ready dish illustration/i})).toHaveLength(2);
