@@ -81,7 +81,13 @@ ALTER TABLE public.random_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_event_history ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for random_events (read-only for all authenticated users, admin manages via service role)
+-- Retire September's public USING (true) policy; retaining it would
+-- OR with the new active-only SELECT policy and expose inactive events.
+-- Preserve admin access via the existing privileged-role policy.
+DROP POLICY IF EXISTS "Random events are viewable by everyone"
+  ON public.random_events;
+
+-- RLS Policies for random_events (active only for public, admin manages via service role)
 CREATE POLICY "Anyone can read active events"
   ON public.random_events FOR SELECT
   USING (is_active = true);
