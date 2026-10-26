@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
 
   let runId: string | null = null;
   let claimedDay: string | null = null;
+  let claimedReleaseId: string | null = null;
   const startedAt = Date.now();
   let streamUpdates = 0;
   let salesUpdates = 0;
@@ -52,13 +53,18 @@ Deno.serve(async (req) => {
 
   try {
     const runDate = new Date().toISOString().slice(0, 10);
-    const { data: claimed, error: claimError } = await supabase.rpc("claim_streaming_simulation_day", { p_day: runDate });
+    // A single release per invocation bounds CPU work and prevents one large
+    // catalogue from exhausting the Edge worker's runtime.
+    const { data: nextRelease, error: claimError } = await supabase.rpc(
+      "claim_next_streaming_release", { p_day: runDate },
+    );
     if (claimError) throw claimError;
-    if (!claimed) {
-      return new Response(JSON.stringify({ success: true, alreadyProcessed: true, runDate }), {
+    if (!nextRelease) {
+      return new Response(JSON.stringify({ success: true, noPendingReleases: true, runDate }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    claimedReleaseId = nextRelease;
     claimedDay = runDate;
     console.log('Starting daily streams and sales update...');
 
@@ -90,6 +96,7 @@ Deno.serve(async (req) => {
       `)
       .eq('is_active', true)
       .eq('release_type', 'streaming')
+      .eq('id', claimedReleaseId)
       .in('songs.status', ['recorded', 'released'])
       .lte('release_date', new Date().toISOString())
       .order('id', { ascending: true })
@@ -434,16 +441,6 @@ Deno.serve(async (req) => {
           throw new Error('Streaming region allocations do not reconcile to the release total');
         }
 
-        const { error: updateError } = await supabase.rpc("increment_song_release_stream_totals", {
-          p_release_id: release.id,
-          p_daily_streams: dailyStreams,
-          p_daily_revenue: dailyRevenueDollars,
-        });
-
-        if (updateError) {
-          throw updateError;
-        }
-
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
           const uniqueListeners = rb.streams > 0 ? Math.max(1, Math.floor(rb.streams * listenerRatio)) : 0;
@@ -472,24 +469,6 @@ Deno.serve(async (req) => {
             listener_age_group: ageGroup,
             listener_region: rb.region,
           });
-        }
-
-        if (release.song_id) {
-          const fameGain = Math.floor(dailyStreams / 1000);
-          if (fameGain > 0) {
-            const { error: fameError } = await supabase.rpc('update_song_fame', {
-              p_song_id: release.song_id,
-              p_fame_amount: fameGain,
-              p_source: 'streaming'
-            });
-            if (fameError) throw fameError;
-          }
-          const hypeChange = Math.floor(dailyStreams / 5000) - 1;
-          const { error: hypeError } = await supabase.rpc('update_song_hype', {
-            p_song_id: release.song_id,
-            p_hype_change: hypeChange
-          });
-          if (hypeError) throw hypeError;
         }
 
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
@@ -556,15 +535,32 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Batch high-volume writes to avoid one PostgREST request per release/region.
-    if (analyticsRows.length > 0) {
-      const { error } = await supabase.from('streaming_analytics_daily').insert(analyticsRows);
-      if (error) throw error;
+    if (errorCount !== 0 || streamUpdates !== 1 || !claimedReleaseId || !claimedDay) {
+      throw new Error(`Stream calculation failed for release ${claimedReleaseId}: ${errorSamples.join("; ") || "no release computed"}`);
     }
-    if (earningsRows.length > 0) {
-      const { error } = await supabase.from('band_earnings').insert(earningsRows);
-      if (error) throw error;
-    }
+    // All streamed units, regional analytics, band earnings and label credits
+    // settle inside one PostgreSQL transaction keyed by (day, song_release_id).
+    const labelEntry = [...labelRevenueAccumulator.entries()][0];
+    const [labelId] = labelEntry?.[0]?.split(":") ?? [];
+    const labelInfo = labelEntry?.[1];
+    const labelAmount = Math.round(labelInfo?.labelRevenue ?? 0);
+    const { data: settled, error: settleError } = await supabase.rpc(
+      "settle_streaming_release_day", {
+        p_day: claimedDay,
+        p_song_release_id: claimedReleaseId,
+        p_streams: analyticsRows.reduce((n, row) => n + Number(row.daily_streams ?? 0), 0),
+        p_revenue: analyticsRows.reduce((n, row) => n + Number(row.daily_revenue ?? 0), 0),
+        p_analytics: analyticsRows,
+        p_earnings: earningsRows,
+        p_label_id: labelId ?? null,
+        p_contract_id: labelInfo?.contractId ?? null,
+        p_label_amount: labelAmount,
+        p_recoup_amount: Math.round(labelInfo?.recoupmentApplied ?? 0),
+      },
+    );
+    if (settleError) throw settleError;
+    if (settled !== true) throw new Error("Streaming release already settled: refusing duplicate payout");
+    const labelsCredited = labelAmount > 0 ? 1 : 0;
 
     // === DAILY STREAMING REVENUE → MORALE (v1.0.978) ===
     for (const [bandId, totalRevenue] of bandStreamingRevenueAccumulator.entries()) {
@@ -593,30 +589,7 @@ Deno.serve(async (req) => {
 
     // Daily physical and digital sales are exclusively handled by generate-daily-sales.
 
-    let labelsCredited = 0;
-    for (const [labelKey, labelRevenue] of labelRevenueAccumulator.entries()) {
-      if (labelRevenue.labelRevenue <= 0) continue;
-      try {
-        const [labelId] = labelKey.split(":");
-        const labelAmount = Math.round(labelRevenue.labelRevenue);
-        const recoupAmount = Math.round(labelRevenue.recoupmentApplied);
-        const { error: labelCreditError } = await supabase.rpc("credit_label_revenue_atomic", {
-          p_label_id: labelId,
-          p_amount: labelAmount,
-          p_description: `Daily streaming royalty share${recoupAmount > 0 ? ` (includes ${recoupAmount} advance recoupment)` : ''}`,
-          p_contract_id: labelRevenue.contractId,
-          p_recoup_amount: recoupAmount,
-        });
-        if (labelCreditError) throw labelCreditError;
-
-        labelsCredited++;
-        console.log(`Credited label ${labelId}: $${labelAmount} streaming (recouped: $${recoupAmount})`);
-      } catch (labelError) {
-        console.error(`Error crediting label ${labelKey}:`, labelError);
-        errorCount++;
-      }
-    }
-    console.log(`Credited ${labelsCredited} labels with streaming royalty revenue`);
+    // Label settlement is already included in the atomic database receipt.
 
     const totalProcessed = streamUpdates + salesUpdates;
     const isEffectivelyFailed = totalProcessed > 0 && errorCount > totalProcessed * 0.5;
@@ -628,8 +601,8 @@ Deno.serve(async (req) => {
         supabaseClient: supabase, durationMs: Date.now() - startedAt,
         error: new Error(`Streaming worker failed more than half of its operations (${errorCount} failures)`),
         resultSummary: { streamUpdates, salesUpdates, errorCount, errorSamples, labelsCredited } });
-      const { error: failedClaimError } = await supabase.rpc("finish_streaming_simulation_day", {
-        p_day: claimedDay, p_success: false,
+      const { error: failedClaimError } = await supabase.rpc("fail_streaming_release_day", {
+        p_day: claimedDay, p_song_release_id: claimedReleaseId,
         p_error: `Streaming worker had ${errorCount} failed operations`,
       });
       if (failedClaimError) throw failedClaimError;
@@ -654,10 +627,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const { error: finalizeError } = await supabase.rpc("finish_streaming_simulation_day", {
-      p_day: claimedDay, p_success: true,
-    });
-    if (finalizeError) throw finalizeError;
+    // The atomic settlement function has already finalized this release claim.
     return new Response(
       JSON.stringify({
         success: !isEffectivelyFailed,
@@ -670,11 +640,12 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    if (claimedDay) {
-      const { error: failClaimError } = await supabase.rpc("finish_streaming_simulation_day", {
-        p_day: claimedDay, p_success: false, p_error: getErrorMessage(error),
+    if (claimedDay && claimedReleaseId) {
+      const { error: failClaimError } = await supabase.rpc("fail_streaming_release_day", {
+        p_day: claimedDay, p_song_release_id: claimedReleaseId,
+        p_error: getErrorMessage(error),
       });
-      if (failClaimError) console.error("Could not finalize failed streaming day", failClaimError);
+      if (failClaimError) console.error("Could not finalize failed streaming release", failClaimError);
     }
     await failJobRun({
       jobName: 'update-daily-streams',
