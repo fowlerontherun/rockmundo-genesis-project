@@ -1,10 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Clock3, PackageCheck, Utensils } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { foodAvailability, type FoodBatch } from "./foodBatchRules";
+import { COOKING_RECIPES } from "./recipeCatalogue";
+import {
+  freshnessUrgency, remainingFreshnessPercent, summarizeKitchenFreshness, timeUntilSpoiled,
+  type FreshnessUrgency,
+} from "./foodFreshnessPresentation";
 import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
 
 interface IngredientRow {
@@ -39,11 +45,35 @@ interface ConsumptionResult {
 }
 const formatExpiry = (iso: string) => new Date(iso).toLocaleString();
 const prettyName = (name: string) => name.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+const dishName = (slug: string) => COOKING_RECIPES.find(recipe => recipe.slug === slug)?.name ?? prettyName(slug);
+const freshnessTone = (status: FreshnessUrgency) =>
+  status === "expired" ? "text-destructive" :
+  status === "urgent" ? "text-amber-700 dark:text-amber-300" :
+  status === "soon" ? "text-orange-700 dark:text-orange-300" :
+  "text-emerald-700 dark:text-emerald-300";
+const freshnessBar = (status: FreshnessUrgency) =>
+  status === "expired" ? "bg-destructive" :
+  status === "urgent" ? "bg-amber-500" :
+  status === "soon" ? "bg-orange-500" : "bg-emerald-600";
 
 export function CookingInventory() {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState<string | null>(null);
+  // Recalculate freshness on the minute and when returning to the tab:
+  // a meal must not remain visually "ready" after its actual expiry time.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(update, 60_000);
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
   // A timed-out browser response may still have consumed a portion.
   // Keep the request ID for a safe retry, never create a second debit.
   const pendingConsumptionIds = useRef(new Map<string, string>());
@@ -118,7 +148,10 @@ export function CookingInventory() {
     },
   });
 
-  const now = Date.now();
+  const freshness = inventory.data
+    ? summarizeKitchenFreshness(inventory.data.ingredients, inventory.data.food, now)
+    : null;
+  const activeEffects = (effects.data ?? []).filter(effect => Date.parse(effect.expires_at) > now);
   return <Card>
     <CardHeader>
       <CardTitle>Your kitchen inventory</CardTitle>
@@ -133,6 +166,28 @@ export function CookingInventory() {
         </div>
         <p className="text-sm text-muted-foreground">Keep an eye on freshness: pantry ingredients and prepared meals expire on the dates shown below.</p>
       </div>
+      {freshness && <section aria-label="Kitchen freshness overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><PackageCheck className="h-4 w-4" />Pantry units</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.usableIngredients}</p>
+          <p className="text-xs text-muted-foreground">{freshness.soonIngredientUnits} need using within 24h</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Utensils className="h-4 w-4" />Edible portions</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.readyPortions}</p>
+          <p className="text-xs text-muted-foreground">Ready to eat</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Clock3 className="h-4 w-4" />Use soon</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.soonPortions}</p>
+          <p className="text-xs text-muted-foreground">Meals expiring within 24h</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><AlertTriangle className="h-4 w-4" />Spoiled portions</div>
+          <p className="text-xl font-semibold tabular-nums">{freshness.spoiledPortions}</p>
+          <p className="text-xs text-muted-foreground">Cannot be eaten or traded</p>
+        </div>
+      </section>}
       {!profileId && <p role="status">Select a character to see your inventory.</p>}
       {inventory.isLoading && <p role="status">Loading kitchen inventory…</p>}
       {inventory.isError && <p role="alert">Could not load kitchen inventory. Please try again later.</p>}
@@ -144,36 +199,54 @@ export function CookingInventory() {
             : <ul className="space-y-1">{inventory.data.ingredients.filter(lot => lot.quantity > 0).map(lot =>
               <li key={lot.id} className="flex items-center gap-3 rounded-lg border p-2 text-sm">
                 <div className="cooking-market-product-art"><IngredientIllustration slug={lot.ingredient_slug} size="small" /></div>
-                <div><strong>{prettyName(lot.ingredient_slug)}</strong>
-                  <p>{lot.quantity} units · Quality {lot.quality}/100 ·{" "}
-                    {Date.parse(lot.expires_at) <= now ? "Expired" : `Expires ${formatExpiry(lot.expires_at)}`}</p>
+                <div className="min-w-0">
+                  <strong>{prettyName(lot.ingredient_slug)}</strong>
+                  <p>{lot.quantity} units · Quality {lot.quality}/100</p>
+                  <p className={`font-medium ${freshnessTone(freshnessUrgency(lot.expires_at, now))}`}>
+                    {timeUntilSpoiled(lot.expires_at, now)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Expires {formatExpiry(lot.expires_at)}</p>
                 </div>
               </li>)}</ul>}
         </section>
         <section aria-label="Prepared food">
           <h3 className="font-semibold">Prepared food</h3>
-          {inventory.data.food.length === 0 ? <p className="text-sm text-muted-foreground">No food batches yet.</p>
-            : <ul className="space-y-2">{inventory.data.food.map(food => {
+          {inventory.data.food.filter(food => food.portions > 0).length === 0
+            ? <p className="text-sm text-muted-foreground">No prepared food portions right now.</p>
+            : <ul className="space-y-2">{inventory.data.food.filter(food => food.portions > 0).map(food => {
               const batch: FoodBatch = {
                 id: food.id, profileId: food.profile_id, recipeSlug: food.recipe_slug,
                 portions: food.portions, quality: food.quality, preparedAt: food.prepared_at,
                 expiresAt: food.expires_at,
               };
               const status = foodAvailability(batch, now);
+              const urgency = freshnessUrgency(food.expires_at, now);
+              const freshnessPercent = remainingFreshnessPercent(food.prepared_at, food.expires_at, now);
               const canEat = status === "fresh" && food.portions > 0 && !consumeFood.isPending;
-              return <li key={food.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                <div className="flex items-center gap-3">
+              return <li key={food.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="w-24 shrink-0 overflow-hidden rounded-lg border">
                     <DishIllustration recipeSlug={food.recipe_slug} className="h-16 w-24" />
                   </div>
-                  <div><strong>{prettyName(food.recipe_slug)}</strong>
-                  <p>{food.portions} portions · Quality {food.quality}/100 ·
-                    {" "}{status === "fresh" ? `Expires ${formatExpiry(food.expires_at)}` : status}
-                  </p></div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <strong>{dishName(food.recipe_slug)}</strong>
+                    <p>{food.portions} portion(s) · Quality {food.quality}/100</p>
+                    <p className={`font-medium ${freshnessTone(urgency)}`}>
+                      {status === "fresh" ? timeUntilSpoiled(food.expires_at, now) : "Spoiled — cannot eat"}
+                    </p>
+                    {freshnessPercent !== null && <div role="progressbar"
+                      aria-label={`${dishName(food.recipe_slug)} shelf life remaining`}
+                      aria-valuemin={0} aria-valuemax={100} aria-valuenow={freshnessPercent}
+                      className="h-2 w-full max-w-56 overflow-hidden rounded-full bg-secondary">
+                      <div className={`h-full rounded-full transition-all ${freshnessBar(urgency)}`}
+                        style={{ width: `${freshnessPercent}%` }} />
+                    </div>}
+                    <p className="text-xs text-muted-foreground">Expires {formatExpiry(food.expires_at)}</p>
+                  </div>
                 </div>
                 <Button type="button" size="sm" variant="secondary" disabled={!canEat || !profileId}
                   onClick={() => consumeFood.mutate(food)}>
-                  {consumeFood.isPending ? "Confirming…" : food.portions < 1 ? "Finished" :
+                  {consumeFood.isPending ? "Confirming…" :
                     status !== "fresh" ? "Spoiled" : "Eat 1 portion"}
                 </Button>
               </li>;
@@ -181,9 +254,9 @@ export function CookingInventory() {
         </section>
       </>}
       {effects.isError && <p role="alert">Could not load recorded food effects.</p>}
-      {(effects.data ?? []).length > 0 && <section aria-label="Recorded food effects">
+      {activeEffects.length > 0 && <section aria-label="Recorded food effects">
         <h3 className="font-semibold">Current food effects</h3>
-        <ul className="space-y-1">{effects.data!.map(effect => <li key={effect.effect_slug} className="text-sm">
+        <ul className="space-y-1">{activeEffects.map(effect => <li key={effect.effect_slug} className="text-sm">
           {prettyName(effect.effect_slug)} · +{effect.effect_percent}% ·
           {" "}Expires {formatExpiry(effect.expires_at)}
         </li>)}</ul>
