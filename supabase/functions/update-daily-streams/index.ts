@@ -73,7 +73,19 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const streamingReleases: any[] = [];
+    const streamingReleases: Array<{
+      id: string;
+      song_id: string;
+      platform_id: string;
+      total_streams: number | null;
+      total_revenue: number | null;
+      band_id: string | null;
+      user_id: string | null;
+      created_at: string | null;
+      release_date: string | null;
+      release_id: string | null;
+      songs: { band_id: string | null; quality_score: number | null; status: string } | null;
+    }> = [];
     for (let offset = 0; ; offset += 500) {
     const { data: page, error: streamingError } = await supabase
       .from('song_releases')
