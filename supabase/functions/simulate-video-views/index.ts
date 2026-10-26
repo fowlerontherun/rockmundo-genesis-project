@@ -11,12 +11,28 @@ import {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-triggered-by",
+    "authorization, x-client-info, apikey, content-type, x-cron-secret, x-triggered-by",
 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Only the Vault-backed internal scheduler can trigger privileged payments.
+  const cronToken = req.headers.get("x-cron-secret");
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const trustedService = Boolean(serviceRoleKey && bearer === serviceRoleKey);
+  if (!trustedService) {
+    if (!cronToken || cronToken.length < 32) {
+      return new Response(JSON.stringify({ error: "Privileged authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const verifier = createClient(Deno.env.get("SUPABASE_URL") || "", serviceRoleKey);
+    const { data: verified, error: verificationError } = await verifier.rpc("verify_internal_cron_secret", { p_secret: cronToken });
+    if (verificationError || verified !== true) {
+      return new Response(JSON.stringify({ error: "Invalid scheduler authentication" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
   }
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
@@ -69,7 +85,7 @@ serve(async (req) => {
         views_count,
         earnings,
         hype_score,
-        songs(id, title, quality_score, hype, band_id, user_id)
+        songs(id, title, quality_score, hype, band_id, user_id, profile_id)
       `)
       .eq("status", "released")
       .or(`release_date.is.null,release_date.lte.${new Date().toISOString()}`)
@@ -191,11 +207,14 @@ serve(async (req) => {
         : dailyEarnings;
 
       // Credit earnings to user
-      if (song?.user_id && dailyEarnings > 0) {
+      if (dailyEarnings > 0 && !song?.profile_id) {
+        throw new Error(`Video ${video.id} has no owning song profile to credit`);
+      }
+      if (song?.profile_id && dailyEarnings > 0) {
         const { data: profile, error: profileLookupError } = await supabaseClient
           .from("profiles")
           .select("cash, fans")
-          .eq("user_id", song.user_id)
+          .eq("id", song.profile_id)
           .single();
         if (profileLookupError) throw profileLookupError;
 
@@ -206,7 +225,7 @@ serve(async (req) => {
               cash: (profile.cash || 0) + creatorShare,
               fans: (profile.fans || 0) + newFans,
             })
-            .eq("user_id", song.user_id);
+            .eq("id", song.profile_id);
           if (playerCreditError) throw playerCreditError;
         }
       }
@@ -281,6 +300,7 @@ serve(async (req) => {
                 video_id: video.id, 
                 daily_views: dailyViews,
                 song_id: song.id,
+                profile_id: song.profile_id,
               },
             });
 
