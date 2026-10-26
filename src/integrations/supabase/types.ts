@@ -15504,6 +15504,48 @@ export type Database = {
           },
         ]
       }
+      daily_release_sales_claims: {
+        Row: {
+          claimed_at: string
+          error: string | null
+          finished_at: string | null
+          release_id: string
+          sale_date: string
+          status: string
+        }
+        Insert: {
+          claimed_at?: string
+          error?: string | null
+          finished_at?: string | null
+          release_id: string
+          sale_date: string
+          status?: string
+        }
+        Update: {
+          claimed_at?: string
+          error?: string | null
+          finished_at?: string | null
+          release_id?: string
+          sale_date?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_release_sales_claims_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "daily_release_sales_claims_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_skill_growth_grants: {
         Row: {
           created_at: string
@@ -63999,6 +64041,50 @@ export type Database = {
         }
         Relationships: []
       }
+      streaming_release_day_claims: {
+        Row: {
+          finished_at: string | null
+          last_error: string | null
+          region_breakdown: Json | null
+          run_date: string
+          settled_revenue: number | null
+          settled_streams: number | null
+          song_release_id: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          finished_at?: string | null
+          last_error?: string | null
+          region_breakdown?: Json | null
+          run_date: string
+          settled_revenue?: number | null
+          settled_streams?: number | null
+          song_release_id: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          finished_at?: string | null
+          last_error?: string | null
+          region_breakdown?: Json | null
+          run_date?: string
+          settled_revenue?: number | null
+          settled_streams?: number | null
+          song_release_id?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaming_release_day_claims_song_release_id_fkey"
+            columns: ["song_release_id"]
+            isOneToOne: false
+            referencedRelation: "song_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       streaming_simulation_day_claims: {
         Row: {
           finished_at: string | null
@@ -70249,6 +70335,88 @@ export type Database = {
           },
         ]
       }
+      video_daily_settlements: {
+        Row: {
+          band_id: string | null
+          band_paid: number | null
+          creator_paid: number | null
+          daily_views: number | null
+          earned_cents: number | null
+          finished_at: string | null
+          last_error: string | null
+          owner_profile_id: string | null
+          run_date: string
+          started_at: string
+          status: string
+          video_id: string
+        }
+        Insert: {
+          band_id?: string | null
+          band_paid?: number | null
+          creator_paid?: number | null
+          daily_views?: number | null
+          earned_cents?: number | null
+          finished_at?: string | null
+          last_error?: string | null
+          owner_profile_id?: string | null
+          run_date: string
+          started_at?: string
+          status?: string
+          video_id: string
+        }
+        Update: {
+          band_id?: string | null
+          band_paid?: number | null
+          creator_paid?: number | null
+          daily_views?: number | null
+          earned_cents?: number | null
+          finished_at?: string | null
+          last_error?: string | null
+          owner_profile_id?: string | null
+          run_date?: string
+          started_at?: string
+          status?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_daily_settlements_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "music_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_royalty_carry: {
+        Row: {
+          band_cents: number
+          creator_cents: number
+          updated_at: string
+          video_id: string
+        }
+        Insert: {
+          band_cents?: number
+          creator_cents?: number
+          updated_at?: string
+          video_id: string
+        }
+        Update: {
+          band_cents?: number
+          creator_cents?: number
+          updated_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_royalty_carry_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: true
+            referencedRelation: "music_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_simulation_day_claims: {
         Row: {
           finished_at: string | null
@@ -75210,6 +75378,12 @@ export type Database = {
           requested_views: Json
         }[]
       }
+      claim_next_daily_release_sale: {
+        Args: { p_sale_date: string }
+        Returns: string
+      }
+      claim_next_daily_video: { Args: { p_day: string }; Returns: string }
+      claim_next_streaming_release: { Args: { p_day: string }; Returns: string }
       claim_privileged_job_window: {
         Args: { p_job_name: string }
         Returns: Json
@@ -76746,6 +76920,14 @@ export type Database = {
         Args: { p_error: string; p_job_id: string; p_retry?: boolean }
         Returns: undefined
       }
+      fail_daily_video: {
+        Args: { p_day: string; p_error: string; p_video_id: string }
+        Returns: boolean
+      }
+      fail_streaming_release_day: {
+        Args: { p_day: string; p_error: string; p_song_release_id: string }
+        Returns: boolean
+      }
       festival_admin_can_operate_edition: {
         Args: { p_edition_id: string; p_roles?: string[] }
         Returns: boolean
@@ -77468,6 +77650,15 @@ export type Database = {
           p_failure_note?: string
           p_orders?: number
           p_run_id: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      finish_daily_release_sale: {
+        Args: {
+          p_error?: string
+          p_release_id: string
+          p_sale_date: string
           p_status: string
         }
         Returns: boolean
@@ -79457,6 +79648,10 @@ export type Database = {
       }
       mayor_company_modifier: { Args: { p_city_id: string }; Returns: number }
       media_quality_bar: { Args: { p_tier: number }; Returns: number }
+      merch_assert_band_funds: {
+        Args: { p_amount: number; p_band_id: string }
+        Returns: undefined
+      }
       moderate_player_report: {
         Args: {
           p_assign_to_self?: boolean
@@ -82471,6 +82666,17 @@ export type Database = {
         }
         Returns: Json
       }
+      settle_daily_video: {
+        Args: {
+          p_daily_earnings_cents: number
+          p_daily_views: number
+          p_day: string
+          p_is_viral: boolean
+          p_video_hype_change: number
+          p_video_id: string
+        }
+        Returns: boolean
+      }
       settle_dj_booking_internal: {
         Args: { p_booking_id: string }
         Returns: string
@@ -82546,6 +82752,21 @@ export type Database = {
           p_listing_id: string
         }
         Returns: Json
+      }
+      settle_streaming_release_day: {
+        Args: {
+          p_analytics: Json
+          p_contract_id?: string
+          p_day: string
+          p_earnings: Json
+          p_label_amount?: number
+          p_label_id?: string
+          p_recoup_amount?: number
+          p_revenue: number
+          p_song_release_id: string
+          p_streams: number
+        }
+        Returns: boolean
       }
       settle_support_band_gig: { Args: { p_gig_id: string }; Returns: Json }
       settle_work_shift_atomic: {
