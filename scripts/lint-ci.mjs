@@ -58,9 +58,25 @@ if (newErrors > 0) {
     .filter((file) => file.errorCount > 0)
     .sort((a, b) => b.errorCount - a.errorCount)
     .slice(0, 25);
-  console.error("\nTop ESLint error files (diagnostic only):");
+  const byRule = new Map();
+  for (const file of report) {
+    for (const message of file.messages.filter((item) => item.severity === 2)) {
+      const rule = message.ruleId ?? "eslint";
+      byRule.set(rule, (byRule.get(rule) ?? 0) + 1);
+    }
+  }
+  console.error("\\nESLint errors by rule (current total, not baseline delta):");
+  for (const [rule, count] of [...byRule].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+    console.error(`  ${rule}: ${count}`);
+  }
+
+  console.error("\\nTop ESLint error files (current totals; not necessarily newly introduced):");
   for (const file of topFiles) {
     console.error(`  ${normalizedPath(file.filePath)} — ${file.errorCount} error(s)`);
+    for (const message of file.messages.filter((item) => item.severity === 2).slice(0, 5)) {
+      console.error(`    ${message.line}:${message.column}  ${message.ruleId ?? "eslint"}  ${message.message}`);
+    }
+    if (file.errorCount > 5) console.error(`    ... ${file.errorCount - 5} more error(s) in this file`);
   }
 
   if (focused.length) {
