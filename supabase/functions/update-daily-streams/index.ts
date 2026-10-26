@@ -317,8 +317,8 @@ Deno.serve(async (req) => {
         .in('id', bandIds);
       for (const b of bandExtras || []) {
         if (b.genre) bandGenreMap.set(b.id, b.genre);
-        bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
-        bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
+        bandSentimentMap.set(b.id, b.fan_sentiment_score ?? 0);
+        bandReputationMap.set(b.id, b.reputation_score ?? 0);
       }
     }
 
