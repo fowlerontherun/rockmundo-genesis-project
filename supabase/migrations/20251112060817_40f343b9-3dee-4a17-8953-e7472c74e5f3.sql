@@ -32,8 +32,30 @@ CREATE INDEX IF NOT EXISTS idx_cron_job_runs_job_name ON public.cron_job_runs(jo
 CREATE INDEX IF NOT EXISTS idx_cron_job_runs_started_at ON public.cron_job_runs(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cron_job_runs_status ON public.cron_job_runs(status);
 
--- Create view for job summary
-CREATE OR REPLACE VIEW public.admin_cron_job_summary AS
+-- November 8 created a *different* admin cron monitoring model: summary
+-- is already a view with more columns and admin_cron_job_runs is a TABLE.
+-- Preserve the earlier table and its data under a legacy name, then install
+-- the canonical November 12 model without DROP ... CASCADE.
+DROP FUNCTION IF EXISTS public.admin_get_cron_job_summary();
+DROP FUNCTION IF EXISTS public.admin_get_cron_job_runs(integer);
+DROP VIEW IF EXISTS public.admin_cron_job_summary;
+
+DO $reconcile_cron_models$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname='admin_cron_job_runs'
+      AND c.relkind IN ('r','p')
+  ) THEN
+    IF to_regclass('public.admin_cron_job_runs_legacy') IS NOT NULL THEN
+      RAISE EXCEPTION 'Legacy cron table name occupied: manual reconciliation required';
+    END IF;
+    ALTER TABLE public.admin_cron_job_runs RENAME TO admin_cron_job_runs_legacy;
+  END IF;
+END $reconcile_cron_models$;
+
+-- Create view for job summary with caller-side RLS enforcement.
+CREATE OR REPLACE VIEW public.admin_cron_job_summary WITH (security_invoker=true) AS
 SELECT 
   c.job_name,
   c.edge_function_name,
@@ -56,7 +78,7 @@ WHERE c.is_active = true
 GROUP BY c.job_name, c.edge_function_name, c.display_name, c.description, c.schedule, c.allow_manual_trigger;
 
 -- Create view for recent runs
-CREATE OR REPLACE VIEW public.admin_cron_job_runs AS
+CREATE OR REPLACE VIEW public.admin_cron_job_runs WITH (security_invoker=true) AS
 SELECT 
   id,
   job_name,
@@ -72,22 +94,37 @@ SELECT
 FROM public.cron_job_runs
 ORDER BY started_at DESC;
 
--- Create RPC functions
+-- Admin RPCs must never expose privileged cron logs via default PUBLIC
+-- EXECUTE on SECURITY DEFINER functions.
 CREATE OR REPLACE FUNCTION public.admin_get_cron_job_summary()
-RETURNS SETOF admin_cron_job_summary
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT * FROM admin_cron_job_summary ORDER BY display_name;
-$$;
+RETURNS SETOF public.admin_cron_job_summary
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path TO public, pg_temp AS $fn$
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role'
+    AND (auth.uid() IS NULL OR NOT coalesce(public.has_role(auth.uid(),'admin'),false)) THEN
+    RAISE EXCEPTION 'Not authorized' USING errcode='42501';
+  END IF;
+  RETURN QUERY SELECT * FROM public.admin_cron_job_summary ORDER BY display_name;
+END $fn$;
 
 CREATE OR REPLACE FUNCTION public.admin_get_cron_job_runs(_limit INTEGER DEFAULT 50)
-RETURNS SETOF admin_cron_job_runs
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT * FROM admin_cron_job_runs LIMIT _limit;
-$$;
+RETURNS SETOF public.admin_cron_job_runs
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path TO public, pg_temp AS $fn$
+BEGIN
+  IF auth.role() IS DISTINCT FROM 'service_role'
+    AND (auth.uid() IS NULL OR NOT coalesce(public.has_role(auth.uid(),'admin'),false)) THEN
+    RAISE EXCEPTION 'Not authorized' USING errcode='42501';
+  END IF;
+  RETURN QUERY SELECT * FROM public.admin_cron_job_runs
+    ORDER BY started_at DESC LIMIT least(greatest(coalesce(_limit,50),1),200);
+END $fn$;
+
+REVOKE ALL ON FUNCTION public.admin_get_cron_job_summary() FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.admin_get_cron_job_runs(integer) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.admin_get_cron_job_summary() TO authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.admin_get_cron_job_runs(integer) TO authenticated,service_role;
 
 -- Enable RLS
 ALTER TABLE public.cron_job_runs ENABLE ROW LEVEL SECURITY;
