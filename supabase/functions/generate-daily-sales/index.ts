@@ -445,7 +445,7 @@ serve(async (req) => {
 
         const avgQuality =
           (release.release_songs?.reduce(
-            (sum: number, rs: any) => sum + (rs.song?.quality_score || 50),
+            (sum: number, rs: { song?: { quality_score?: number | null } | null }) => sum + (rs.song?.quality_score || 50),
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
