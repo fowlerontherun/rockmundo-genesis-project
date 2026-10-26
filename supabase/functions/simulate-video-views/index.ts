@@ -80,7 +80,13 @@ serve(async (req) => {
     if (videoError) throw videoError;
     if (!video) throw new Error("Claimed video was not found");
 
-    const song = video.songs as any;
+    const song = video.songs as {
+      id: string;
+      quality_score: number | null;
+      hype: number | null;
+      band_id: string | null;
+      profile_id: string | null;
+    };
     let sentiment = 0;
     let reputation = 0;
     if (song?.band_id) {
