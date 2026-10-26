@@ -199,7 +199,7 @@ serve(async (req) => {
     try {
       const { data: marketingSummary, error: marketingError } = await supabaseClient.rpc("process_label_marketing_daily");
       if (marketingError) throw marketingError;
-      labelsMarketingProcessed = Number((marketingSummary as any)?.labels_processed ?? 0);
+      labelsMarketingProcessed = Number((marketingSummary as { labels_processed?: number } | null)?.labels_processed ?? 0);
       console.log("Label marketing applied before sales:", marketingSummary);
     } catch (marketingError) {
       console.error("Error processing label marketing before sales:", marketingError);
