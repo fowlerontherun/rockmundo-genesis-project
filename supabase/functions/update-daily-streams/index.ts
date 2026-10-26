@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-fetch band country fans for territory weighting
-    const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || (r.songs as any)?.band_id).filter(Boolean))];
+    const bandIds = [...new Set((streamingReleases || []).map(r => r.band_id || r.songs?.band_id).filter(Boolean))];
     const bandCountryFansMap = new Map<string, Map<string, number>>();
     if (bandIds.length > 0) {
       const { data: bcf } = await supabase
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
         break;
       }
       try {
-        const bandId = release.band_id || (release.songs as any)?.band_id;
+        const bandId = release.band_id || release.songs?.band_id;
         const bandStats = bandId ? bandFameMap.get(bandId) : undefined;
         const bandFame = bandStats?.fame || 0;
         const bandTotalFans = bandStats?.totalFans || 0;
@@ -367,7 +367,7 @@ Deno.serve(async (req) => {
         // Marketing buys reach; quality determines how strongly listeners convert and
         // whether a song can break out organically. Support both the current 0-100
         // quality scale and the expanded 0-1000 scale used by newer songwriting data.
-        const rawQuality = Number((release.songs as any)?.quality_score ?? 50);
+        const rawQuality = Number(release.songs?.quality_score ?? 50);
         const quality100 = Math.max(0, Math.min(100, rawQuality > 100 ? rawQuality / 10 : rawQuality));
         const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9; // 0.7x-1.6x
         const breakoutT = Math.max(0, (quality100 - 75) / 25);
