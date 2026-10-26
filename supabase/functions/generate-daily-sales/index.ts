@@ -10,7 +10,7 @@ import {
 import { calculateSaleDeductions, distributionRate as resolveDistributionRate } from "../_shared/release-finance.ts";
 
 // Helper: get sales tax rate for a city
-async function getCitySalesTaxRate(cityId: string | null, client?: any): Promise<number> {
+async function getCitySalesTaxRate(cityId: string | null, client?: ReturnType<typeof createClient>): Promise<number> {
   if (!cityId || !client) return 0.10;
   try {
     const { data } = await client
