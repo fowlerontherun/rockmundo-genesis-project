@@ -581,12 +581,16 @@ serve(async (req) => {
               });
               if (claimError) throw claimError;
 
-              const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
-              actualSales = Number((claim as any)?.actual_sold ?? 0);
+              const claim = (Array.isArray(claimRows) ? claimRows[0] : claimRows) as {
+                actual_sold?: number | null;
+                backlog_sold?: number | null;
+                unmet_demand_added?: number | null;
+              } | null;
+              actualSales = Number(claim?.actual_sold ?? 0);
               inventoryClaim = {
                 actualSold: actualSales,
-                backlogSold: Number((claim as any)?.backlog_sold ?? 0),
-                unmetAdded: Number((claim as any)?.unmet_demand_added ?? 0),
+                backlogSold: Number(claim?.backlog_sold ?? 0),
+                unmetAdded: Number(claim?.unmet_demand_added ?? 0),
               };
             }
 
