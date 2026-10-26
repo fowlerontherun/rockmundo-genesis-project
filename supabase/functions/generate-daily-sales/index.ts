@@ -10,7 +10,7 @@ import {
 import { calculateSaleDeductions, distributionRate as resolveDistributionRate } from "../_shared/release-finance.ts";
 
 // Helper: get sales tax rate for a city
-async function getCitySalesTaxRate(cityId: string | null, client?: any): Promise<number> {
+async function getCitySalesTaxRate(cityId: string | null, client?: ReturnType<typeof createClient>): Promise<number> {
   if (!cityId || !client) return 0.10;
   try {
     const { data } = await client
@@ -129,7 +129,7 @@ serve(async (req) => {
       .eq("category", "sales");
     
     const salesConfig: Record<string, number> = {};
-    (salesConfigData || []).forEach((item: any) => {
+    (salesConfigData || []).forEach((item) => {
       salesConfig[item.key] = item.value as number;
     });
     
@@ -199,7 +199,7 @@ serve(async (req) => {
     try {
       const { data: marketingSummary, error: marketingError } = await supabaseClient.rpc("process_label_marketing_daily");
       if (marketingError) throw marketingError;
-      labelsMarketingProcessed = Number((marketingSummary as any)?.labels_processed ?? 0);
+      labelsMarketingProcessed = Number((marketingSummary as { labels_processed?: number } | null)?.labels_processed ?? 0);
       console.log("Label marketing applied before sales:", marketingSummary);
     } catch (marketingError) {
       console.error("Error processing label marketing before sales:", marketingError);
