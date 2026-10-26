@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
 import {
   completeJobRun,
   failJobRun,
@@ -66,10 +65,21 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
-  // Vault-backed scheduler authentication and once-per-UTC-day claim.
-  // Reject before reading the payload, logging or performing any settlement.
-  const denied = await authorizeInternalJob(req, supabaseClient, "generate-daily-sales", corsHeaders);
-  if (denied) return denied;
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Reject untrusted callers BEFORE job logging, body parsing or world-state IO.
+  const { data: authenticated, error: authError } = await supabaseClient.rpc(
+    "verify_internal_cron_secret", { p_secret: req.headers.get("x-cron-secret") },
+  );
+  if (authError || authenticated !== true) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
@@ -80,6 +90,8 @@ serve(async (req) => {
   let releasesProcessed = 0;
   let errorCount = 0;
   let labelsMarketingProcessed = 0;
+  const saleDate = new Date().toISOString().slice(0, 10);
+  let claimedReleaseId: string | null = null;
 
   // Accumulate per-band revenue to credit once at the end
   const bandRevenueAccumulator = new Map<string, { netRevenue: number; grossRevenue: number; units: number; taxRate: number; formats: string[] }>();
@@ -88,6 +100,19 @@ serve(async (req) => {
   const labelRevenueAccumulator = new Map<string, { labelRevenue: number; recoupmentApplied: number; contractId: string }>();
 
   try {
+    // A durable one-release-per-UTC-day claim bounds each invocation's work
+    // and prevents duplicates across retries and parallel cron triggers.
+    const { data: nextReleaseId, error: claimError } = await supabaseClient.rpc(
+      "claim_next_daily_release_sale", { p_sale_date: saleDate },
+    );
+    if (claimError) throw claimError;
+    if (!nextReleaseId) {
+      return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_unprocessed_releases" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    claimedReleaseId = nextReleaseId;
+
     runId = await startJobRun({
       jobName: "generate-daily-sales",
       functionName: "generate-daily-sales",
@@ -209,6 +234,7 @@ serve(async (req) => {
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
       .eq("release_status", "released")
+      .eq("id", claimedReleaseId)
       .order("id", { ascending: true })
       .range(offset, offset + 499);
     if (releasesError) throw releasesError;
@@ -364,6 +390,7 @@ serve(async (req) => {
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
+        const songFameGains = new Map<string, number>();
 
         const profile = release.user_id
           ? profilesMap.get(release.user_id as string)
@@ -788,16 +815,13 @@ serve(async (req) => {
                 }
               }
 
-              const famePerSale = isDigital ? 0.1 : 0.2;
-              for (const rs of release.release_songs || []) {
-                if (rs.song_id) {
-                  const fameGain = Math.floor(actualSales * famePerSale);
-                  if (fameGain > 0) {
-                    await supabaseClient.rpc('update_song_fame', {
-                      p_song_id: rs.song_id,
-                      p_fame_amount: fameGain,
-                      p_source: 'sales'
-                    });
+              // Batch per-song fame once per release, rather than 16 RPCs
+              // per territory sale (which exhausted the Edge worker budget).
+              const fameGain = Math.floor(actualSales * (isDigital ? 0.1 : 0.2));
+              if (fameGain > 0) {
+                for (const rs of release.release_songs || []) {
+                  if (rs.song_id) {
+                    songFameGains.set(rs.song_id, (songFameGains.get(rs.song_id) || 0) + fameGain);
                   }
                 }
               }
@@ -806,6 +830,16 @@ serve(async (req) => {
             }
           } // end territory loop
         }
+        for (const [songId, fameAmount] of songFameGains) {
+          const { error: fameError } = await supabaseClient.rpc("update_song_fame", {
+            p_song_id: songId, p_fame_amount: fameAmount, p_source: "sales",
+          });
+          if (fameError) {
+            errorCount++;
+            console.error("Failed batched sales song fame", songId, fameError);
+          }
+        }
+
         // Hype decay: 5% per day after first week
         const hypeScoreVal = (release as any).hype_score || 0;
         let resultingHype = hypeScoreVal;
@@ -931,6 +965,10 @@ serve(async (req) => {
     console.log(`Processed marketing for ${labelsMarketingProcessed} labels before sales`);
 
     if (errorCount > 0) {
+      await supabaseClient.rpc("finish_daily_release_sale", {
+        p_sale_date: saleDate, p_release_id: claimedReleaseId,
+        p_status: "failed", p_error: errorCount + " processing or settlement errors",
+      });
       await failJobRun({ jobName: "generate-daily-sales", runId, supabaseClient,
         durationMs: Date.now() - startedAt,
         error: new Error(`${errorCount} daily sales or payout operations failed`),
@@ -939,6 +977,11 @@ serve(async (req) => {
         bandsCredited, labelsCredited, labelsMarketingProcessed }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    const { data: finishConfirmed, error: finishError } = await supabaseClient.rpc("finish_daily_release_sale", {
+      p_sale_date: saleDate, p_release_id: claimedReleaseId, p_status: "completed",
+    });
+    if (finishError || finishConfirmed !== true) throw finishError ?? new Error("Sale completion claim not confirmed");
+
     await completeJobRun({
       jobName: "generate-daily-sales",
       runId,
@@ -982,6 +1025,13 @@ serve(async (req) => {
       },
     });
 
+    if (claimedReleaseId) {
+      const { error: markError } = await supabaseClient.rpc("finish_daily_release_sale", {
+        p_sale_date: saleDate, p_release_id: claimedReleaseId, p_status: "failed",
+        p_error: getErrorMessage(error),
+      });
+      if (markError) console.error("Unable to mark sales claim as failed", markError);
+    }
     console.error("Error generating sales:", error);
     return new Response(
       JSON.stringify({ error: getErrorMessage(error) }),
