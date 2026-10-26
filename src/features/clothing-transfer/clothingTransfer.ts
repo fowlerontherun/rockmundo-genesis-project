@@ -32,22 +32,27 @@ export function slugifyExternalKey(name: string, id?: string) {
   return `rockmundo.${slug}.${(id || crypto.randomUUID()).slice(0, 8)}`;
 }
 
-export function toPortableClothingItem(item: ClothingItem | Record<string, any>, collection?: PortableClothingItem['collection']): PortableClothingItem {
+export function toPortableClothingItem(item: ClothingItem | Record<string, unknown>, collection?: PortableClothingItem['collection']): PortableClothingItem {
+  const source = item as Record<string, unknown>;
   const portable: Record<string, unknown> = {};
   for (const key of PORTABLE_FIELDS) {
-    if ((item as any)[key] !== undefined) portable[key] = (item as any)[key];
+    if (source[key] !== undefined) portable[key] = source[key];
   }
+  const itemId = typeof source.id === 'string' ? source.id : undefined;
+  const externalKey = typeof source.external_key === 'string' && source.external_key
+    ? source.external_key
+    : slugifyExternalKey(typeof source.name === 'string' ? source.name : 'Clothing item', itemId);
   return {
     schema: CLOTHING_EXPORT_SCHEMA,
     schemaVersion: CLOTHING_EXPORT_VERSION,
-    externalKey: (item as any).external_key || slugifyExternalKey((item as any).name || 'Clothing item', (item as any).id),
-    originalId: (item as any).id,
+    externalKey,
+    originalId: itemId,
     collection: collection || null,
     item: portable,
   };
 }
 
-export function toPortableBundle(items: Array<ClothingItem | Record<string, any>>, collection?: PortableClothingBundle['collection']): PortableClothingBundle {
+export function toPortableBundle(items: Array<ClothingItem | Record<string, unknown>>, collection?: PortableClothingBundle['collection']): PortableClothingBundle {
   return {
     schema: 'rockmundo.clothing.bundle',
     schemaVersion: CLOTHING_EXPORT_VERSION,
@@ -81,16 +86,16 @@ export function validatePortableItem(entry: PortableClothingItem) {
   const errors: string[] = [];
   const item = entry?.item || {};
   if (entry?.schema !== CLOTHING_EXPORT_SCHEMA) errors.push('Invalid item schema');
-  if (!String((item as any).name || '').trim()) errors.push('Missing name');
-  if (!String((item as any).category || '').trim()) errors.push('Missing category');
-  if (!String((item as any).wearable_slot || '').trim()) errors.push('Missing wearable slot');
+  if (!String(item.name || '').trim()) errors.push('Missing name');
+  if (!String(item.category || '').trim()) errors.push('Missing category');
+  if (!String(item.wearable_slot || '').trim()) errors.push('Missing wearable slot');
   if (!entry.externalKey) errors.push('Missing external key');
-  const status = String((item as any).curated_asset_status || 'legacy');
-  if (status !== 'legacy' && !String((item as any).curated_asset_key || '').trim()) errors.push('Curated item is missing asset key');
+  const status = String(item.curated_asset_status || 'legacy');
+  if (status !== 'legacy' && !String(item.curated_asset_key || '').trim()) errors.push('Curated item is missing asset key');
   if (!['legacy','planned','asset_ready','validated','published','blocked'].includes(status)) errors.push('Invalid curated asset status');
-  if (Array.isArray((item as any).detail_layers) && (item as any).detail_layers.length > 24) errors.push('More than 24 detail layers');
-  if (Array.isArray((item as any).customization_zones) && (item as any).customization_zones.length > 12) errors.push('More than 12 customization zones');
-  if (Array.isArray((item as any).variant_matrix) && (item as any).variant_matrix.length > 40) errors.push('More than 40 variants');
+  if (Array.isArray(item.detail_layers) && item.detail_layers.length > 24) errors.push('More than 24 detail layers');
+  if (Array.isArray(item.customization_zones) && item.customization_zones.length > 12) errors.push('More than 12 customization zones');
+  if (Array.isArray(item.variant_matrix) && item.variant_matrix.length > 40) errors.push('More than 40 variants');
   return errors;
 }
 
