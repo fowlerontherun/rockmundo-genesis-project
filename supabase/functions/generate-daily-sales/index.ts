@@ -129,7 +129,7 @@ serve(async (req) => {
       .eq("category", "sales");
     
     const salesConfig: Record<string, number> = {};
-    (salesConfigData || []).forEach((item: any) => {
+    (salesConfigData || []).forEach((item) => {
       salesConfig[item.key] = item.value as number;
     });
     
