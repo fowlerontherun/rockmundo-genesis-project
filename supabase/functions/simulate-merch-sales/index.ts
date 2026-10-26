@@ -100,7 +100,22 @@ Deno.serve(async (req) => {
   try {
     // PostgREST caps responses (typically 1,000 rows). Process all bands
     // deterministically instead of silently omitting the later pages.
-    const bandsWithMerch: any[] = [];
+    type MerchItem = {
+      id: string; item_type: string | null; design_name: string | null;
+      selling_price: number | null; stock_quantity: number | null;
+      quality_tier: string | null; cost_to_produce: number | null;
+      superfan_only: boolean | null; drop_starts_at: string | null;
+      available_until: string | null; is_limited_edition: boolean | null;
+      limited_quantity: number | null; tour_exclusive_tour_id: string | null;
+    };
+    type MerchBand = {
+      id: string; name: string; fame: number | null; total_fans: number | null;
+      casual_fans: number | null; dedicated_fans: number | null;
+      superfans: number | null; home_city_id: string | null;
+      fan_sentiment_score: number | null; reputation_score: number | null;
+      player_merchandise: MerchItem[] | null;
+    };
+    const bandsWithMerch: MerchBand[] = [];
     for (let offset = 0; ; offset += 500) {
       const { data: batch, error: bandsError } = await supabase
         .from("bands")
@@ -117,8 +132,8 @@ Deno.serve(async (req) => {
       if ((batch ?? []).length < 500) break;
     }
 
-    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; is_active: boolean }>>();
-    const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
+    const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number | null; selling_price_override: number | null; cost_to_produce_override: number | null; is_active: boolean | null }>>();
+    const merchIds = (bandsWithMerch || []).flatMap((b) => (b.player_merchandise || []).map((m) => m.id));
     if (merchIds.length > 0) {
       // Chunk large merch catalogues and paginate variants within each chunk.
       for (let from = 0; from < merchIds.length; from += 150) {
@@ -133,9 +148,9 @@ Deno.serve(async (req) => {
             .range(offset, offset + 499);
           if (variantError) throw variantError;
           for (const variant of variants || []) {
-        const list = variantMap.get((variant as any).merchandise_id) || [];
-        list.push(variant as any);
-        variantMap.set((variant as any).merchandise_id, list);
+        const list = variantMap.get(variant.merchandise_id) || [];
+        list.push(variant);
+        variantMap.set(variant.merchandise_id, list);
           }
           if ((variants ?? []).length < 500) break;
         }
@@ -153,19 +168,19 @@ Deno.serve(async (req) => {
     let rejectedForStock = 0;
 
     for (const band of bandsWithMerch || []) {
-      const merchandise = (band as any).player_merchandise || [];
+      const merchandise = band.player_merchandise || [];
       if (merchandise.length === 0) continue;
 
-      const sentimentT = (Math.max(-100, Math.min(100, (band as any).fan_sentiment_score ?? 0)) + 100) / 200;
+      const sentimentT = (Math.max(-100, Math.min(100, band.fan_sentiment_score ?? 0)) + 100) / 200;
       const merchDemandMod = 0.5 + sentimentT;
-      const repT = (Math.max(-100, Math.min(100, (band as any).reputation_score ?? 0)) + 100) / 200;
+      const repT = (Math.max(-100, Math.min(100, band.reputation_score ?? 0)) + 100) / 200;
       const merchRepMod = 0.8 + repT * 0.4;
-      const fameMultiplier = 1 + Math.min(((band as any).fame || 0) / 5000, 2);
-      const dailySalesTarget = Math.max(1, Math.floor(((band as any).total_fans || 0) * 0.001 * fameMultiplier * merchDemandMod * merchRepMod));
+      const fameMultiplier = 1 + Math.min((band.fame || 0) / 5000, 2);
+      const dailySalesTarget = Math.max(1, Math.floor((band.total_fans || 0) * 0.001 * fameMultiplier * merchDemandMod * merchRepMod));
       const actualSales = Math.floor(dailySalesTarget * (0.5 + Math.random()));
 
       const variantStateMap = new Map<string, Array<{ id: string; stock: number; price: number | null; cost: number | null }>>();
-      const merchState = merchandise.map((m: any) => {
+      const merchState = merchandise.map((m) => {
         const variants = (variantMap.get(m.id) || []).map(v => ({
           id: v.id,
           stock: v.stock_quantity || 0,
@@ -180,9 +195,9 @@ Deno.serve(async (req) => {
         };
       });
 
-      const successfulOrders: any[] = [];
-      const superfanRatio = ((band as any).superfans || 0) / Math.max(1, (band as any).total_fans || 1);
-      const dedicatedRatio = ((band as any).dedicated_fans || 0) / Math.max(1, (band as any).total_fans || 1);
+      const successfulOrders: Array<{ merchandise_id: string; variant_id: string | null; quantity: number; unit_price: number; total_price: number; sales_tax: number; vat: number; net_revenue: number; production_cost: number; order_type: string; customer_type: string }> = [];
+      const superfanRatio = (band.superfans || 0) / Math.max(1, band.total_fans || 1);
+      const dedicatedRatio = (band.dedicated_fans || 0) / Math.max(1, band.total_fans || 1);
 
       for (let i = 0; i < actualSales; i++) {
         let customerType = "fan";
@@ -191,7 +206,7 @@ Deno.serve(async (req) => {
         else if (fanRoll < superfanRatio * 2 + dedicatedRatio) customerType = "collector";
 
         const nowMs = Date.now();
-        const available = merchState.filter((m: any) => {
+        const available = merchState.filter((m) => {
           if (m.currentStock <= 0) return false;
           if (m.drop_starts_at && new Date(m.drop_starts_at).getTime() > nowMs) return false;
           if (m.available_until && new Date(m.available_until).getTime() < nowMs) return false;
@@ -201,7 +216,7 @@ Deno.serve(async (req) => {
         if (available.length === 0) break;
 
         const qualityWeights: Record<string, number> = { exclusive: 5, premium: 4, standard: 3, basic: 2, poor: 1 };
-        const selected: any = weightedRandomSelect(available.map((m: any) => ({ ...m, weight: qualityWeights[m.quality_tier || "basic"] || 2 })));
+        const selected = weightedRandomSelect(available.map((m) => ({ ...m, weight: qualityWeights[m.quality_tier || "basic"] || 2 })));
 
         let variantId: string | null = null;
         let variantPrice: number | null = null;
@@ -241,7 +256,7 @@ Deno.serve(async (req) => {
         const { data: saleResult, error: saleError } = await supabase.rpc("record_simulated_merch_sale_atomic", {
           p_run_id: simulationRunId,
           p_sale_sequence: ++saleSequence,
-          p_band_id: (band as any).id,
+          p_band_id: band.id,
           p_merchandise_id: selected.id,
           p_variant_id: variantId,
           p_quantity: quantity,
@@ -262,7 +277,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const result = saleResult as any;
+        const result = saleResult as { sold: boolean; remaining_stock: number | null } | null;
         if (!result?.sold) {
           rejectedForStock++;
           const remaining = Number(result?.remaining_stock ?? 0);
@@ -312,13 +327,13 @@ Deno.serve(async (req) => {
       const bandTotalTaxes = successfulOrders.reduce((sum, o) => sum + o.sales_tax + o.vat, 0);
       const bandTotalCosts = successfulOrders.reduce((sum, o) => sum + o.production_cost, 0);
 
-      if ((band as any).home_city_id && bandTotalTaxes > 0) {
+      if (band.home_city_id && bandTotalTaxes > 0) {
         const { error: treasuryError } = await supabase.rpc("credit_city_treasury", {
-          p_city_id: (band as any).home_city_id,
+          p_city_id: band.home_city_id,
           p_amount: bandTotalTaxes,
           p_type: "merch_sales_tax",
-          p_description: `Merch sales tax for ${(band as any).name} (${successfulOrders.length} orders)`,
-          p_reference_id: (band as any).id,
+          p_description: `Merch sales tax for ${band.name} (${successfulOrders.length} orders)`,
+          p_reference_id: band.id,
         });
         if (treasuryError) throw new Error(`Merch tax settlement failed: ${treasuryError.message}`);
       }
@@ -328,22 +343,22 @@ Deno.serve(async (req) => {
       const { data: active360, error: contractError } = await supabase
         .from("artist_label_contracts")
         .select("id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)")
-        .eq("band_id", (band as any).id)
+        .eq("band_id", band.id)
         .eq("status", "active")
         .limit(1)
         .maybeSingle();
       if (contractError) throw new Error(`360 contract lookup failed: ${contractError.message}`);
 
-      if (active360 && (active360 as any).label_deal_types?.name === "360 Deal" && bandNetRevenue > 0) {
-        const labelPct = (((active360 as any).royalty_label_pct ?? 20) as number) / 100;
+      if (active360 && active360.label_deal_types?.name === "360 Deal" && bandNetRevenue > 0) {
+        const labelPct = ((active360.royalty_label_pct ?? 20) as number) / 100;
         const proposedCut = Math.round(bandNetRevenue * labelPct);
         if (proposedCut > 0) {
           const { error: labelCreditError } = await supabase.rpc("credit_label_merch_revenue_atomic", {
-            p_label_id: (active360 as any).label_id,
+            p_label_id: active360.label_id,
             p_amount: proposedCut,
-            p_description: `360 Deal merch cut: ${successfulOrders.length} orders from ${(band as any).name}`,
-            p_related_contract_id: (active360 as any).id,
-            p_related_band_id: (band as any).id,
+            p_description: `360 Deal merch cut: ${successfulOrders.length} orders from ${band.name}`,
+            p_related_contract_id: active360.id,
+            p_related_band_id: band.id,
           });
           if (labelCreditError) {
             throw new Error(`360 label settlement failed: ${labelCreditError.message}`);
@@ -356,13 +371,13 @@ Deno.serve(async (req) => {
 
       if (finalBandRevenue > 0) {
         try {
-          const { data: bandHealth } = await supabase.from("bands").select("morale").eq("id", (band as any).id).single();
+          const { data: bandHealth } = await supabase.from("bands").select("morale").eq("id", band.id).single();
           if (bandHealth) {
             const moraleBoost = finalBandRevenue >= 5000 ? 4 : finalBandRevenue >= 1000 ? 3 : finalBandRevenue >= 200 ? 2 : 1;
-            const newMorale = Math.min(100, ((bandHealth as any).morale ?? 50) + moraleBoost);
-            await supabase.from("bands").update({ morale: newMorale }).eq("id", (band as any).id);
+            const newMorale = Math.min(100, (bandHealth.morale ?? 50) + moraleBoost);
+            await supabase.from("bands").update({ morale: newMorale }).eq("id", band.id);
             await supabase.from("band_health_events").insert({
-              band_id: (band as any).id,
+              band_id: band.id,
               event_type: "morale",
               delta: moraleBoost,
               new_value: newMorale,
@@ -375,7 +390,7 @@ Deno.serve(async (req) => {
         }
 
         const { error: earningsError } = await supabase.from("band_earnings").insert({
-          band_id: (band as any).id,
+          band_id: band.id,
           amount: Math.round(finalBandRevenue),
           source: "merchandise",
           description: `Daily merch sales: ${successfulOrders.length} orders (inventory production cost already paid: $${bandTotalCosts.toFixed(0)}, taxes: $${bandTotalTaxes.toFixed(0)})${labelMerchCut > 0 ? ` [360 deal: $${labelMerchCut} to label]` : ""}`,
