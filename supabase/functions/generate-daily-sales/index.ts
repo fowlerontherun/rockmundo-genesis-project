@@ -206,7 +206,34 @@ serve(async (req) => {
       errorCount++;
     }
 
-    const releases: any[] = [];
+    // Shape of the selected sales release and its joined rows. This keeps the
+    // daily settlement path typed without changing the underlying query.
+    type SalesBand = {
+      id: string; fame: number | null; popularity: number | null;
+      total_fans: number | null; chemistry_level: number | null;
+      home_city_id: string | null;
+    };
+    type SalesRelease = {
+      id: string; band_id: string | null; user_id: string | null;
+      created_at: string | null; release_type: string | null;
+      hype_score: number | null; label_marketing_power: number | null;
+      pr_reach_power: number | null; pr_reach_updated_at: string | null;
+      label_marketing_focus: string | null; label_marketing_regions: string[] | null;
+      label_marketing_saturation: number | null; manufacturing_complete_at: string | null;
+      home_country: string | null; label_contract_id: string | null;
+      label_revenue_share_pct: number | null; revenue_share_enabled: boolean | null;
+      revenue_share_percentage: number | null; bands: SalesBand | SalesBand[] | null;
+      release_formats: Array<{
+        id: string; format_type: string; retail_price: number | null;
+        quantity: number | null; stockout_demand: number | null;
+        distribution_fee_percentage: number | null;
+      }> | null;
+      release_songs: Array<{
+        song_id: string | null;
+        song: { id: string; quality_score: number | null } | null;
+      }> | null;
+    };
+    const releases: SalesRelease[] = [];
     for (let offset = 0; ; offset += 500) {
     const { data: page, error: releasesError } = await supabaseClient
       .from("releases")
@@ -238,7 +265,7 @@ serve(async (req) => {
       .order("id", { ascending: true })
       .range(offset, offset + 499);
     if (releasesError) throw releasesError;
-    releases.push(...(page ?? []));
+    releases.push(...((page ?? []) as SalesRelease[]));
     if (!page || page.length < 500) break;
     }
 
@@ -272,7 +299,7 @@ serve(async (req) => {
 
     // Pre-fetch all release territories
     const releaseIds = (releases || []).map(r => r.id);
-    let allTerritories: any[] = [];
+    let allTerritories: Array<{ release_id: string; country: string; distance_tier: string | null; cost_multiplier: number | null; is_active: boolean }> = [];
     if (releaseIds.length > 0) {
       const { data: territories } = await supabaseClient
         .from("release_territories")
@@ -283,7 +310,7 @@ serve(async (req) => {
     }
 
     // Pre-fetch all active label contracts for revenue splitting
-    const contractIds = [...new Set((releases || []).map(r => (r as any).label_contract_id).filter(Boolean))];
+    const contractIds = [...new Set((releases || []).map(r => r.label_contract_id).filter(Boolean))];
     const contractMap = new Map<string, { id: string; label_id: string; advance_amount: number; recouped_amount: number; royalty_artist_pct: number; royalty_label_pct: number; marketing_support: number; deal_type_name: string; end_date: string }>();
     
     if (contractIds.length > 0) {
@@ -351,14 +378,14 @@ serve(async (req) => {
     }
 
     // Pre-fetch data previously queried once per release.
-    const cityIds = [...new Set((releases || []).map((r: any) => (Array.isArray(r.bands) ? r.bands[0] : r.bands)?.home_city_id).filter(Boolean))];
+    const cityIds = [...new Set((releases || []).map((r) => (Array.isArray(r.bands) ? r.bands[0] : r.bands)?.home_city_id).filter(Boolean))];
     const cityTaxMap = new Map<string, number>();
     if (cityIds.length > 0) {
       const { data: cities } = await supabaseClient.from("cities").select("id, sales_tax_rate").in("id", cityIds);
       for (const city of cities || []) cityTaxMap.set(city.id, city.sales_tax_rate != null ? city.sales_tax_rate / 100 : defaultSalesTaxRate);
     }
 
-    const countryFansByBand = new Map<string, any[]>();
+    const countryFansByBand = new Map<string, Array<{ band_id: string; country: string; fame: number; has_performed: boolean; total_fans: number }>>();
     if (saleBandIds.length > 0) {
       const { data: countryFans } = await supabaseClient
         .from("band_country_fans")
@@ -366,12 +393,17 @@ serve(async (req) => {
         .in("band_id", saleBandIds);
       for (const fan of countryFans || []) {
         const rows = countryFansByBand.get(fan.band_id) || [];
-        rows.push(fan);
+        rows.push({
+          ...fan,
+          fame: fan.fame ?? 0,
+          has_performed: fan.has_performed ?? false,
+          total_fans: fan.total_fans ?? 0,
+        });
         countryFansByBand.set(fan.band_id, rows);
       }
     }
 
-    const campaignsByRelease = new Map<string, any[]>();
+    const campaignsByRelease = new Map<string, Array<{ release_id: string; effects: { hypeBoost?: number } | null }>>();
     if (releaseIds.length > 0) {
       const { data: campaigns, error: campaignsError } = await (supabaseClient.from("promotional_campaigns" as any) as any)
         .select("release_id, effects, start_date, end_date")
@@ -445,7 +477,7 @@ serve(async (req) => {
 
         const avgQuality =
           (release.release_songs?.reduce(
-            (sum: number, rs: any) => sum + (rs.song?.quality_score || 50),
+            (sum, rs) => sum + (rs.song?.quality_score || 50),
             0
           ) ?? 50) / (release.release_songs?.length || 1);
 
@@ -465,13 +497,13 @@ serve(async (req) => {
           : 0;
         // Regional fan rows improve territory weighting, but missing/stale rows
         // must never erase the band's known global audience.
-        const totalFans = Math.max(regionalFans, Number((band as any)?.total_fans || 0));
+        const totalFans = Math.max(regionalFans, Number(band?.total_fans || 0));
         // Old: sqrt(500K)*0.005 = 3.5x. New: log10-based with cap — 1K→4x, 100K→6x, 1M→7x
         const fansMultiplier = totalFans > 0 ? 1 + Math.min(Math.log10(totalFans) * 1.5, 10) : 1.0;
 
         // ── Label contract lookup for this release ──
-        const releaseContractId = (release as any).label_contract_id;
-        const releaseSharePct = (release as any).label_revenue_share_pct;
+        const releaseContractId = release.label_contract_id;
+        const releaseSharePct = release.label_revenue_share_pct;
         const contract = releaseContractId ? contractMap.get(releaseContractId) : null;
         // Effective label cut percentage (from release override or contract)
         const labelCutPct = contract
@@ -503,9 +535,9 @@ serve(async (req) => {
               break;
           }
 
-          const hypeScore = (release as any).hype_score || 0;
+          const hypeScore = release.hype_score || 0;
           const hypeMultiplier = 1 + (hypeScore / 500);
-          const releasedDate = (release as any).manufacturing_complete_at || release.created_at;
+          const releasedDate = release.manufacturing_complete_at || release.created_at;
           const realDaysSinceRelease = releasedDate ? (Date.now() - new Date(releasedDate).getTime()) / (1000 * 60 * 60 * 24) : 999;
           const gameDaysSinceRelease = realDaysSinceRelease * 3;
           const ageDecay = gameDaysSinceRelease <= 7 ? 1.5
@@ -521,17 +553,17 @@ serve(async (req) => {
           // paid reach. Popular artists already convert this reach through fame/fans,
           // while the independent quality multiplier allows exceptional songs to break out.
           const labelMarketingBonus = contract ? 1 + (contract.marketing_support / 10000) : 1.0;
-          const labelMarketingPower = Math.max(0, Math.min(100, Number((release as any).label_marketing_power || 0)));
+          const labelMarketingPower = Math.max(0, Math.min(100, Number(release.label_marketing_power || 0)));
           const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5;
 
           // Earned/owned PR is separate from paid label reach and naturally fades.
-          const storedPrReach = Math.max(0, Math.min(100, Number((release as any).pr_reach_power || 0)));
-          const prUpdatedAt = (release as any).pr_reach_updated_at ? new Date((release as any).pr_reach_updated_at).getTime() : Date.now();
+          const storedPrReach = Math.max(0, Math.min(100, Number(release.pr_reach_power || 0)));
+          const prUpdatedAt = release.pr_reach_updated_at ? new Date(release.pr_reach_updated_at).getTime() : Date.now();
           const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
           const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
           const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
-          const marketingFocus = String((release as any).label_marketing_focus || "balanced");
-          const saturation = Math.max(0, Math.min(100, Number((release as any).label_marketing_saturation || 0)));
+          const marketingFocus = String(release.label_marketing_focus || "balanced");
+          const saturation = Math.max(0, Math.min(100, Number(release.label_marketing_saturation || 0)));
           const saturationEfficiency = 1 - (saturation / 100) * 0.35;
           const focusSalesMultiplier = marketingFocus === "retail" ? 1.25
             : marketingFocus === "radio" ? 1.08
@@ -581,12 +613,12 @@ serve(async (req) => {
               });
               if (claimError) throw claimError;
 
-              const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
-              actualSales = Number((claim as any)?.actual_sold ?? 0);
+              const claim = (Array.isArray(claimRows) ? claimRows[0] : claimRows) as { actual_sold?: number | null; backlog_sold?: number | null; unmet_demand_added?: number | null } | null;
+              actualSales = Number(claim?.actual_sold ?? 0);
               inventoryClaim = {
                 actualSold: actualSales,
-                backlogSold: Number((claim as any)?.backlog_sold ?? 0),
-                unmetAdded: Number((claim as any)?.unmet_demand_added ?? 0),
+                backlogSold: Number(claim?.backlog_sold ?? 0),
+                unmetAdded: Number(claim?.unmet_demand_added ?? 0),
               };
             }
 
@@ -595,7 +627,7 @@ serve(async (req) => {
               const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
               
               // v1.1.287: respect per-format distribution_fee_percentage override (clamped 0-50%)
-              const formatOverride = (format as any).distribution_fee_percentage;
+              const formatOverride = format.distribution_fee_percentage;
               const fallbackByConfig =
                 format.format_type === "digital" ? digitalDistributionRate
                 : format.format_type === "cd" ? cdDistributionRate
@@ -609,8 +641,8 @@ serve(async (req) => {
               const deductions = calculateSaleDeductions({
                 quantity: actualSales, unitPriceMinor: retailPrice, taxRate: salesTaxRate,
                 distributionRate, physical: !isDigital,
-                manufacturerRevenueSharePercentage: (release as any).revenue_share_enabled
-                  ? (release as any).revenue_share_percentage : 0,
+                manufacturerRevenueSharePercentage: release.revenue_share_enabled
+                  ? (release.revenue_share_percentage ?? 0) : 0,
               });
               const unitPriceCents = retailPrice;
               const totalAmountCents = deductions.grossMinor;
@@ -728,7 +760,7 @@ serve(async (req) => {
                 : null;
               
               if (formatColumn) {
-                const updateObj: Record<string, any> = {};
+                const updateObj: Record<string, number> = {};
                 const { data: currentRelease } = await supabaseClient
                   .from("releases")
                   .select(`total_units_sold, ${formatColumn}`)
@@ -841,9 +873,9 @@ serve(async (req) => {
         }
 
         // Hype decay: 5% per day after first week
-        const hypeScoreVal = (release as any).hype_score || 0;
+        const hypeScoreVal = release.hype_score || 0;
         let resultingHype = hypeScoreVal;
-        const releaseDateVal = (release as any).manufacturing_complete_at || release.created_at;
+        const releaseDateVal = release.manufacturing_complete_at || release.created_at;
         const daysSinceVal = releaseDateVal ? (Date.now() - new Date(releaseDateVal).getTime()) / (1000 * 60 * 60 * 24) : 999;
         if (daysSinceVal > 7 && hypeScoreVal > 0) {
           const decayedHype = Math.floor(hypeScoreVal * 0.95);
@@ -864,7 +896,7 @@ serve(async (req) => {
         }
         if (resultingHype !== hypeScoreVal) {
           const { error: hypeError } = await supabaseClient.from("releases")
-            .update({ hype_score: resultingHype } as any).eq("id", release.id);
+            .update({ hype_score: resultingHype }).eq("id", release.id);
           if (hypeError) throw hypeError;
         }
 
@@ -916,7 +948,7 @@ serve(async (req) => {
             console.error(`Unable to read morale for band ${bandId}`, moraleReadError);
             errorCount++;
           } else {
-            const newMorale = Math.min(100, ((currentBand as any)?.morale ?? 50) + moraleBoost);
+            const newMorale = Math.min(100, (currentBand?.morale ?? 50) + moraleBoost);
             const { error: moraleError } = await supabaseClient
               .from("bands").update({ morale: newMorale }).eq("id", bandId);
             if (moraleError) {
