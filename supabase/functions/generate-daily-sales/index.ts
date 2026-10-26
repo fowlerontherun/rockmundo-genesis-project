@@ -272,7 +272,7 @@ serve(async (req) => {
 
     // Pre-fetch all release territories
     const releaseIds = (releases || []).map(r => r.id);
-    let allTerritories: any[] = [];
+    let allTerritories: Array<{ release_id: string; country: string; distance_tier: string | null; cost_multiplier: number | null; is_active: boolean }> = [];
     if (releaseIds.length > 0) {
       const { data: territories } = await supabaseClient
         .from("release_territories")
@@ -346,7 +346,7 @@ serve(async (req) => {
         .select('id, fan_sentiment_score')
         .in('id', saleBandIds);
       for (const b of bandSentData || []) {
-        bandSentimentSalesMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
+        bandSentimentSalesMap.set(b.id, b.fan_sentiment_score ?? 0);
       }
     }
 
