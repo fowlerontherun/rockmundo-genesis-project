@@ -113,16 +113,32 @@ Deno.serve(async (req) => {
     const { data: rawSessions, error: sessionsError } = await sessionsQuery
     if (sessionsError) throw sessionsError
 
-    const songIds = Array.from(new Set((rawSessions || []).map((s: any) => s.song_id).filter(Boolean)))
-    const songMap = new Map<string, any>()
+    const songIds = Array.from(new Set((rawSessions || []).map((s) => s.song_id).filter(Boolean)))
+    type RecordingSong = {
+      id: string
+      title: string
+      genre: string | null
+      lyrics: string | null
+      user_id: string | null
+      profile_id: string | null
+      band_id: string | null
+      parent_song_id: string | null
+      source_recording_session_id: string | null
+      quality_score: number | null
+      version: string | null
+      duration_seconds: number | null
+      duration_display: string | null
+      songwriting_project_id: string | null
+    }
+    const songMap = new Map<string, RecordingSong>()
     if (songIds.length > 0) {
       const { data: songRows } = await supabase
         .from('songs')
         .select('id, quality_score, title, genre, lyrics, user_id, profile_id, band_id, parent_song_id, source_recording_session_id, version, duration_seconds, duration_display, songwriting_project_id')
         .in('id', songIds)
-      for (const row of songRows || []) songMap.set((row as any).id, row)
+      for (const row of songRows || []) songMap.set(row.id, row)
     }
-    const sessions = (rawSessions || []).map((s: any) => ({ ...s, songs: s.song_id ? songMap.get(s.song_id) || null : null }))
+    const sessions = (rawSessions || []).map((s) => ({ ...s, songs: s.song_id ? songMap.get(s.song_id) || null : null }))
 
     for (const session of sessions) {
       let completionClaimId: string | null = null
@@ -136,7 +152,7 @@ Deno.serve(async (req) => {
 
         // #4104: read booked attendance exactly once and use the same
         // participant snapshot for location AND performance/XP calculations.
-        let bookedParticipants: any[] = []
+        let bookedParticipants: Array<{ profile_id: string | null; user_id: string | null; instrument_role?: string | null; role?: string | null }> = []
         if (session.band_id) {
           const { data: rows, error: bookedError } = await supabase
             .from('player_scheduled_activities')
@@ -145,7 +161,7 @@ Deno.serve(async (req) => {
             .in('status', ['scheduled', 'in_progress', 'completed'])
           if (bookedError) throw bookedError
           const seenProfiles = new Set<string>()
-          bookedParticipants = (rows || []).filter((row: any) => {
+          bookedParticipants = (rows || []).filter((row) => {
             if (!row.profile_id || seenProfiles.has(row.profile_id)) return false
             seenProfiles.add(row.profile_id)
             return true
@@ -170,7 +186,7 @@ Deno.serve(async (req) => {
             .select('id, name, country')
             .eq('id', locationCityId)
             .maybeSingle()
-          const missingDetails: any[] = []
+          const missingDetails: Array<{ name: string; current_city_name: string | null; is_traveling: boolean; travel_arrives_at: string | null; [key: string]: unknown }> = []
 
           if (session.band_id) {
             // Attendance is the booked participant snapshot, not whoever is
@@ -178,7 +194,7 @@ Deno.serve(async (req) => {
             // band leader explicitly skipped due to scheduling conflicts.
             const members = bookedParticipants
 
-            const profileIds = (members || []).map((m: any) => m.profile_id).filter(Boolean)
+            const profileIds = (members || []).map((m) => m.profile_id).filter(Boolean)
             const { data: profiles, error: profileError } = profileIds.length
               ? await supabase
                   .from('profiles')
@@ -187,12 +203,12 @@ Deno.serve(async (req) => {
               : { data: [], error: null } as any
             if (profileError) throw profileError
 
-            const cityIds = Array.from(new Set((profiles || []).map((p: any) => p.current_city_id).filter(Boolean)))
+            const cityIds = Array.from(new Set((profiles || []).map((p) => p.current_city_id).filter(Boolean)))
             const { data: currentCities } = cityIds.length
               ? await supabase.from('cities').select('id, name, country').in('id', cityIds)
               : { data: [] } as any
-            const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
-            const cityMap = new Map((currentCities || []).map((c: any) => [c.id, c]))
+            const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
+            const cityMap = new Map((currentCities || []).map((c) => [c.id, c]))
 
             for (const member of members || []) {
               const profile = member.profile_id ? profileMap.get(member.profile_id) : null
@@ -258,7 +274,7 @@ Deno.serve(async (req) => {
 
           if (missingDetails.length > 0) {
             const expectedName = expectedCity?.name || 'the studio city'
-            const memberText = missingDetails.map((m: any) => {
+            const memberText = missingDetails.map((m) => {
               if (m.is_traveling && m.travel_arrives_at) {
                 return `${m.name} was still travelling (arrival ${new Date(m.travel_arrives_at).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC)`
               }
@@ -321,17 +337,17 @@ Deno.serve(async (req) => {
         // Each performer is precisely who was booked, even if a member has
         // since joined/left the band or was explicitly skipped at checkout.
         const membershipByProfile = new Map((memberRows || [])
-          .filter((row: any) => row.profile_id)
-          .map((row: any) => [row.profile_id, row]))
+          .filter((row) => row.profile_id)
+          .map((row) => [row.profile_id, row]))
         const participants = session.band_id
-          ? bookedParticipants.map((booked: any) => ({
+          ? bookedParticipants.map((booked) => ({
               ...(membershipByProfile.get(booked.profile_id) || {}),
               profile_id: booked.profile_id,
               user_id: booked.user_id,
             }))
           : soloProfiles
 
-        const performerInputs = await Promise.all(participants.map(async (member: any) => {
+        const performerInputs = await Promise.all(participants.map(async (member) => {
           const performerProfileId = member.profile_id
           const { data: profile } = performerProfileId
             ? await supabase.from('profiles').select('health, energy, motivation, physical_health').eq('id', performerProfileId).maybeSingle()
@@ -339,8 +355,8 @@ Deno.serve(async (req) => {
           const { data: skillRows } = performerProfileId
             ? await supabase.from('player_skills').select('skill_id, skill_slug, level').eq('profile_id', performerProfileId)
             : { data: [] } as any
-          const skills = Object.fromEntries((skillRows || []).map((row: any) => [row.skill_slug || row.skill_id, row.level || 0]))
-          const attrs = { physical_health: (profile as any)?.physical_health ?? (profile as any)?.health ?? 75 }
+          const skills = Object.fromEntries((skillRows || []).map((row) => [row.skill_slug || row.skill_id, row.level || 0]))
+          const attrs = { physical_health: profile?.physical_health ?? profile?.health ?? 75 }
           return {
             profileId: performerProfileId || member.user_id || session.user_id,
             role: member.instrument_role || member.role || 'lead_vocals',
@@ -350,9 +366,9 @@ Deno.serve(async (req) => {
             attributes: attrs,
             songFamiliarity: 40,
             rehearsalReadiness: 40,
-            health: (profile as any)?.health ?? 85,
-            energy: (profile as any)?.energy ?? 85,
-            focus: (profile as any)?.motivation ?? 75,
+            health: profile?.health ?? 85,
+            energy: profile?.energy ?? 85,
+            focus: profile?.motivation ?? 75,
             equipmentQuality: 55,
             equipmentSuitability: 60,
           }
@@ -377,7 +393,7 @@ Deno.serve(async (req) => {
 
         const requiredRoles = Array.from(new Set([
           'lead_vocals',
-          ...performerInputs.map((p: any) => p.role).filter(Boolean),
+          ...performerInputs.map((p) => p.role).filter(Boolean),
           ...(performerInputs.length > 1 ? ['bass', 'drums'] : []),
         ]))
 
@@ -390,17 +406,17 @@ Deno.serve(async (req) => {
           performers: performerInputs,
           studio: {
             id: session.studio_id,
-            quality: (studioData as any)?.quality_rating ?? 55,
-            equipment: (studioData as any)?.equipment_rating ?? (studioData as any)?.quality_rating ?? 55,
+            quality: studioData?.quality_rating ?? 55,
+            equipment: studioData?.equipment_rating ?? studioData?.quality_rating ?? 55,
           },
-          engineer: { kind: 'studio_default', rating: (studioData as any)?.equipment_rating ?? (studioData as any)?.quality_rating ?? 50 },
+          engineer: { kind: 'studio_default', rating: studioData?.equipment_rating ?? studioData?.quality_rating ?? 50 },
           producer: session.player_producer_id
             ? { id: producerCharacterId, kind: producerCharacterId ? 'player' : 'npc', rating: 55 }
             : session.producer_id ? { id: session.producer_id, kind: 'npc', rating: 60 } : null,
           sessionMode: session.recording_type || session.session_data?.sessionMode || 'professional',
           effortHours: durationHours,
-          bandCohesion: (bandData as any)?.cohesion ?? (bandData as any)?.band_chemistry ?? (bandData as any)?.chemistry ?? 50,
-          chemistry: (bandData as any)?.chemistry ?? (bandData as any)?.band_chemistry ?? 50,
+          bandCohesion: bandData?.cohesion ?? bandData?.band_chemistry ?? bandData?.chemistry ?? 50,
+          chemistry: bandData?.chemistry ?? bandData?.band_chemistry ?? 50,
           // Retry-safe: updated_at changes during the recording workflow.
           seed: `${session.id}:${session.scheduled_end}`,
         })
@@ -413,7 +429,7 @@ Deno.serve(async (req) => {
         let recordingBoost: { percent: number; purchaseId: string } | null = null
         if (!recordingBoost) {
           const bookedIds = [...new Set(participants
-            .map((member: any) => member.profile_id)
+            .map((member) => member.profile_id)
             .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
           if (bookedIds.length > 0) {
             const { data: boosts, error: boostsError } = await supabase
@@ -427,7 +443,7 @@ Deno.serve(async (req) => {
               .not('source_purchase_id', 'is', null)
             if (boostsError) throw new Error(`recording_boost_lookup_failed: ${boostsError.message}`)
             recordingBoost = selectRecordingQualityBoost(
-              (boosts || []) as any, new Set(bookedIds), session.scheduled_end,
+              (boosts || []), new Set(bookedIds), session.scheduled_end,
             )
           }
         }
@@ -436,13 +452,13 @@ Deno.serve(async (req) => {
         let outfitRecordingPct = 0
         try {
           const performerIds = [...new Set(participants
-            .map((member: any) => member.profile_id)
+            .map((member) => member.profile_id)
             .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
           if (performerIds.length > 0) {
             const pcts = await Promise.all(performerIds.map(async (pid) => {
               const { data } = await supabase.rpc('get_equipped_clothing_bonuses', { p_profile_id: pid })
               const row = Array.isArray(data) ? data[0] : data
-              return Math.max(0, Number((row as any)?.recording_pct ?? 0))
+              return Math.max(0, Number((row as { recording_pct?: number } | null)?.recording_pct ?? 0))
             }))
             outfitRecordingPct = Math.min(10, pcts.reduce((a, b) => a + b, 0) / performerIds.length)
           }
@@ -473,7 +489,7 @@ Deno.serve(async (req) => {
             applied_variance: outcome.appliedVariance,
             outcome_breakdown: outcomeBreakdown,
             xp_awards: outcome.xpAwards,
-            recording_credits: (outcome.breakdown as any).performerBreakdowns || [],
+            recording_credits: (outcome.breakdown as { performerBreakdowns?: unknown[] }).performerBreakdowns || [],
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.id)
