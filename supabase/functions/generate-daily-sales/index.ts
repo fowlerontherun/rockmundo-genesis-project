@@ -339,7 +339,7 @@ serve(async (req) => {
 
     // === PRE-FETCH BAND SENTIMENT FOR SALES MODIFIER (v1.0.986) ===
     const saleBandIds = [...new Set((releases || []).map(r => r.band_id).filter(Boolean))];
-    let bandSentimentSalesMap = new Map<string, number>();
+    const bandSentimentSalesMap = new Map<string, number>();
     if (saleBandIds.length > 0) {
       const { data: bandSentData } = await supabaseClient
         .from('bands')
@@ -414,7 +414,7 @@ serve(async (req) => {
         const hasTerritories = releaseTerritories.length > 0;
 
         // Fetch ALL country fans for this band
-        let countryFansMap = new Map<string, { fame: number; has_performed: boolean; total_fans: number }>();
+        const countryFansMap = new Map<string, { fame: number; has_performed: boolean; total_fans: number }>();
         let globalFame = artistFame;
         
         if (release.band_id) {
