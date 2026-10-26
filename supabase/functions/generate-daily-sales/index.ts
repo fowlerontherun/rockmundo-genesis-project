@@ -385,7 +385,7 @@ serve(async (req) => {
       for (const city of cities || []) cityTaxMap.set(city.id, city.sales_tax_rate != null ? city.sales_tax_rate / 100 : defaultSalesTaxRate);
     }
 
-    const countryFansByBand = new Map<string, Array<{ band_id: string; country: string; fame: number | null; has_performed: boolean; total_fans: number | null }>>();
+    const countryFansByBand = new Map<string, Array<{ band_id: string; country: string; fame: number; has_performed: boolean; total_fans: number }>>();
     if (saleBandIds.length > 0) {
       const { data: countryFans } = await supabaseClient
         .from("band_country_fans")
@@ -393,12 +393,17 @@ serve(async (req) => {
         .in("band_id", saleBandIds);
       for (const fan of countryFans || []) {
         const rows = countryFansByBand.get(fan.band_id) || [];
-        rows.push(fan);
+        rows.push({
+          ...fan,
+          fame: fan.fame ?? 0,
+          has_performed: fan.has_performed ?? false,
+          total_fans: fan.total_fans ?? 0,
+        });
         countryFansByBand.set(fan.band_id, rows);
       }
     }
 
-    const campaignsByRelease = new Map<string, any[]>();
+    const campaignsByRelease = new Map<string, Array<{ release_id: string; effects: { hypeBoost?: number } | null }>>();
     if (releaseIds.length > 0) {
       const { data: campaigns, error: campaignsError } = await (supabaseClient.from("promotional_campaigns" as any) as any)
         .select("release_id, effects, start_date, end_date")
