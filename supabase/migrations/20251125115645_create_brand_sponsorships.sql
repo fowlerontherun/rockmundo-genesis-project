@@ -1,5 +1,15 @@
 -- Create brand sponsorship foundations
-CREATE TYPE IF NOT EXISTS brand_wealth_tier AS ENUM ('emerging', 'growth', 'established', 'titan');
+-- PostgreSQL does NOT support CREATE TYPE IF NOT EXISTS for enum types.
+-- A clean migration replay and a pre-populated sponsor DB must both be safe.
+DO $brand_type$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
+    WHERE n.nspname='public' AND t.typname='brand_wealth_tier'
+  ) THEN
+    CREATE TYPE public.brand_wealth_tier AS ENUM ('emerging', 'growth', 'established', 'titan');
+  END IF;
+END $brand_type$;
 
 CREATE TABLE IF NOT EXISTS brand_partners (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
