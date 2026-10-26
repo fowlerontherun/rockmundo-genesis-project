@@ -13,6 +13,17 @@ export async function authorizePrivilegedJob(req: Request): Promise<Response | n
   const cronSecret = Deno.env.get("ROCKMUNDO_CRON_SECRET");
   if (token && token === key) return null;
   if (cronSecret && req.headers.get("x-cron-secret") === cronSecret) return null;
+  // Some deployments have a different environment secret; verify the Vault secret
+  // through the service-role-only database RPC instead of trusting an anon JWT.
+  const suppliedCronSecret = req.headers.get("x-cron-secret");
+  if (suppliedCronSecret && suppliedCronSecret.length >= 32) {
+    const verifier = createClient(url, key);
+    const { data: verified, error: verificationError } = await verifier.rpc(
+      "verify_internal_cron_secret",
+      { p_secret: suppliedCronSecret }
+    );
+    if (!verificationError && verified === true) return null;
+  }
   if (!token) return new Response(JSON.stringify({error:"Privileged authentication required"}), {status:401});
   const service = createClient(url,key);
   const {data:{user},error} = await service.auth.getUser(token);
