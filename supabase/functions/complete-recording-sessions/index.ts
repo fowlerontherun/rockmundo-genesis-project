@@ -200,13 +200,13 @@ Deno.serve(async (req) => {
                   .from('profiles')
                   .select('id, user_id, display_name, username, current_city_id, is_traveling, travel_arrives_at')
                   .in('id', profileIds)
-              : { data: [], error: null } as any
+              : { data: [] as Array<{ id: string; user_id: string | null; display_name: string | null; username: string | null; current_city_id: string | null; is_traveling: boolean | null; travel_arrives_at: string | null }>, error: null }
             if (profileError) throw profileError
 
             const cityIds = Array.from(new Set((profiles || []).map((p) => p.current_city_id).filter(Boolean)))
             const { data: currentCities } = cityIds.length
               ? await supabase.from('cities').select('id, name, country').in('id', cityIds)
-              : { data: [] } as any
+              : { data: [] as Array<{ id: string; name: string; country: string }> }
             const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
             const cityMap = new Map((currentCities || []).map((c) => [c.id, c]))
 
@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
               if (profile && profile.current_city_id !== locationCityId) {
                 const { data: currentCity } = profile.current_city_id
                   ? await supabase.from('cities').select('id, name, country').eq('id', profile.current_city_id).maybeSingle()
-                  : { data: null } as any
+                  : { data: null }
                 missingDetails.push({
                   profile_id: profile.id,
                   user_id: profile.user_id,
@@ -314,15 +314,15 @@ Deno.serve(async (req) => {
 
         const { data: studioData } = session.studio_id
           ? await supabase.from('city_studios').select('quality_rating, equipment_rating').eq('id', session.studio_id).maybeSingle()
-          : { data: null } as any
+          : { data: null }
         const { data: bandData } = session.band_id
           ? await supabase.from('bands').select('morale, reputation_score, fan_sentiment_score, chemistry, band_chemistry, cohesion').eq('id', session.band_id).maybeSingle()
-          : { data: null } as any
+          : { data: null }
         const { data: memberRows, error: memberRowsError } = session.band_id
           ? await supabase.from('band_members')
               .select('profile_id, user_id, instrument_role, role, member_status')
               .eq('band_id', session.band_id)
-          : { data: [], error: null } as any
+          : { data: [] as Array<{ profile_id: string | null; user_id: string | null; instrument_role: string | null; role: string | null; member_status: string | null }>, error: null }
         if (memberRowsError) throw memberRowsError
 
         let soloProfileId = session.profile_id || null
@@ -351,10 +351,10 @@ Deno.serve(async (req) => {
           const performerProfileId = member.profile_id
           const { data: profile } = performerProfileId
             ? await supabase.from('profiles').select('health, energy, motivation, physical_health').eq('id', performerProfileId).maybeSingle()
-            : { data: null } as any
+            : { data: null }
           const { data: skillRows } = performerProfileId
             ? await supabase.from('player_skills').select('skill_id, skill_slug, level').eq('profile_id', performerProfileId)
-            : { data: [] } as any
+            : { data: [] as Array<{ skill_id: string | null; skill_slug: string | null; level: number | null }> }
           const skills = Object.fromEntries((skillRows || []).map((row) => [row.skill_slug || row.skill_id, row.level || 0]))
           const attrs = { physical_health: profile?.physical_health ?? profile?.health ?? 75 }
           return {
