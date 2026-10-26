@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     // Pre-fetch all territories for releases linked to these song_releases
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
-    const allTerritories: any[] = [];
+    const allTerritories: Array<{ release_id: string; country: string; distance_tier: string | null; cost_multiplier: number | null; is_active: boolean }> = [];
     // All releases on one label contract share the same recoupment balance.
     // Per-release copies can otherwise recoup the same advance multiple times.
     const contractRecoupedToday = new Map<string, number>();
