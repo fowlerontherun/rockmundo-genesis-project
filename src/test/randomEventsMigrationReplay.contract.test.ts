@@ -26,6 +26,7 @@ describe("legacy random events replay", () => {
  it("retains the original updated_at trigger without duplicates", () => {
   expect(legacy).toContain("CREATE TRIGGER update_random_events_updated_at");
   expect(modern).toContain("tgname='update_random_events_updated_at'");
+  expect(modern).toContain('DROP POLICY IF EXISTS "Random events are viewable by everyone"');
  });
  it("creates the modern player event and history tables", () => {
   expect(modern).toContain("CREATE TABLE IF NOT EXISTS public.player_events");
