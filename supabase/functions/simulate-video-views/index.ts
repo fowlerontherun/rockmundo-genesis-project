@@ -18,355 +18,146 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
-  // Only the Vault-backed internal scheduler can trigger privileged payments.
-  const cronToken = req.headers.get("x-cron-secret");
-  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
+  // This function credits real game balances and must never be publicly runnable.
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const trustedService = Boolean(serviceRoleKey && bearer === serviceRoleKey);
-  if (!trustedService) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  if (!serviceRoleKey || !supabaseUrl) {
+    return new Response(JSON.stringify({ error: "Server unavailable" }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const client = createClient(supabaseUrl, serviceRoleKey);
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
+  if (bearer !== serviceRoleKey) {
+    const cronToken = req.headers.get("x-cron-secret");
     if (!cronToken || cronToken.length < 32) {
-      return new Response(JSON.stringify({ error: "Privileged authentication required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Privileged authentication required" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    const verifier = createClient(Deno.env.get("SUPABASE_URL") || "", serviceRoleKey);
-    const { data: verified, error: verificationError } = await verifier.rpc("verify_internal_cron_secret", { p_secret: cronToken });
+    const { data: verified, error: verificationError } = await client.rpc(
+      "verify_internal_cron_secret", { p_secret: cronToken },
+    );
     if (verificationError || verified !== true) {
-      return new Response(JSON.stringify({ error: "Invalid scheduler authentication" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Invalid scheduler authentication" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
   }
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
-
-  let runId: string | null = null;
-  let claimedDay: string | null = null;
+  const runDate = new Date().toISOString().slice(0, 10);
   const startedAt = Date.now();
-  let videosUpdated = 0;
-  let totalViews = 0;
-  let totalEarnings = 0;
-  // A release can have multiple videos. Track the cumulative hype applied in this run.
-  const songHypeById = new Map<string, number>();
-
+  let runId: string | null = null;
+  let claimedVideoId: string | null = null;
   try {
-    const simulationDay = new Date().toISOString().slice(0, 10);
-    const { data: claimed, error: claimError } = await supabaseClient.rpc("claim_video_simulation_day", { p_day: simulationDay });
+    // One video per invocation. The claim RPC refuses historical days when the
+    // legacy worker may already have incremented views without paying royalties.
+    const { data: nextVideo, error: claimError } = await client.rpc(
+      "claim_next_daily_video", { p_day: runDate },
+    );
     if (claimError) throw claimError;
-    if (!claimed) {
-      return new Response(JSON.stringify({ success: true, alreadyProcessed: true, runDate: simulationDay }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!nextVideo) {
+      return new Response(JSON.stringify({
+        success: true, alreadyProcessed: true, runDate,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    claimedDay = simulationDay;
+    claimedVideoId = nextVideo;
     runId = await startJobRun({
       jobName: "simulate-video-views",
       functionName: "simulate-video-views",
-      supabaseClient,
+      supabaseClient: client,
       triggeredBy,
       requestPayload: payload ?? null,
       requestId: payload?.requestId ?? null,
     });
 
-    // Get released videos
-    const releasedVideos: any[] = [];
-    for (let offset = 0; ; offset += 500) {
-    const { data: page, error: fetchError } = await supabaseClient
-      .from("music_videos")
-      .select(`
-        id,
-        song_id,
-        title,
-        production_quality,
-        release_date,
-        views_count,
-        earnings,
-        hype_score,
-        songs(id, title, quality_score, hype, band_id, user_id, profile_id)
-      `)
-      .eq("status", "released")
-      .or(`release_date.is.null,release_date.lte.${new Date().toISOString()}`)
-      .order("id", { ascending: true })
-      .range(offset, offset + 499);
+    const { data: video, error: videoError } = await client.from("music_videos")
+      .select("id, song_id, title, production_quality, release_date, created_at, views_count, hype_score, songs!inner(id, quality_score, hype, band_id, profile_id)")
+      .eq("id", claimedVideoId)
+      .single();
+    if (videoError) throw videoError;
+    if (!video) throw new Error("Claimed video was not found");
 
-    if (fetchError) throw fetchError;
-    releasedVideos.push(...(page ?? []));
-    if (!page || page.length < 500) break;
+    const song = video.songs as any;
+    let sentiment = 0;
+    let reputation = 0;
+    if (song?.band_id) {
+      const { data: band, error: bandError } = await client.from("bands")
+        .select("fan_sentiment_score, reputation_score")
+        .eq("id", song.band_id).single();
+      if (bandError) throw bandError;
+      sentiment = Number(band?.fan_sentiment_score ?? 0);
+      reputation = Number(band?.reputation_score ?? 0);
     }
 
-    console.log(`Processing ${releasedVideos?.length || 0} released videos`);
+    const releaseDate = new Date(video.release_date || video.created_at);
+    const ageDays = Math.max(1, (Date.now() - releaseDate.getTime()) / 86400000);
+    const qualityMultiplier = Number(video.production_quality || 50) / 100;
+    const songQualityMultiplier = Number(song?.quality_score || 50) / 100;
+    const decayFactor = Math.max(0.1, 1 - ageDays / 60);
+    const sentimentT = (Math.max(-100, Math.min(100, sentiment)) + 100) / 200;
+    const reputationT = (Math.max(-100, Math.min(100, reputation)) + 100) / 200;
+    const sentimentMultiplier = Number((0.6 + sentimentT * 0.8).toFixed(2));
+    const reputationMultiplier = Number((0.8 + reputationT * 0.4).toFixed(2));
+    let baseViews = (100 + Number(video.production_quality || 50) * 10 + Number(song?.hype || 0))
+      * qualityMultiplier * songQualityMultiplier * decayFactor
+      * sentimentMultiplier * reputationMultiplier;
+    const viralChance = 0.01 + (sentimentT > 0.7 ? (sentimentT - 0.7) * 0.03 : 0);
+    const isViral = Math.random() < viralChance;
+    if (isViral) baseViews *= 5 + Math.random() * 5;
+    const dailyViews = Math.max(0, Math.min(10_000_000, Math.round(baseViews * (0.7 + Math.random() * 0.6))));
+    const dailyEarningsCents = Math.round(dailyViews / 5);
+    const velocity = dailyViews / Math.max(1, Number(video.views_count || 1));
+    const videoHypeChange = isViral ? 10 : velocity > 0.1 ? 2 : velocity > 0.01 ? 0 : -1;
 
-    // === FETCH BAND SENTIMENT & REPUTATION FOR VIDEO ENGAGEMENT (v1.0.951 / v1.0.988) ===
-    const bandSentimentMap = new Map<string, number>();
-    const bandReputationMap = new Map<string, number>();
-    const bandIds = new Set<string>();
-    for (const v of releasedVideos || []) {
-      const song = v.songs as any;
-      if (song?.band_id) bandIds.add(song.band_id);
-    }
-    if (bandIds.size > 0) {
-      try {
-        const { data: bandExtras, error: bandExtrasError } = await supabaseClient
-          .from('bands')
-          .select('id, fan_sentiment_score, reputation_score')
-          .in('id', Array.from(bandIds));
-        if (bandExtrasError) throw bandExtrasError;
-        for (const b of bandExtras || []) {
-          bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
-          bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
-        }
-      } catch (e) {
-        console.error("Error fetching band sentiment/reputation for videos:", e);
-        throw e;
-      }
-    }
-
-    const sentimentEventInserts: any[] = [];
-    const now = new Date();
-
-    for (const video of releasedVideos || []) {
-      const releaseDate = new Date(video.release_date || video.created_at);
-      const daysSinceRelease = Math.max(1, (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      const song = video.songs as any;
-      const qualityMult = (video.production_quality || 50) / 100;
-      const songHype = (song?.hype || 0);
-      const songQuality = (song?.quality_score || 50) / 100;
-      
-      // Decay factor - videos get fewer new views over time
-      const decayFactor = Math.max(0.1, 1 - (daysSinceRelease / 60));
-      
-      // Base daily views based on quality
-      let baseViews = 100 + (video.production_quality || 50) * 10 + songHype;
-      
-      // === SENTIMENT VIDEO VIEWS MODIFIER (v1.0.951) ===
-      const sentimentScore = song?.band_id ? (bandSentimentMap.get(song.band_id) ?? 0) : 0;
-      const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
-      const videoViewsMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6x to 1.4x
-
-      // === REPUTATION → VIDEO VIEWS (v1.0.988) ===
-      // Respected/iconic artists get more clicks; toxic artists get fewer organic views
-      const vidRepScore = song?.band_id ? (bandReputationMap.get(song.band_id) ?? 0) : 0;
-      const vidRepT = (Math.max(-100, Math.min(100, vidRepScore)) + 100) / 200;
-      const videoRepMod = parseFloat((0.8 + vidRepT * 0.4).toFixed(2)); // 0.8x–1.2x
-
-      // Apply multipliers
-      baseViews *= qualityMult * songQuality * decayFactor * videoViewsMod * videoRepMod;
-      
-      // Random viral chance (1% chance of 5-10x views, boosted by positive sentiment)
-      const viralChance = 0.01 + (sentimentT > 0.7 ? (sentimentT - 0.7) * 0.03 : 0); // up to 1.9%
-      const isViral = Math.random() < viralChance;
-      if (isViral) {
-        baseViews *= 5 + Math.random() * 5;
-      }
-      
-      // Add variance
-      const variance = 0.7 + Math.random() * 0.6;
-      const dailyViews = Math.round(baseViews * variance);
-      
-      // Calculate earnings ($0.002 per view on average)
-      const dailyEarnings = Math.round(dailyViews * 0.002 * 100) / 100;
-      
-      // Update hype based on view velocity
-      const viewVelocity = dailyViews / Math.max(1, video.views_count || 1);
-      const hypeChange = isViral ? 10 : (viewVelocity > 0.1 ? 2 : (viewVelocity > 0.01 ? 0 : -1));
-      const newHype = Math.max(0, Math.min(100, (video.hype_score || 0) + hypeChange));
-
-      // Update video
-      const { error: updateError } = await supabaseClient
-        .from("music_videos")
-        .update({
-          views_count: (video.views_count || 0) + dailyViews,
-          earnings: (video.earnings || 0) + dailyEarnings,
-          hype_score: newHype,
-        })
-        .eq("id", video.id);
-
-      if (updateError) {
-        console.error("Error updating video:", updateError);
-        continue;
-      }
-
-      // Update song hype
-      if (song?.id) {
-        const previousHype = songHypeById.get(song.id) ?? Number(song.hype || 0);
-        const updatedHype = Math.min(100, Math.max(0, previousHype + Math.round(dailyViews * 0.01)));
-        const { error: hypeError } = await supabaseClient.from("songs")
-          .update({ hype: updatedHype }).eq("id", song.id);
-        if (hypeError) throw hypeError;
-        songHypeById.set(song.id, updatedHype);
-      }
-
-      // Divide one payout pool: bands receive 70%, creators receive 30%.
-      // Solo recordings retain the full creator payout.
-      const creatorShare = song?.band_id
-        ? Math.round(dailyEarnings * 0.3 * 100) / 100
-        : dailyEarnings;
-
-      // Credit earnings to user
-      if (dailyEarnings > 0 && !song?.profile_id) {
-        throw new Error(`Video ${video.id} has no owning song profile to credit`);
-      }
-      if (song?.profile_id && dailyEarnings > 0) {
-        const { data: profile, error: profileLookupError } = await supabaseClient
-          .from("profiles")
-          .select("cash, fans")
-          .eq("id", song.profile_id)
-          .single();
-        if (profileLookupError) throw profileLookupError;
-
-        if (profile) {
-          const newFans = Math.round(dailyViews * 0.001);
-          const { error: playerCreditError } = await supabaseClient.from("profiles")
-            .update({
-              cash: (profile.cash || 0) + creatorShare,
-              fans: (profile.fans || 0) + newFans,
-            })
-            .eq("id", song.profile_id);
-          if (playerCreditError) throw playerCreditError;
-        }
-      }
-
-      // Credit to band balance and create earnings record
-      if (song?.band_id && dailyEarnings > 0) {
-        const bandShare = Math.round(dailyEarnings * 0.7 * 100) / 100;
-        
-        // A zero-cent band share is not a reason to omit successfully earned views
-        // from this run's totals.
-
-        const { data: band, error: bandLookupError } = await supabaseClient
-          .from("bands")
-          .select("band_balance, weekly_fans, fan_sentiment_score")
-          .eq("id", song.band_id)
-          .single();
-        if (bandLookupError) throw bandLookupError;
-
-        if (band) {
-          // Viral videos boost sentiment (v1.0.951)
-          let sentimentBoost = 0;
-          if (isViral) sentimentBoost = 5;
-          else if (dailyViews > 10000) sentimentBoost = 2;
-          else if (dailyViews > 1000) sentimentBoost = 1;
-
-          const currentSentiment = (band as any).fan_sentiment_score ?? 0;
-          const newSentiment = Math.max(-100, Math.min(100, currentSentiment + sentimentBoost));
-
-          const bandUpdate: any = {
-            band_balance: (band.band_balance || 0) + bandShare,
-            weekly_fans: (band.weekly_fans || 0) + Math.round(dailyViews * 0.001),
-          };
-          if (sentimentBoost > 0) {
-            bandUpdate.fan_sentiment_score = newSentiment;
-          }
-
-          // === MORALE BOOST: Video views feel rewarding (v1.0.968) ===
-          const videoMoraleBoost = isViral ? 6 : dailyViews > 10000 ? 3 : dailyViews > 1000 ? 2 : 0;
-          if (videoMoraleBoost > 0) {
-            const { data: moraleBand } = await supabaseClient.from('bands').select('morale').eq('id', song.band_id).single();
-            bandUpdate.morale = Math.min(100, ((moraleBand as any)?.morale ?? 50) + videoMoraleBoost);
-          }
-
-          const { error: bandCreditError } = await supabaseClient.from("bands")
-            .update(bandUpdate).eq("id", song.band_id);
-          if (bandCreditError) throw bandCreditError;
-
-          if (sentimentBoost > 0) {
-            sentimentEventInserts.push({
-              band_id: song.band_id,
-              event_type: isViral ? 'viral_video' : 'music_video_views',
-              sentiment_change: sentimentBoost,
-              media_intensity_change: isViral ? 5 : 1,
-              sentiment_after: newSentiment,
-              source: 'simulate-video-views',
-              description: isViral 
-                ? `🔥 "${video.title}" went viral with ${dailyViews.toLocaleString()} views!`
-                : `"${video.title}" gained ${dailyViews.toLocaleString()} views`,
-            });
-          }
-
-          // Create band_earnings record for tracking
-          const { error: earningsError } = await supabaseClient
-            .from("band_earnings")
-            .insert({
-              band_id: song.band_id,
-              amount: bandShare,
-              source: "music_video",
-              description: `Music video views: ${video.title || "Video"}`,
-              earned_by_user_id: song.user_id || null,
-              metadata: { 
-                video_id: video.id, 
-                daily_views: dailyViews,
-                song_id: song.id,
-                profile_id: song.profile_id,
-              },
-            });
-
-          if (earningsError) {
-            console.error("Error inserting band_earnings for video:", video.id, earningsError);
-          }
-        }
-      }
-
-      videosUpdated++;
-      totalViews += dailyViews;
-      totalEarnings += dailyEarnings;
-
-      if (isViral) {
-        console.log(`Video "${video.title}" went viral! ${dailyViews} views today`);
-      }
-    }
-
-    // Batch insert sentiment events (v1.0.951)
-    if (sentimentEventInserts.length > 0) {
-      const { error: sentimentError } = await supabaseClient.from('band_sentiment_events').insert(sentimentEventInserts);
-      if (sentimentError) throw sentimentError;
-      console.log(`Logged ${sentimentEventInserts.length} video sentiment events`);
-    }
-
-    console.log(`Updated ${videosUpdated} videos, ${totalViews} total views, $${totalEarnings.toFixed(2)} earnings`);
-
+    // These changes are a SINGLE Postgres transaction, not separate HTTP writes:
+    // video views and earnings, character funds/fans, band earnings (via
+    // band_earnings balance trigger), song hype and daily receipt. Any failure
+    // rolls every change back; retrying a completed receipt returns false.
+    const { data: settled, error: settleError } = await client.rpc("settle_daily_video", {
+      p_day: runDate,
+      p_video_id: claimedVideoId,
+      p_daily_views: dailyViews,
+      p_daily_earnings_cents: dailyEarningsCents,
+      p_video_hype_change: videoHypeChange,
+      p_is_viral: isViral,
+    });
+    if (settleError) throw settleError;
+    if (settled !== true) throw new Error("Daily video was already settled");
     await completeJobRun({
       jobName: "simulate-video-views",
       runId,
-      supabaseClient,
+      supabaseClient: client,
       durationMs: Date.now() - startedAt,
-      processedCount: videosUpdated,
-      resultSummary: { videosUpdated, totalViews, totalEarnings },
+      processedCount: 1,
+      resultSummary: { videosUpdated: 1, totalViews: dailyViews,
+        totalEarnings: dailyEarningsCents / 100, videoId: claimedVideoId },
     });
-
-    const { error: finalizeError } = await supabaseClient.rpc("finish_video_simulation_day", {
-      p_day: claimedDay, p_success: true,
-    });
-    if (finalizeError) throw finalizeError;
-    return new Response(
-      JSON.stringify({ success: true, videosUpdated, totalViews, totalEarnings }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      success: true, videosUpdated: 1, totalViews: dailyViews,
+      totalEarnings: dailyEarningsCents / 100, videoId: claimedVideoId,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
-    if (claimedDay) {
-      const { error: finishError } = await supabaseClient.rpc("finish_video_simulation_day", {
-        p_day: claimedDay,
-        p_success: false,
+    if (claimedVideoId) {
+      const { error: finishError } = await client.rpc("fail_daily_video", {
+        p_day: runDate,
+        p_video_id: claimedVideoId,
         p_error: getErrorMessage(error),
       });
-      if (finishError) console.error("Could not record the failed simulation day:", finishError);
+      if (finishError) console.error("Failed video receipt cannot be finalized", finishError);
     }
     await failJobRun({
       jobName: "simulate-video-views",
       runId,
-      supabaseClient,
+      supabaseClient: client,
       durationMs: Date.now() - startedAt,
       error,
-      resultSummary: { videosUpdated, totalViews, totalEarnings },
     });
-
-    console.error("Error simulating video views:", error);
-    return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
+    console.error("Error settling daily video views:", error);
+    return new Response(JSON.stringify({ error: getErrorMessage(error) }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
