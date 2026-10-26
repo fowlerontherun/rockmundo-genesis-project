@@ -613,8 +613,8 @@ serve(async (req) => {
               const deductions = calculateSaleDeductions({
                 quantity: actualSales, unitPriceMinor: retailPrice, taxRate: salesTaxRate,
                 distributionRate, physical: !isDigital,
-                manufacturerRevenueSharePercentage: (release as any).revenue_share_enabled
-                  ? (release as any).revenue_share_percentage : 0,
+                manufacturerRevenueSharePercentage: release.revenue_share_enabled
+                  ? release.revenue_share_percentage : 0,
               });
               const unitPriceCents = retailPrice;
               const totalAmountCents = deductions.grossMinor;
@@ -920,7 +920,7 @@ serve(async (req) => {
             console.error(`Unable to read morale for band ${bandId}`, moraleReadError);
             errorCount++;
           } else {
-            const newMorale = Math.min(100, ((currentBand as any)?.morale ?? 50) + moraleBoost);
+            const newMorale = Math.min(100, (currentBand?.morale ?? 50) + moraleBoost);
             const { error: moraleError } = await supabaseClient
               .from("bands").update({ morale: newMorale }).eq("id", bandId);
             if (moraleError) {
