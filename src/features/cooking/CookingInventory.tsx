@@ -211,28 +211,42 @@ export function CookingInventory() {
         </section>
         <section aria-label="Prepared food">
           <h3 className="font-semibold">Prepared food</h3>
-          {inventory.data.food.length === 0 ? <p className="text-sm text-muted-foreground">No food batches yet.</p>
-            : <ul className="space-y-2">{inventory.data.food.map(food => {
+          {inventory.data.food.filter(food => food.portions > 0).length === 0
+            ? <p className="text-sm text-muted-foreground">No prepared food portions right now.</p>
+            : <ul className="space-y-2">{inventory.data.food.filter(food => food.portions > 0).map(food => {
               const batch: FoodBatch = {
                 id: food.id, profileId: food.profile_id, recipeSlug: food.recipe_slug,
                 portions: food.portions, quality: food.quality, preparedAt: food.prepared_at,
                 expiresAt: food.expires_at,
               };
               const status = foodAvailability(batch, now);
+              const urgency = freshnessUrgency(food.expires_at, now);
+              const freshnessPercent = remainingFreshnessPercent(food.prepared_at, food.expires_at, now);
               const canEat = status === "fresh" && food.portions > 0 && !consumeFood.isPending;
-              return <li key={food.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                <div className="flex items-center gap-3">
+              return <li key={food.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="w-24 shrink-0 overflow-hidden rounded-lg border">
                     <DishIllustration recipeSlug={food.recipe_slug} className="h-16 w-24" />
                   </div>
-                  <div><strong>{prettyName(food.recipe_slug)}</strong>
-                  <p>{food.portions} portions · Quality {food.quality}/100 ·
-                    {" "}{status === "fresh" ? `Expires ${formatExpiry(food.expires_at)}` : status}
-                  </p></div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <strong>{dishName(food.recipe_slug)}</strong>
+                    <p>{food.portions} portion(s) · Quality {food.quality}/100</p>
+                    <p className={`font-medium ${freshnessTone(urgency)}`}>
+                      {status === "fresh" ? timeUntilSpoiled(food.expires_at, now) : "Spoiled — cannot eat"}
+                    </p>
+                    {freshnessPercent !== null && <div role="progressbar"
+                      aria-label={`${dishName(food.recipe_slug)} shelf life remaining`}
+                      aria-valuemin={0} aria-valuemax={100} aria-valuenow={freshnessPercent}
+                      className="h-2 w-full max-w-56 overflow-hidden rounded-full bg-secondary">
+                      <div className={`h-full rounded-full transition-all ${freshnessBar(urgency)}`}
+                        style={{ width: `${freshnessPercent}%` }} />
+                    </div>}
+                    <p className="text-xs text-muted-foreground">Expires {formatExpiry(food.expires_at)}</p>
+                  </div>
                 </div>
                 <Button type="button" size="sm" variant="secondary" disabled={!canEat || !profileId}
                   onClick={() => consumeFood.mutate(food)}>
-                  {consumeFood.isPending ? "Confirming…" : food.portions < 1 ? "Finished" :
+                  {consumeFood.isPending ? "Confirming…" :
                     status !== "fresh" ? "Spoiled" : "Eat 1 portion"}
                 </Button>
               </li>;
@@ -240,9 +254,9 @@ export function CookingInventory() {
         </section>
       </>}
       {effects.isError && <p role="alert">Could not load recorded food effects.</p>}
-      {(effects.data ?? []).length > 0 && <section aria-label="Recorded food effects">
+      {activeEffects.length > 0 && <section aria-label="Recorded food effects">
         <h3 className="font-semibold">Current food effects</h3>
-        <ul className="space-y-1">{effects.data!.map(effect => <li key={effect.effect_slug} className="text-sm">
+        <ul className="space-y-1">{activeEffects.map(effect => <li key={effect.effect_slug} className="text-sm">
           {prettyName(effect.effect_slug)} · +{effect.effect_percent}% ·
           {" "}Expires {formatExpiry(effect.expires_at)}
         </li>)}</ul>
