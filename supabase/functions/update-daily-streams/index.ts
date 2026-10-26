@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
       
       if (releaseSongData) {
         for (const rs of releaseSongData) {
-          const rel = (rs as any).release;
+          const rel = rs.release;
           // Marketing and hype must come from the canonical released edition,
           // not an unrelated future draft containing the same song.
           if (rel && rel.release_status === "released" && eligibleReleaseIds.has(rs.release_id)) {
