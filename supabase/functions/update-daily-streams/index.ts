@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   let claimedReleaseId: string | null = null;
   const startedAt = Date.now();
   let streamUpdates = 0;
-  let salesUpdates = 0;
+  const salesUpdates = 0;
   let errorCount = 0;
   // Accumulate per-band streaming revenue for morale boosts (v1.0.978)
   const bandStreamingRevenueAccumulator = new Map<string, number>();
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     // Pre-fetch all territories for releases linked to these song_releases
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
-    let allTerritories: any[] = [];
+    const allTerritories: any[] = [];
     // All releases on one label contract share the same recoupment balance.
     // Per-release copies can otherwise recoup the same advance multiple times.
     const contractRecoupedToday = new Map<string, number>();
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     }
 
     // Pre-fetch label contract info for releases
-    let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
+    const releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
     if (releaseIds.length > 0) {
       const { data: releasesWithContracts, error: releaseContractsError } = await supabase
         .from('releases')
