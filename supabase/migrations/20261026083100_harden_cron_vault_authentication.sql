@@ -42,7 +42,8 @@ BEGIN
           headers := jsonb_build_object(
             'Content-Type', 'application/json',
             'x-cron-secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name='internal_cron_secret' LIMIT 1)),
-          body := jsonb_build_object('time', now(), 'triggeredBy', 'cron')
+          body := jsonb_build_object('time', now(), 'triggeredBy', 'cron'),
+          timeout_milliseconds := 120000
         ) AS request_id;
       $command$
     );
