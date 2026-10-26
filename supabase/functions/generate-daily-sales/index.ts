@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { authorizePrivilegedJob } from "../_shared/privilegedJobAuth.ts";
+import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
 import {
   completeJobRun,
   failJobRun,
@@ -61,16 +61,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const denied = await authorizePrivilegedJob(req);
-  if (denied) return denied;
-
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
+
+  // Vault-backed scheduler authentication and once-per-UTC-day claim.
+  // Reject before reading the payload, logging or performing any settlement.
+  const denied = await authorizeInternalJob(req, supabaseClient, "generate-daily-sales", corsHeaders);
+  if (denied) return denied;
+
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   let runId: string | null = null;
   const startedAt = Date.now();
