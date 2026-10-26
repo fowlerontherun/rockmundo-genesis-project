@@ -595,7 +595,7 @@ serve(async (req) => {
               const grossRevenue = Math.round(actualSales * retailPriceDollars * 100) / 100;
               
               // v1.1.287: respect per-format distribution_fee_percentage override (clamped 0-50%)
-              const formatOverride = (format as any).distribution_fee_percentage;
+              const formatOverride = format.distribution_fee_percentage;
               const fallbackByConfig =
                 format.format_type === "digital" ? digitalDistributionRate
                 : format.format_type === "cd" ? cdDistributionRate
