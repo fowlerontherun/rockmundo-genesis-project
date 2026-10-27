@@ -188,8 +188,20 @@ ON CONFLICT DO NOTHING;
 -- SEED YOUTUBE VIDEOS
 -- =============================================
 
-INSERT INTO education_youtube_resources (title, description, video_url, category, difficulty_level, duration_minutes, tags)
-VALUES
+-- The September 21 curated playlist table predates the September 26 legacy
+-- video columns. Seed both representations so its required curated fields
+-- remain populated without relaxing NOT NULL constraints or losing videos.
+INSERT INTO public.education_youtube_resources (
+  collection_key, collection_title, resource_name, resource_format,
+  resource_focus, resource_summary, resource_url,
+  title, description, video_url, category, difficulty_level, duration_minutes, tags
+)
+SELECT
+  'legacy-education-videos', 'Education videos',
+  seed.title, 'video', seed.category, seed.description, seed.video_url,
+  seed.title, seed.description, seed.video_url,
+  seed.category, seed.difficulty_level, seed.duration_minutes, seed.tags
+FROM (VALUES
 ('Guitar Basics for Beginners', 'Learn first chords and strumming.', 'https://youtube.com/watch?v=guitar101', 'Guitar', 1, 15, ARRAY['guitar', 'beginner']),
 ('Intermediate Guitar Techniques', 'Barre chords and fingerpicking.', 'https://youtube.com/watch?v=guitar201', 'Guitar', 2, 25, ARRAY['guitar', 'intermediate']),
 ('Advanced Guitar Solos', 'Master shredding.', 'https://youtube.com/watch?v=guitar301', 'Guitar', 3, 35, ARRAY['guitar', 'advanced']),
@@ -236,4 +248,5 @@ VALUES
 ('DJ Basics', 'Your first DJ set.', 'https://youtube.com/watch?v=dj101', 'DJ', 1, 20, ARRAY['dj', 'beginner']),
 ('Beatmatching Tutorial', 'Mix seamlessly.', 'https://youtube.com/watch?v=beatmatch', 'DJ', 2, 25, ARRAY['dj', 'beatmatching']),
 ('Scratching Techniques', 'Learn scratching.', 'https://youtube.com/watch?v=scratching', 'DJ', 3, 35, ARRAY['dj', 'turntablism'])
+  AS seed(title, description, video_url, category, difficulty_level, duration_minutes, tags)
 ON CONFLICT DO NOTHING;
