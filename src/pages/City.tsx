@@ -197,6 +197,9 @@ export const CityContent = ({
           </Alert>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
+              <Link to={`/cities/${city.id}/scene-challenges`}>🎸 City Scene Challenges</Link>
+            </Button>
+            <Button variant="outline" asChild>
               <Link to="/cities">Back to cities</Link>
             </Button>
             <Button onClick={onRetry}>Try again</Button>
