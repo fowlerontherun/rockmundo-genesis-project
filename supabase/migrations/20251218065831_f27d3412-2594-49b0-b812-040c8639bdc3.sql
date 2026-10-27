@@ -249,4 +249,5 @@ FROM (VALUES
 ('Beatmatching Tutorial', 'Mix seamlessly.', 'https://youtube.com/watch?v=beatmatch', 'DJ', 2, 25, ARRAY['dj', 'beatmatching']),
 ('Scratching Techniques', 'Learn scratching.', 'https://youtube.com/watch?v=scratching', 'DJ', 3, 35, ARRAY['dj', 'turntablism'])
 ) AS seed(title, description, video_url, category, difficulty_level, duration_minutes, tags)
+WHERE true -- Disambiguate the INSERT...SELECT conflict clause from JOIN ON syntax.
 ON CONFLICT DO NOTHING;
