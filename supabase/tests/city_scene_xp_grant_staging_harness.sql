@@ -74,6 +74,35 @@ begin
     'staging_verified_fixture',v_unique,now()-interval '1 day 12 hours',1
   );
 
+  -- A reward policy may NOT be activated by flipping its Boolean alone.
+  begin
+    insert into public.scene_reward_policies(
+      reward_key,cadence,min_personal_points,requires_city_success,
+      reward_kind,reward_amount,enabled
+    ) values (
+      'staging_scene_' || v_unique,'daily',1,true,'xp',17,true
+    );
+    raise exception 'UNAPPROVED_REWARD_POLICY_ACTIVATED';
+  exception when insufficient_privilege then
+    null; -- Intended denial by the operator approval trigger.
+  end;
+
+  begin
+    update public.scene_reward_payout_controls set payouts_enabled=true
+    where singleton=true;
+    raise exception 'UNAPPROVED_XP_PAYOUT_ACTIVATED';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  -- Approval exists ONLY in this rollback-only staging transaction.
+  update private.scene_reward_activation_authorizations
+  set approved_until=clock_timestamp()+interval '15 minutes',
+      approved_by='staging-harness',
+      reason='Isolated transaction-only reward integration test',
+      approval_recorded_at=clock_timestamp()
+  where singleton=true;
+
   insert into public.scene_reward_policies(
     reward_key,cadence,min_personal_points,requires_city_success,
     reward_kind,reward_amount,enabled
@@ -104,6 +133,20 @@ begin
   update public.scene_reward_payout_controls
      set payouts_enabled=true,updated_at=now()
    where singleton is true;
+
+  -- Expired approvals block wallet grants even if policy/switch stay ON.
+  update private.scene_reward_activation_authorizations
+    set approved_until=clock_timestamp()-interval '1 minute'
+  where singleton=true;
+  v_payload := public.scene_grant_earned_xp(25);
+  if (v_payload->>'disabled')::boolean is not true
+    or (v_payload->>'approval_required')::boolean is not true
+    or (v_payload->>'xp_granted')::int <> 0 then
+    raise exception 'EXPIRED_SCENE_XP_APPROVAL_DID_NOT_BLOCK_GRANT: %',v_payload;
+  end if;
+  update private.scene_reward_activation_authorizations
+    set approved_until=clock_timestamp()+interval '15 minutes'
+  where singleton=true;
 
   v_payload := public.scene_grant_earned_xp(25);
   if (v_payload->>'xp_granted')::int <> 0 then
