@@ -1,4 +1,6 @@
-# City Scene Challenges — Processor Runbook (draft)
+# City Scene Challenges — Processor Runbook
+
+> **CURRENT PRODUCTION STATUS — 27 October 2026:** All 19 City Scene migrations were applied directly to RockMundo main Supabase and their history versions aligned with the committed GitHub filenames. The schema security smoke passed. The guarded `scene-challenges-processor` Edge Function is now deployed (ACTIVE version 1), but its dedicated secret and enable flag were **not configured by this rollout**; scoring templates, source-health flags, reward policies and XP payout control remain OFF. No scheduler, live cycles, contributions or reward payments were activated. See [LIVE_SCHEMA_DEPLOYMENT_20261027.md](LIVE_SCHEMA_DEPLOYMENT_20261027.md). Earlier notes below describing schema as “not applied” are historical and superseded by this status.
 
 Date: 27 October 2026  
 Status: **Code committed on PR #4588 (continuation of merged PR #4587); not enabled in production**
