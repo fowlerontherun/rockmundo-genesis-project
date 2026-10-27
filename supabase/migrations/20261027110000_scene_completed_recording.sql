@@ -63,8 +63,7 @@ begin
   select * into v_profile
   from public.profiles p
   where p.id = v_session.profile_id and p.user_id = v_session.user_id
-    and p.deleted_at is null and p.is_active is true
-    and p.current_city_id = v_session.city_id;
+    and p.deleted_at is null and p.is_active is true;
   if not found then return 0; end if;
 
   -- Verify the recording owner is a member of the assigned band. Personal
@@ -89,6 +88,9 @@ begin
         or (c.cadence = 'monthly' and t.action_type = 'scene:verified_community'))
   ) then return 0; end if;
 
+  -- Credit the city recorded on the completed studio session, not the
+  -- player's location at later processing time. Daily affiliation prevents
+  -- travel from doubling a day's city credit.
   -- Serialise the player's daily affiliation and preserve it during travel.
   perform pg_advisory_xact_lock(hashtext(
     'rockmundo:scene:acct:' || v_profile.user_id::text || ':' ||
