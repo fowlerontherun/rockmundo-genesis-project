@@ -56,3 +56,17 @@ Request: HTTPS `POST` to deployed function, with secret in `x-cron-secret`. No b
 - Test a late committed event and two simultaneous processor invocations, verifying the cursor never jumps past unprocessed source events. The 15-minute safety lag is a mitigation, not proof against arbitrarily long transactions.
 - Review reward sample values (100/50 daily, 350 weekly, 1000 monthly XP) against live economy before enabling any reward policy. There is **no** payout implementation.
 - Existing daily challenge templates primarily require social activities whose attendance is not yet independently verified; they remain disabled. Broaden proven action adapters before presenting the feature as playable V1.
+
+## Atomic XP reward payout staging gate (new)
+
+The additive migrations `20261027130000_scene_atomic_xp_reward_grants.sql` and `20261027130500_scene_private_reward_history.sql` add exactly-once XP issuance and an owner-only reward read model. Both are code-only until applied in an isolated staging database. **Do not apply them directly to the live RockMundo database as part of an untested release.**
+
+The new `scene_reward_payout_controls` singleton is seeded with `payouts_enabled=false`. All reward policies are also disabled. The protected, service-only `scene_grant_earned_xp(p_limit)` RPC is intentionally **not called by the scene processor Edge Function or any cron job**. The browser has no claim or grant RPC. The City Scene Board can show previously earned/pending/awarded rewards only via `get_my_scene_reward_history`, which filters by `auth.uid()` and the requested city.
+
+Before an operator could enable grants in staging, first verify that eligible *expired daily/weekly/monthly* scene cycles generate only idempotent claim entitlements, and that `reward_amount` matches the enabled policy snapshot. Validate real character ownership and inactive profiles; ensure a pending entitlement expires seven days after its cycle ends.
+
+A successful payout must update `player_xp_wallet.xp_balance`, `lifetime_xp`, `skill_xp_balance` and `skill_xp_lifetime`; insert an `experience_ledger` row with `activity_type='city_scene_reward'`; insert one unique `scene_reward_grant_receipts` row; and set the claim to `granted` with the ledger ID. These changes happen in the same Postgres transaction. Reprocessing a successful claim must never change the wallet again.
+
+Staging fixtures must exercise (1) exact-once replay and two simultaneous payout calls, (2) rollback after a deliberate ledger-write exception, (3) disabled flag and disabled policy, (4) expiry boundary at midnight UTC, (5) inactive/deleted/mismatched owner, (6) rewards for two separate characters on the same account, and (7) city-completion rewards when one objective is overfilled but another is unfinished. Keep both flags off and the function unconnected to scheduling until these pass.
+
+For emergency rollback, set `scene_reward_payout_controls.payouts_enabled=false` first; then suspend the worker invocation and inspect the receipt-ledger-wallet relationships before doing any compensating financial operation. **Never delete historical grant receipts to allow replay.**
