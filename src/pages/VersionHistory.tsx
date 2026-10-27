@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.799",
+    date: "2026-10-27",
+    changes: [
+      { type: "feature", description: "Media interview popup now has a 'Skip interview' button that answers every question at random, giving a random outcome you can then confirm." },
+    ],
+  },
+  {
     version: "1.1.798",
     date: "2026-10-24",
     changes: [
