@@ -11,33 +11,34 @@ declare
 begin
   insert into public.scene_milestones
     (cycle_id, percent_threshold, art_version)
-  select cycle.id, threshold.percent_threshold, cycle.art_version
-  from public.scene_challenge_cycles cycle
+  select c.id, threshold.percent_threshold, c.art_version
+  from public.scene_challenge_cycles c
   cross join (values (25), (50), (75), (100)) threshold(percent_threshold)
   cross join lateral (
     select coalesce(sum(contribution.points), 0) as earned
     from public.scene_contributions contribution
     join public.scene_challenge_objectives objective
       on objective.id = contribution.objective_id
-    where objective.cycle_id = cycle.id
+    where objective.cycle_id = c.id
       and contribution.invalidated_at is null
   ) progress
-  where cycle.status in ('active', 'completed')
-    and (p_city_id is null or cycle.city_id = p_city_id)
+  where c.status in ('active', 'completed')
+    and (p_city_id is null or c.city_id = p_city_id)
     and progress.earned * 100 >=
-      cycle.target_total * threshold.percent_threshold
+      c.target_total * threshold.percent_threshold
   on conflict (cycle_id, percent_threshold) do nothing;
 
   get diagnostics v_inserted = row_count;
 
-  update public.scene_challenge_cycles cycle
+  update public.scene_challenge_cycles c
      set status = 'completed'
-   where cycle.status = 'active'
-     and (p_city_id is null or cycle.city_id = p_city_id)
-     and exists (
-       select 1 from public.scene_milestones m
-       where m.cycle_id = cycle.id and m.percent_threshold = 100
-     );
+   where c.status = 'active'
+     and (p_city_id is null or c.city_id = p_city_id)
+     and (select coalesce(sum(sc.points), 0)
+            from public.scene_contributions sc
+            join public.scene_challenge_objectives ob on ob.id = sc.objective_id
+           where ob.cycle_id = c.id and sc.invalidated_at is null
+         ) >= c.target_total;
 
   return v_inserted;
 end;
