@@ -20,6 +20,6 @@ describe("DJ mixer source lifecycle and live auto-sync contract", () => {
     assert.match(mixer, /changedDjTempoPercent\(rateB, rate\)/);
     assert.match(mixer, /if \(changedPercent !== null\)/);
     assert.match(mixer, /sendLiveEvent\(\{ kind: "tempo", deck: "B", value: changedPercent \}\)/);
-    assert.match(mixer, /if \(!liveBookingId\) return;/);
+    assert.match(mixer, /if \(!liveBookingId \|\| !mounted\.current \|\| !liveBookingActive\.current\) return;/);
   });
 });
