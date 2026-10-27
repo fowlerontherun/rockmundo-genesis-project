@@ -10,6 +10,7 @@ A community progression feature using daily, weekly and monthly verified city ob
 - [Processor rollout and dry-run runbook](PROCESSOR_RUNBOOK.md)
 - [Live schema deployment record — 27 Oct 2026](LIVE_SCHEMA_DEPLOYMENT_20261027.md)
 - [Live four-city pilot, scoring and scheduler — 27 Oct 2026](LIVE_PILOT_20261027.md)
+- [XP economy audit and rollout constraints — 27 Oct 2026](XP_ECONOMY_AUDIT_20261027.md)
 
 ## Implementation status — live daily/weekly pilot
 
