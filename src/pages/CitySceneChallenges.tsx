@@ -188,6 +188,7 @@ export default function CitySceneChallenges() {
               monthLabel={new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(monthly.starts_at))}
               earnedPoints={monthly.earned_points}
               targetPoints={monthly.target_total}
+              unlockedMilestones={monthly.milestones ?? []}
             />
           ) : (
             <Card className="border-dashed">
