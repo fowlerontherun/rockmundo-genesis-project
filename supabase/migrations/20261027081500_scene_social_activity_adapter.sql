@@ -18,6 +18,10 @@ declare
   v_current_points integer;
   v_cap integer;
 begin
+  if p_activity_id is null then
+    return 0;
+  end if;
+
   -- At most one ingester per source event, even during job retries.
   perform pg_advisory_xact_lock(hashtext('rockmundo:scene:social:' || p_activity_id::text));
 
@@ -44,6 +48,22 @@ begin
          and p.deleted_at is null
          and p.user_id is not null) < 2
   then
+    return 0;
+  end if;
+
+  -- Never claim a city affiliation if no active, healthy objective can score.
+  if not exists (
+    select 1 from public.scene_challenge_cycles c
+    join public.scene_challenge_objectives o on o.cycle_id = c.id
+    join public.scene_challenge_templates t on t.id = o.template_id
+    where c.city_id = v_activity.city_id
+      and c.starts_at <= v_activity.completed_at and c.ends_at > v_activity.completed_at
+      and c.status in ('active','completed','expired')
+      and o.status in ('active','completed') and t.enabled is true
+      and coalesce(o.source_health_snapshot->>'scoring_enabled', 'false') = 'true'
+      and (t.action_type = 'social:' || v_activity.activity_type
+        or (c.cadence = 'monthly' and t.action_type = 'scene:verified_community'))
+  ) then
     return 0;
   end if;
 
@@ -92,6 +112,7 @@ begin
         and c.status in ('active','completed','expired')
         and o.status in ('active','completed')
         and t.enabled is true
+        and coalesce(o.source_health_snapshot->>'scoring_enabled', 'false') = 'true'
         and (
           t.action_type = 'social:' || v_activity.activity_type
           or (c.cadence = 'monthly' and t.action_type = 'scene:verified_community')
