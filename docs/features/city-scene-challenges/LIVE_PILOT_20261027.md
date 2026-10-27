@@ -80,6 +80,16 @@ As a fail-safe pending independent economy/rollout validation, the payout switch
 
 Two further migrations were visible on main: `20261027160000_scene_balanced_reward_policies.sql` and `20261027161500_scene_immediate_source_kill_switches.sql`. The policy migration defines candidate XP amounts but itself sets no payout flags. Source kill-switch functions were separately reviewed. Do not reactivate the canary without explicit payout approval, a reproducible staging grant test, a scoped reward-policy rollout plan and monitoring. Be alert to concurrent agent changes in the same production environment.
 
+## XP reward approval gate — 27 October 2026
+
+A later reward-canary review found an hourly XP grant schedule had been enabled without the previous rollout gates being validated. It was unscheduled, all four reward policies were disabled, the payout switch was turned off, and zero claims, receipts or `city_scene_reward` ledger rows were verified.
+
+**Additional fail-closed protection is now live:** `20261027163000_scene_reward_activation_approval_gate.sql` creates the `private.scene_reward_activation_authorizations` singleton with **no active approval**. Database triggers reject any attempt to enable a reward policy or payout flag unless a privileged operator has supplied a nonempty approver, documented reason and future expiration. This private approval record grants **no browser or service-role update permissions**. The actual XP grant function independently rechecks the approval deadline on every invocation, so a previously enabled payout switch cannot continue paying after the approval expires.
+
+Verification completed directly against the main database: an unapproved policy enable was rejected; an unapproved payout enable was rejected; a rollback-only test temporarily enabled both under a documented approval, then expired it and confirmed the grant function returned `approval_required=true` and **0 XP**, with all state rolled back. The previous real canary remained removed. Migration history was reconciled to GitHub `main`.
+
+**Future activation requires a separate explicit decision.** The trusted DB operator must first review the source-to-entitlement reconciliation and wallet/ledger canary, explicitly document the approver/reason/short approval window in the private authorization table, and only then enable one policy and the payout switch. Do not schedule the grant function merely because the controls can be enabled; first verify eligibility, expiration, replay locks and the two independent safeguards. When approval expires, grants automatically fail closed. No operator approval was issued as part of this implementation.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
