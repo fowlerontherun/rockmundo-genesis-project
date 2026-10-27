@@ -89,19 +89,17 @@ Deno.serve(async (request) => {
       .rpc('scene_reconcile_cycles', { p_at: now.toISOString() });
     if (cyclesError) throw cyclesError;
 
-    let processed = 0;
-    let inserted = 0;
-    const failedSessionIds: string[] = [];
-    for (const record of selected) {
-      const { data: credited, error } = await client
-        .rpc('scene_ingest_verified_jam', { p_session_id: record.session_id });
-      if (error) {
-        failedSessionIds.push(record.session_id);
-        continue;
-      }
-      processed += 1;
-      inserted += Number(credited ?? 0);
-    }
+    // One database transaction processes the oldest eligible finalisations,
+    // persists the ordered cursor, and rolls back all changes on any error.
+    // Unlike a newest-first fixed scan, old queued events cannot be starved.
+    const { data: batch, error: batchError } = await client
+      .rpc('scene_process_verified_jam_batch', { p_limit: maxEvents });
+    if (batchError) throw batchError;
+
+    const processingDisabled = batch?.disabled === true;
+    const backlogPending = batch?.backlog_pending === true;
+    const processed = Number(batch?.events_processed ?? 0);
+    const inserted = Number(batch?.contributions_inserted ?? 0);
 
     const { data: milestones, error: milestoneError } = await client
       .rpc('scene_reconcile_milestones');
@@ -111,15 +109,14 @@ Deno.serve(async (request) => {
       dryRun: false,
       cyclesCreated: Number(cycles ?? 0),
       posterMilestonesUnlocked: Number(milestones ?? 0),
-      candidateSessions: selected.length,
-      truncated: hasMore,
       eventsProcessed: processed,
       contributionRowsInserted: inserted,
-      failedSessions: failedSessionIds.length,
-      // A non-empty failed list or truncated scan is a degraded run,
-      // not a quiet all-clear. Inspect before enabling a recurring job.
-      healthy: failedSessionIds.length === 0 && !hasMore,
-    }, failedSessionIds.length ? 207 : 200);
+      backlogPending,
+      processingDisabled,
+      // A queued backlog is transparent; repeat explicitly or connect the
+      // existing audited job scheduler only after all rollout gates pass.
+      healthy: !processingDisabled && !backlogPending,
+    });
   } catch (error) {
     console.error('scene processor failed', error instanceof Error ? error.message : 'unknown');
     return json({ error: 'PROCESSOR_FAILED' }, 500);
