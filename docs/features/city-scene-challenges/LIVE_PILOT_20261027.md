@@ -62,6 +62,16 @@ select cron.unschedule('rockmundo-city-scene-verified-v1');
 
 The first action makes the periodic worker return without writing; the second removes the cron job. Before re-enabling the pilot, review source snapshots and any pending backlog. Do **not** delete contribution or XP receipt rows to roll back a credit.
 
+## Verification and performance follow-up
+
+- The new `20261027144500_scene_verified_rehearsal_source.sql`, `20261027150000_scene_rollout_controls_and_balanced_targets.sql`, `20261027153000_scene_periodic_worker.sql` and `20261027154000_scene_foreign_key_indexes.sql` were applied to the main DB, and their history versions reconciled to the exact repo filenames.
+- Four additional foreign-key indexes were installed after review of Supabase performance advisors.
+- The isolated PostgreSQL migration, ACL, cycle balancing, actual rehearsal event/deduplication, mural and XP rollback harness all **passed**. The scoped City Scene Vitest and TypeScript workflows also **passed**.
+- PR [#4599](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4599) (rehearsal integration tests) was squash-merged.
+- Latest main DB check: **8 cycles, 24 objectives, 3 verified contribution rows, 2 mural milestones, 0 XP receipts**, and cron job 157 still active. First recorded cron execution succeeded.
+- RLS is active across all `scene_*` tables. Ordinary authenticated players cannot invoke the worker, contribution ingesters or the XP grant procedure; reward policies and payout controls remain disabled.
+- Only complete, XP-bearing band rehearsals belonging to the validated paying band member are credited. Confirmed invitations without durable attendance are never credited.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
