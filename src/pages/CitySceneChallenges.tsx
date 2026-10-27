@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalendarDays, Clock3, Music2, RefreshCw, Trophy, Users } from 'lucide-react';
+import { CalendarDays, Clock3, Disc3, Music2, RefreshCw, Trophy, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +57,21 @@ const cadences: { key: SceneCadence; title: string; description: string }[] = [
   { key: 'weekly', title: 'Weekly', description: 'Band cooperation and shared effort' },
   { key: 'monthly', title: 'Monthly', description: 'Build a lasting music legacy together' },
 ];
+
+const sceneActions: Record<string, { destination: string; buttonText: string; label: string; tint: string; icon: typeof Music2 }> = {
+  'jam:verified_collaboration': {
+    destination: '/jam-sessions', buttonText: 'Find a jam session', label: 'COLLABORATE',
+    tint: 'from-fuchsia-700 via-purple-700 to-indigo-900', icon: Music2,
+  },
+  'recording:completed': {
+    destination: '/recording-studio', buttonText: 'Visit recording studios', label: 'IN THE STUDIO',
+    tint: 'from-amber-600 via-orange-700 to-red-950', icon: Disc3,
+  },
+  'gig:verified_performance': {
+    destination: '/gig-booking', buttonText: 'Book a gig', label: 'LIVE ON STAGE',
+    tint: 'from-sky-700 via-blue-800 to-slate-950', icon: Trophy,
+  },
+};
 
 function percent(earned: number, target: number): number {
   return target > 0 ? Math.max(0, Math.min(100, Math.floor(earned / target * 100))) : 0;
@@ -268,23 +283,39 @@ export default function CitySceneChallenges() {
                   </CardContent>
                 </Card>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {current.objectives.map((objective) => (
-                    <Card key={objective.id}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Trophy className="h-4 w-4 shrink-0 text-primary" /> {objective.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <p className="min-h-10 text-sm text-muted-foreground">{objective.description}</p>
-                        <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-                          <span>{objective.status === 'completed' ? 'Completed' : 'Community progress'}</span>
-                          <span className="tabular-nums">{objective.earned_points} / {objective.target_points}</span>
+                  {current.objectives.map((objective) => {
+                    const action = sceneActions[objective.action_type];
+                    const ActionIcon = action?.icon ?? Music2;
+                    return (
+                      <Card key={objective.id} className="group overflow-hidden transition-colors hover:border-primary/40">
+                        <div className={`relative isolate h-24 overflow-hidden bg-gradient-to-br text-white ${action?.tint ?? 'from-violet-800 via-fuchsia-900 to-slate-950'}`}>
+                          <div aria-hidden="true" className="absolute -right-4 -top-5 rotate-12 opacity-25 transition-transform duration-300 group-hover:rotate-6 motion-reduce:transition-none">
+                            <ActionIcon className="h-36 w-36" strokeWidth={1} />
+                          </div>
+                          <span className="absolute left-4 top-3 rounded bg-black/30 px-2 py-1 text-[10px] font-bold tracking-[.2em]">
+                            {action?.label ?? 'CITY SCENE'}
+                          </span>
+                          <ActionIcon aria-hidden="true" className="absolute bottom-4 left-4 h-7 w-7 text-white" />
                         </div>
-                        <Progress value={percent(objective.earned_points, objective.target_points)} />
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{objective.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <p className="min-h-10 text-sm text-muted-foreground">{objective.description}</p>
+                          <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+                            <span>{objective.status === 'completed' ? 'Completed' : 'Community progress'}</span>
+                            <span className="tabular-nums">{objective.earned_points} / {objective.target_points}</span>
+                          </div>
+                          <Progress value={percent(objective.earned_points, objective.target_points)} />
+                          {action && (
+                            <Button asChild variant="outline" size="sm" className="w-full">
+                              <Link to={action.destination}>{action.buttonText}</Link>
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </>
             )}
