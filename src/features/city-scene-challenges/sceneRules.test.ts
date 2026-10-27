@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest';
+import { allocateSceneTarget, getSceneCycleBounds, getScenePosterStage, getSceneTarget } from './sceneRules';
+
+describe('City Scene Challenge cycle boundaries', () => {
+  it('uses UTC and half-open day ranges across daylight saving changes', () => {
+    expect(getSceneCycleBounds('daily', new Date('2026-10-25T01:30:00Z'))).toEqual({
+      startsAt: '2026-10-25T00:00:00.000Z',
+      endsAt: '2026-10-26T00:00:00.000Z',
+    });
+  });
+
+  it('starts weekly cycles on Monday even when input is Sunday', () => {
+    expect(getSceneCycleBounds('weekly', new Date('2026-10-25T23:59:59Z'))).toEqual({
+      startsAt: '2026-10-19T00:00:00.000Z',
+      endsAt: '2026-10-26T00:00:00.000Z',
+    });
+  });
+
+  it('handles month and year rollover correctly', () => {
+    expect(getSceneCycleBounds('monthly', new Date('2026-12-31T23:59:59Z'))).toEqual({
+      startsAt: '2026-12-01T00:00:00.000Z',
+      endsAt: '2027-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('rejects invalid timestamps', () => {
+    expect(() => getSceneCycleBounds('daily', new Date('invalid'))).toThrow(RangeError);
+  });
+});
+
+describe('City Scene Challenge scaling and mural milestones', () => {
+  it('keeps smaller scenes playable without zero targets', () => {
+    expect(getSceneTarget('daily', 0)).toBe(4);
+    expect(getSceneTarget('weekly', 1)).toBe(12);
+    expect(getSceneTarget('monthly', 1)).toBe(40);
+    expect(getSceneTarget('daily', 10)).toBe(30);
+  });
+
+  it('allocates all target points with stable tie-breaking', () => {
+    expect(allocateSceneTarget(5, [1, 1, 1])).toEqual([2, 2, 1]);
+    expect(allocateSceneTarget(20, [2, 1, 1]).reduce((sum, n) => sum + n, 0)).toBe(20);
+    expect(() => allocateSceneTarget(2, [1, 1, 1])).toThrow(RangeError);
+  });
+
+  it('reveals exactly the earned mural stage without optimistic completion', () => {
+    expect([0, 24, 25, 49, 50, 74, 75, 99, 100].map((n) => getScenePosterStage(n, 100)))
+      .toEqual([0, 0, 25, 25, 50, 50, 75, 75, 100]);
+    expect(getScenePosterStage(0, 0)).toBe(0);
+  });
+});
