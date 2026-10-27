@@ -3,7 +3,7 @@
 **Applied:** 27 October 2026 (UTC)  
 **Project:** RockMundo main Supabase, `eu-west-2`  
 **Code source:** `fowlerontherun/rockmundo-genesis-project`, `main`  
-**Scope:** Database schema, PostgreSQL functions, read-side RPCs and protected scoring/reward infrastructure. No live feature activation.
+**Scope:** Database schema, PostgreSQL functions, read-side RPCs, protected scoring/reward infrastructure, and guarded Edge Function deployment. No live feature activation.
 
 ## Deployment result
 
@@ -15,6 +15,7 @@
 - Four provisional XP reward policies present; **zero enabled**.
 - Reward payout control `payouts_enabled=false`.
 - At deployment validation: **zero** scene cycles, contribution rows, reward claims and grant receipts.
+- `scene-challenges-processor` Edge Function deployed directly from GitHub `main`: Supabase reports **ACTIVE, version 1**, with `verify_jwt=false` because the function authenticates the dedicated `x-cron-secret` header. The code also requires `SCENE_CHALLENGES_PROCESSOR_ENABLED=true` before any query/write execution. Neither this flag nor the dedicated secret was configured by the deployment.
 - No cron job was created. No XP, fame, cash or other grants were issued.
 
 ## Safe operational previews (read-only)
@@ -40,7 +41,7 @@ These are **candidate source records, not validated/credited player actions**. S
 
 The City Scene feature is **not activated** merely because its schema is deployed. Separate steps remain:
 
-1. Deploy and configure the `scene-challenges-processor` Edge Function, using its dedicated secret and explicit enable flag. Verify blocked/disabled requests before allowing writes.
+1. **Deployed:** the `scene-challenges-processor` Edge Function is active. Before allowing writes, separately configure its dedicated secret and enable flag, and verify unauthenticated/disabled calls are blocked. Neither was configured by this rollout.
 2. Validate activity source adapters against representative real-source records, particularly post-completion verification, travel, caps and replay.
 3. Intentionally enable eligible challenge templates and source-health settings, then reconcile city cycles. Inspect targets and category balance.
 4. Define and audit scheduler ownership, concurrency, backlog and failure monitoring before any recurring processing.
