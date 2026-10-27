@@ -6,8 +6,34 @@ test('v1 remains the immutable historical five-milestone source',()=>{assert.mat
 test('v2 generates and validates 550 contiguous levels with milestone parity',()=>{for(const token of ['generate_series(1,10)','count(*)<>50','max(l.level)<>50','count(DISTINCT l.level)<>50','purchase_cost_minor/10','v2 milestone parity failure','weekly_upkeep_minor<>old.weekly_upkeep_minor','n.effects<>old.effects'])assert.match(v2,new RegExp(token.replace(/[()*+]/g,'\\$&')));assert.match(v2,/catalogue_version=2/)});
 test('rolling limit preserves milestone pace after v2 granularisation',()=>{assert.match(cadence,/completed_at > (?:now\(\)|clock_at) - interval '30 days'/);assert.match(cadence,/financial_transaction_id IS NOT NULL/);assert.match(cadence,/'limit', 20/);assert.match(cadence,/used >= 20/);assert.match(cadence,/greatest\(0, 20 - used\)/);assert.match(v2,/pg_advisory_xact_lock/);assert.match(v2,/_festival_upgrade_purchase_window/);assert.ok(v2.indexOf('_festival_upgrade_purchase_window')<v2.indexOf("finance_debit_owner('company'"))});
 test('granular construction preserves milestone timing without a company-wide build lock',()=>{assert.match(v2,/extract\(epoch FROM build_duration\)::bigint\/10/);assert.match(v2,/WHERE festival_company_id=fc\.id AND category_key=p_category_key FOR UPDATE/);assert.match(v2,/IF u\.status='building' THEN RAISE EXCEPTION 'FESTIVAL_UPGRADE_BUILD_IN_PROGRESS'/);assert.doesNotMatch(v2,/EXISTS\s*\(SELECT 1 FROM public\.festival_company_upgrades WHERE festival_company_id=fc\.id AND status='building'/)});
-test('UI uses server maxima, bands, milestones and purchase window',()=>{assert.doesNotMatch(workspace,/\/5|aria-valuemax=\{5\}/);for(const x of ['c.maximumLevel','c.bandName','c.nextMilestoneName','purchaseWindow','nextAvailableAt','en-GB'])assert.match(workspace,new RegExp(x.replace(/[.]/g,'\\.')))});
-test('UI scopes in-flight previews and purchases to the selected category',()=>{assert.match(workspace,/queryKey:\["festival-upgrade-preview",festivalCompanyId,selected\?\.key\]/);assert.match(workspace,/isSelected&&preview\.data\?\.category\.key===c\.key/);assert.match(workspace,/mutationFn:async\(p:FestivalUpgradePreview\)/);assert.match(workspace,/if\(currentPreview\)buy\.mutate\(currentPreview\)/);assert.doesNotMatch(workspace,/const p=preview\.data!/);assert.match(workspace,/previewError\?<p role="alert">/)});
+test('UI uses server maxima, bands, milestones and purchase window', () => {
+  assert.doesNotMatch(workspace, /\/5|aria-valuemax=\{5\}/);
+  for (const token of ['category.maximumLevel', 'category.bandName', 'category.nextMilestoneName', 'purchaseWindow', 'nextAvailableAt', 'en-GB']) {
+    assert.ok(workspace.includes(token), `Missing festival UI contract: ${token}`);
+  }
+});
+test('UI scopes in-flight previews and purchases to the selected category', () => {
+  assert.match(workspace, /queryKey:\s*\[\s*"festival-upgrade-preview",\s*festivalCompanyId,\s*selected\?\.key\s*\]/);
+  assert.match(workspace, /isSelected\s*&&\s*preview\.data\?\.category\.key\s*===\s*category\.key/);
+  assert.match(workspace, /mutationFn:\s*async\s*\(purchase:\s*FestivalUpgradePreview\)/);
+  assert.match(workspace, /categoryKey:\s*purchase\.category\.key/);
+  assert.match(workspace, /onPurchase=\{\(\)\s*=>\s*currentPreview\s*&&\s*buy\.mutate\(currentPreview\)\}/);
+  assert.doesNotMatch(workspace, /const p\s*=\s*preview\.data!/);
+  assert.match(workspace, /previewError\s*\?\s*<p\s+role="alert"/);
+});
 test('hardening gate is executable rather than structural-only',()=>{const harness=fs.readFileSync('supabase/tests/festival_upgrade_harness.sql','utf8');const workflow=fs.readFileSync('.github/workflows/festival-runtime-gate.yml','utf8');const hardening=fs.readFileSync('supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql','utf8');for(const token of ['INSERT INTO auth.users','found_festival_company','get_festival_upgrade_purchase_preview','purchase_festival_company_upgrade','financial_ledger_entries','snapshot_festival_edition_upgrades'])assert.match(harness,new RegExp(token));assert.doesNotMatch(harness,/fixtures are seeded by CI/i);assert.match(workflow,/test:festivals:upgrades:db/g);assert.match(hardening,/VALIDATE CONSTRAINT festival_upgrade_purchase_requested_level_1_50/)});
 test('preview uses canonical blockers and effects are genuine deltas',()=>{const hardening=fs.readFileSync('supabase/migrations/20291218245200_festival_upgrade_v2_hardening.sql','utf8');const repository=fs.readFileSync('src/features/festival-company/upgrades/repository.ts','utf8');for(const token of ['_festival_upgrade_eligibility','FESTIVAL_UPGRADE_LICENCE_REQUIRED','FESTIVAL_UPGRADE_REPUTATION_REQUIRED','FESTIVAL_UPGRADE_PREREQUISITE_MISSING','FESTIVAL_UPGRADE_ROLLING_LIMIT_REACHED'])assert.match(hardening,new RegExp(token));assert.match(hardening,/next.*current|current.*next/s);assert.match(repository,/effectDeltaValue/);assert.match(repository,/purchaseWindow/)});
-test('clean dependency graph records the complete jsdom dependency contract',()=>{const pkg=JSON.parse(fs.readFileSync('package.json'));const lock=JSON.parse(fs.readFileSync('package-lock.json'));const jsdom=lock.packages['node_modules/jsdom'];assert.equal(pkg.devDependencies.jsdom,'^25.0.1');assert.equal(jsdom.version,'25.0.1');for(const dependency of ['cssstyle','data-urls','rrweb-cssom','webidl-conversions','whatwg-url'])assert.equal(typeof jsdom.dependencies[dependency],'string');assert.equal(pkg.devDependencies['rrweb-cssom'],undefined)});
+test('clean dependency graph retains both explicit rrweb-cssom and jsdom-required versions', () => {
+  const pkg = JSON.parse(fs.readFileSync('package.json'));
+  const lock = JSON.parse(fs.readFileSync('package-lock.json'));
+  const jsdom = lock.packages['node_modules/jsdom'];
+  assert.equal(pkg.devDependencies.jsdom, '^25.0.1');
+  assert.equal(jsdom.version, '25.0.1');
+  for (const dependency of ['cssstyle', 'data-urls', 'rrweb-cssom', 'webidl-conversions', 'whatwg-url']) {
+    assert.equal(typeof jsdom.dependencies[dependency], 'string');
+  }
+  assert.equal(pkg.devDependencies['rrweb-cssom'], '^0.8.0');
+  assert.equal(lock.packages['node_modules/rrweb-cssom'].version, '0.8.0');
+  assert.equal(jsdom.dependencies['rrweb-cssom'], '^0.7.1');
+  assert.equal(lock.packages['node_modules/jsdom/node_modules/rrweb-cssom'].version, '0.7.1');
+});
