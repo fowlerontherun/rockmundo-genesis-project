@@ -47,3 +47,15 @@
 4. Build private server-only contribution adapter, using one verified completed activity type.
 5. Add board read RPC and city view once data can be served truthfully.
 6. Test duplicate event replay, alt characters, travel, period rollover, RLS and partial failures.
+
+## 27 October continuation — actual implementation
+
+- Added a City Scene Board page under `/cities/:cityId/scene-challenges`, linked from the city page, with daily/weekly/monthly tabs, server totals, personal point counts and live-data mural visuals.
+- Added `get_city_scene_board` aggregate RPC and `get_my_city_scene_progress` owner-only RPC.
+- Added service-role-only UTC cycle reconciliation and poster milestone persistence. No automatically scheduled job is installed.
+- Added a jam adapter requiring finalisation + independently recorded resolved slot participation by >=2 distinct player accounts. Production snapshot: no matching finalisations yet; controlled staging fixtures required.
+- The initially proposed social hangout adapter is deliberately non-scoring because current completion marks accepted invitees as attended without independently verified participation.
+- Fixed weekly/monthly player point caps to apply to the whole cycle instead of resetting daily; serialise credit by account + cycle.
+- Added `scene-challenges-processor` with dedicated secret, an explicit enable flag, dry-run by default, bounded candidate scans and milestone reconciliation. A truncated scan is not production-ready pagination.
+- Added frontend and migration contract tests; CI remains unverified for new commits, and lint baseline issue #4569 remains a separate blocker.
+- See [PROCESSOR_RUNBOOK.md](PROCESSOR_RUNBOOK.md). Nothing has been applied to the live database or made claimable.
