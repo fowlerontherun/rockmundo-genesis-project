@@ -244,3 +244,8 @@ verify_jwt = true
 
 [functions.cooking-session]
 verify_jwt = true
+
+# Dedicated secret-gated internal processor. JWT gateway bypass is intentional;
+# the function itself requires SCENE_PROCESSOR_CRON_SECRET and enabled flag.
+[functions.scene-challenges-processor]
+verify_jwt = false
