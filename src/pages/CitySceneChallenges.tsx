@@ -26,6 +26,7 @@ type SceneCycle = {
   ends_at: string;
   target_total: number;
   earned_points: number;
+  milestones: number[];
   objectives: SceneObjective[];
 };
 type SceneBoard = {
@@ -185,6 +186,20 @@ export default function CitySceneChallenges() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {monthly && (
+            <section aria-label="City scene poster milestones" className="grid grid-cols-4 gap-2">
+              {[25, 50, 75, 100].map((threshold) => {
+                const unlocked = monthly.milestones?.includes(threshold) ?? false;
+                return (
+                  <div key={threshold} className={`rounded-lg border px-2 py-3 text-center transition-colors ${unlocked ? 'border-amber-400/70 bg-amber-400/10 text-foreground' : 'border-border/60 bg-muted/20 text-muted-foreground'}`}>
+                    <p className="text-base font-black tabular-nums sm:text-lg">{threshold}%</p>
+                    <p className="text-[11px] font-semibold">{unlocked ? 'Unlocked' : 'Locked'}</p>
+                  </div>
+                );
+              })}
+            </section>
           )}
 
           <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Challenge period">
