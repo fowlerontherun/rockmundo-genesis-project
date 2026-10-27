@@ -12,6 +12,7 @@ declare
   v_rehearsal uuid:=gen_random_uuid();
   v_daily uuid;
   v_weekly uuid;
+  v_monthly uuid;
   v_batch jsonb;
   v_repeat jsonb;
   v_progress jsonb;
@@ -72,6 +73,25 @@ begin
     'completed',100
   );
 
+  -- Per-source kill switch must keep the batch cursor stationary, even
+  -- when a fully eligible source event and active objectives already exist.
+  update public.scene_source_controls
+  set enabled=false where action_type='rehearsal:completed';
+  v_batch:=private.process_scene_verified_rehearsal_batch(50);
+  if (v_batch->>'disabled')::boolean is not true
+    or (v_batch->>'events_processed')::int <> 0
+  then raise exception 'DISABLED_REHEARSAL_QUEUE_PROCESSED_EVENT: %',v_batch;end if;
+  if (private.preview_scene_verified_rehearsal_batch(50)->>'source_ready')::boolean
+  then raise exception 'DISABLED_REHEARSAL_SOURCE_STILL_REPORTS_READY';end if;
+  if exists(select 1 from public.scene_processor_cursors
+    where source_key='verified_rehearsal') then
+    raise exception 'DISABLED_REHEARSAL_CREATED_CURSOR';end if;
+  if private.ingest_scene_verified_rehearsal(v_rehearsal) <> 0 then
+    raise exception 'DISABLED_REHEARSAL_DIRECT_INGEST_CREDITED';end if;
+
+  update public.scene_source_controls
+  set enabled=true where action_type='rehearsal:completed';
+
   v_batch:=private.process_scene_verified_rehearsal_batch(50);
   if (v_batch->>'events_processed')::int <> 1
     or (v_batch->>'contributions_inserted')::int <> 2
@@ -99,6 +119,39 @@ begin
   if exists(select 1 from public.scene_reward_grant_receipts)
     or exists(select 1 from public.scene_reward_claims)
   then raise exception 'REHEARSAL_ACCIDENTALLY_ISSUED_REWARDS';end if;
+
+  -- Monthly scene source is a second independent switch. With the
+  -- monthly gate OFF, the same verified event must NOT credit that cycle.
+  update public.scene_challenge_templates set enabled=true
+  where action_type='scene:verified_community';
+  insert into public.scene_challenge_cycles(
+    city_id,cadence,starts_at,ends_at,
+    active_population_snapshot,theme_slug,target_total,status
+  ) values(
+    v_city,'monthly',now()-interval '1 hour',now()+interval '1 hour',
+    1,'test',1,'active'
+  ) returning id into v_monthly;
+
+  insert into public.scene_challenge_objectives(
+    cycle_id,template_id,target_points,source_health_snapshot
+  )
+  select v_monthly,id,1,'{"scoring_enabled":true}'::jsonb
+  from public.scene_challenge_templates
+  where cadence='monthly' and action_type='scene:verified_community';
+
+  if private.ingest_scene_verified_rehearsal(v_rehearsal) <> 0 then
+    raise exception 'DISABLED_MONTHLY_SOURCE_STILL_CREDITED';
+  end if;
+  update public.scene_source_controls set enabled=true
+  where action_type='scene:verified_community';
+  if private.ingest_scene_verified_rehearsal(v_rehearsal) <> 1 then
+    raise exception 'MONTHLY_SOURCE_NOT_CREDITED_ON_REENABLE';
+  end if;
+  if (select count(*) from public.scene_contributions sc
+    join public.scene_challenge_objectives o on o.id=sc.objective_id
+    where o.cycle_id=v_monthly and sc.account_id=v_user) <> 1 then
+    raise exception 'EXPECTED_ONE_MONTHLY_REHEARSAL_CREDIT';
+  end if;
 
   raise notice 'City Scene rehearsal verified event, 2-period credit, deduplication, milestones and private totals passed';
 end;
