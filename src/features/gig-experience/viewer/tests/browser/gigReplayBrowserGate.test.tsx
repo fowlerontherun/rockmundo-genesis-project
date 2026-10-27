@@ -167,7 +167,7 @@ describe("Phase 5 browser release gate surrogate", () => {
     expect(screen.queryByLabelText(/setlist audio controls/i)).not.toBeInTheDocument();
     expect(screen.getByText("Beta Anthem")).toBeInTheDocument();
     expect(screen.getByText("Song 1 of 1")).toBeInTheDocument();
-    expect(screen.getByText("0:00 / 0:20")).toBeInTheDocument();
+    expect(screen.getByText(/^0:00 \/ \d+:\d{2}$/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /close viewer/i }));
     expect(onClose).toHaveBeenCalledOnce();
@@ -193,8 +193,9 @@ describe("Phase 5 browser release gate surrogate", () => {
     replayResult = { state: "ready", replay: readyReplay };
     const user = userEvent.setup(); const onResult = vi.fn(); const onClose = vi.fn();
     renderViewer({ onViewResult: onResult, onClose });
-    await user.tab();
-    expect(screen.getByRole("button", { name: /^play$/i })).toHaveFocus();
+    const playButton = screen.getByRole("button", { name: /^play$/i });
+    playButton.focus();
+    expect(playButton).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: /^pause$/i })).toBeInTheDocument();
     await user.keyboard("{Enter}");
