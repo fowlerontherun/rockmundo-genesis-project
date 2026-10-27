@@ -124,7 +124,7 @@ begin
           or (c.cadence = 'monthly' and t.action_type = 'scene:verified_community'))
       order by c.starts_at, c.cadence, o.id
     loop
-      v_cap := case v_obj.cadence when 'daily' then 3 when 'weekly' then 10 else 25 end;
+      v_cap := case v_obj.cadence when 'daily' then 5 when 'weekly' then 10 else 25 end;
       if exists (
         select 1 from public.scene_contributions
         where objective_id = v_obj.objective_id
