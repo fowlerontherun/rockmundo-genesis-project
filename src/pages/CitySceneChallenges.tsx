@@ -85,6 +85,10 @@ const sceneActions: Record<string, { destination: string; buttonText: string; la
     destination: '/jam-sessions', buttonText: 'Find a jam session', label: 'COLLABORATE',
     tint: 'from-fuchsia-700 via-purple-700 to-indigo-900', icon: Music2,
   },
+  'rehearsal:completed': {
+    destination: '/rehearsals', buttonText: 'Book a band rehearsal', label: 'REHEARSAL ROOM',
+    tint: 'from-emerald-800 via-teal-800 to-slate-950', icon: Music2,
+  },
   'recording:completed': {
     destination: '/recording-studio', buttonText: 'Visit recording studios', label: 'IN THE STUDIO',
     tint: 'from-amber-600 via-orange-700 to-red-950', icon: Disc3,
