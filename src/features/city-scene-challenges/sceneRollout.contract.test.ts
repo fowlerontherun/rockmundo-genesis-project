@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 function migration(name: string) {
-  return readFileSync(fileURLToPath(new URL(`../../../supabase/migrations/${name}`, import.meta.url)), 'utf8');
+  return readFileSync(resolve(process.cwd(), 'supabase/migrations', name), 'utf8');
 }
 
 const board = migration('20261027080000_city_scene_board_and_cycle_reconciliation.sql');
