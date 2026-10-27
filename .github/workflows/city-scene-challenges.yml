@@ -1,0 +1,41 @@
+name: City Scene Challenges Verification
+
+on:
+  pull_request:
+    paths:
+      - "src/features/city-scene-challenges/**"
+      - "src/pages/CitySceneChallenges.tsx"
+      - "supabase/functions/scene-challenges-processor/**"
+      - "supabase/migrations/*scene*.sql"
+      - "supabase/tests/city_scene_challenges_staging_smoke.sql"
+      - ".github/workflows/city-scene-challenges.yml"
+      - "supabase/config.toml"
+  workflow_dispatch:
+
+concurrency:
+  group: scene-challenges-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scene-unit-and-types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Install dependencies
+        run: npm ci
+      - name: City Scene rules and security contracts
+        run: npx vitest run src/features/city-scene-challenges --reporter=default
+      - name: Typecheck
+        run: npm run typecheck
