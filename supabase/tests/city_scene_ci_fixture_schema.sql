@@ -111,6 +111,20 @@ create table public.gig_performers (
   lineup_status text,
   performed_at timestamptz
 );
+create table public.rehearsal_rooms (
+  id uuid primary key default gen_random_uuid(),
+  city_id uuid references public.cities(id)
+);
+create table public.band_rehearsals (
+  id uuid primary key default gen_random_uuid(),
+  band_id uuid references public.bands(id),
+  rehearsal_room_id uuid references public.rehearsal_rooms(id),
+  payment_profile_id uuid references public.profiles(id),
+  scheduled_end timestamptz,
+  completed_at timestamptz,
+  status varchar(40),
+  xp_earned integer
+);
 create table public.player_xp_wallet (
   profile_id uuid primary key references public.profiles(id),
   xp_balance integer default 0,
