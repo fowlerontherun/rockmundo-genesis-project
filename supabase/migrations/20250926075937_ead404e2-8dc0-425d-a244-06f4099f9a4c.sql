@@ -66,6 +66,45 @@ CREATE TABLE IF NOT EXISTS public.education_youtube_resources (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- The September 21 curated-resource migration may have created this table
+-- with playlist-specific columns already. CREATE TABLE IF NOT EXISTS above
+-- does not reconcile that shape. Preserve curated rows and add the legacy
+-- video seed fields required by the December 18 migration on clean replay.
+ALTER TABLE public.education_youtube_resources
+  ADD COLUMN IF NOT EXISTS title varchar,
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS video_url varchar,
+  ADD COLUMN IF NOT EXISTS category varchar,
+  ADD COLUMN IF NOT EXISTS difficulty_level integer DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS duration_minutes integer,
+  ADD COLUMN IF NOT EXISTS tags text[];
+
+-- Historical video seeds (including the later December replacement catalogue)
+-- supply legacy fields only. Fill the curated table's mandatory metadata before
+-- checking its NOT NULL constraints; do not weaken curated playlist contracts.
+CREATE OR REPLACE FUNCTION public.fill_education_youtube_legacy_metadata()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $youtube_compat$
+BEGIN
+  NEW.collection_key := COALESCE(NEW.collection_key, 'legacy-education-videos');
+  NEW.collection_title := COALESCE(NEW.collection_title, 'Education videos');
+  NEW.resource_name := COALESCE(NEW.resource_name, NEW.title);
+  NEW.resource_format := COALESCE(NEW.resource_format, 'video');
+  NEW.resource_focus := COALESCE(NEW.resource_focus, NEW.category, 'general');
+  NEW.resource_summary := COALESCE(NEW.resource_summary, NEW.description, '');
+  NEW.resource_url := COALESCE(NEW.resource_url, NEW.video_url);
+  RETURN NEW;
+END;
+$youtube_compat$;
+
+DROP TRIGGER IF EXISTS fill_education_youtube_legacy_metadata ON public.education_youtube_resources;
+CREATE TRIGGER fill_education_youtube_legacy_metadata
+  BEFORE INSERT ON public.education_youtube_resources
+  FOR EACH ROW
+  EXECUTE FUNCTION public.fill_education_youtube_legacy_metadata();
+
 ALTER TABLE public.education_youtube_resources ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "YouTube resources are viewable by everyone"
