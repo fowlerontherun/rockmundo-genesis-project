@@ -98,10 +98,17 @@ Deno.serve(async (request) => {
       .rpc('scene_reconcile_milestones');
     if (milestoneError) throw milestoneError;
 
+    // All reward policies remain disabled by default. Even when enabled,
+    // this only books pending entitlements; it NEVER grants XP or fame.
+    const { data: entitlements, error: entitlementError } = await client
+      .rpc('scene_reconcile_reward_entitlements');
+    if (entitlementError) throw entitlementError;
+
     return json({
       dryRun: false,
       cyclesCreated: Number(cycles ?? 0),
       posterMilestonesUnlocked: Number(milestones ?? 0),
+      pendingRewardEntitlementsCreated: Number(entitlements ?? 0),
       eventsProcessed: processed,
       contributionRowsInserted: inserted,
       backlogPending,
