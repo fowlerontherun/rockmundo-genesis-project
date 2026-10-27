@@ -90,6 +90,15 @@ Verification completed directly against the main database: an unapproved policy 
 
 **Future activation requires a separate explicit decision.** The trusted DB operator must first review the source-to-entitlement reconciliation and wallet/ledger canary, explicitly document the approver/reason/short approval window in the private authorization table, and only then enable one policy and the payout switch. Do not schedule the grant function merely because the controls can be enabled; first verify eligibility, expiration, replay locks and the two independent safeguards. When approval expires, grants automatically fail closed. No operator approval was issued as part of this implementation.
 
+## Source provenance and deadline reconciliation — 27 October
+
+Two additive migrations are deployed directly to main Supabase and registered with exact canonical GitHub versions.
+
+- `20261027164500_scene_late_finalization_milestone_reconciliation.sql`: permits verified events completed before a cycle deadline to unlock milestones and complete the expired cycle during the seven-day settlement grace window. When a contribution is explicitly invalidated, milestone rows are **soft-revoked**, cycle/objective completion is recalculated and the authenticated board hides invalidated mural stages. The old milestone row remains as correction evidence. A live reconciliation returned zero unexpected changes; the existing two milestone unlocks remain valid.
+- `20261027170000_scene_source_integrity_preview.sql`: a **read-only, private, service-role-only** diagnostic. `select private.scene_source_integrity_preview(100);` checks recent scored gigs, recordings and rehearsals against their canonical event and XP evidence, and returns bounded suspected mismatches for operator investigation. Initial production result: **3 contributions inspected, 0 suspected**. This is not an automatic player-credit revocation process; archived source statuses and later admin corrections must be evaluated carefully before invalidating a historical contribution.
+
+The isolated PostgreSQL late-event test passed in GitHub CI. Focused assertion follow-up is tracked in PR #4605. Separate provenance diagnostics/replay integration is tracked in PR #4606. No reward policies or XP payouts were enabled by these updates.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
