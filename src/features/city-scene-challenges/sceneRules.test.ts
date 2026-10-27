@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateSceneTarget, getSceneCycleBounds, getScenePosterStage, getSceneTarget } from './sceneRules';
+import { allocateSceneTarget, getConfirmedScenePosterStage, getSceneCycleBounds, getScenePosterStage, getSceneTarget } from './sceneRules';
 
 describe('City Scene Challenge cycle boundaries', () => {
   it('uses UTC and half-open day ranges across daylight saving changes', () => {
@@ -40,6 +40,15 @@ describe('City Scene Challenge scaling and mural milestones', () => {
     expect(allocateSceneTarget(5, [1, 1, 1])).toEqual([2, 2, 1]);
     expect(allocateSceneTarget(20, [2, 1, 1]).reduce((sum, n) => sum + n, 0)).toBe(20);
     expect(() => allocateSceneTarget(2, [1, 1, 1])).toThrow(RangeError);
+  });
+
+  it('waits for confirmed server milestones before revealing artwork', () => {
+    expect(getConfirmedScenePosterStage([], 100, 100)).toBe(0);
+    expect(getConfirmedScenePosterStage([25], 90, 100)).toBe(25);
+    expect(getConfirmedScenePosterStage([25, 50], 90, 100)).toBe(50);
+    expect(getConfirmedScenePosterStage([25, 50, 75, 100], 100, 100)).toBe(100);
+    expect(getConfirmedScenePosterStage([42, -1], 100, 100)).toBe(0);
+    expect(getConfirmedScenePosterStage(undefined, 90, 100)).toBe(75);
   });
 
   it('reveals exactly the earned mural stage without optimistic completion', () => {

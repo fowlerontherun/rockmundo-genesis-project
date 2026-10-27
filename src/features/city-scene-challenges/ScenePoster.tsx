@@ -1,5 +1,5 @@
 import { Music2, Star, Trophy } from 'lucide-react';
-import { getScenePosterStage } from './sceneRules';
+import { getConfirmedScenePosterStage } from './sceneRules';
 
 export interface ScenePosterProps {
   cityName: string;
@@ -7,6 +7,7 @@ export interface ScenePosterProps {
   monthLabel: string;
   earnedPoints: number;
   targetPoints: number;
+  unlockedMilestones?: readonly number[];
 }
 
 /**
@@ -19,8 +20,9 @@ export function ScenePoster({
   monthLabel,
   earnedPoints,
   targetPoints,
+  unlockedMilestones,
 }: ScenePosterProps) {
-  const stage = getScenePosterStage(earnedPoints, targetPoints);
+  const stage = getConfirmedScenePosterStage(unlockedMilestones, earnedPoints, targetPoints);
   const progress = targetPoints > 0
     ? Math.max(0, Math.min(100, Math.floor(100 * earnedPoints / targetPoints)))
     : 0;
@@ -35,9 +37,9 @@ export function ScenePoster({
       <div className="absolute inset-0 opacity-30" aria-hidden="true"
         style={{ backgroundImage: 'repeating-linear-gradient(120deg, transparent 0px, transparent 29px, #eabfff 30px, transparent 31px)' }} />
 
-      {/* The revealed graphic is entirely deterministic from the persisted point total. */}
+      {/* The revealed artwork follows server-persisted milestone unlocks. */}
       <div className="absolute inset-y-0 left-0 overflow-hidden" aria-hidden="true"
-        style={{ width: `${progress}%` }}>
+        style={{ width: `${stage}%` }}>
         <div className="absolute inset-y-0 left-0 w-[100vw] max-w-none bg-gradient-to-tr from-fuchsia-900 via-violet-700 to-orange-500 opacity-50" />
         <div className="absolute -bottom-20 left-8 h-56 w-56 rounded-full border-[28px] border-amber-400/30" />
         <div className="absolute right-8 top-8 rotate-12 text-amber-300/70">

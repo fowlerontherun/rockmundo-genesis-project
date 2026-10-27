@@ -76,3 +76,19 @@ export function getScenePosterStage(earned: number, target: number): ScenePoster
   if (ratio >= 0.25) return 25;
   return 0;
 }
+
+/** A rendered mural may only reveal stages persisted by the server.
+ * Undefined preserves the offline/standalone preview behaviour. An explicitly
+ * empty list means that no actual milestone has been granted yet.
+ */
+export function getConfirmedScenePosterStage(
+  confirmedMilestones: readonly number[] | undefined,
+  earned: number,
+  target: number,
+): ScenePosterStage {
+  if (confirmedMilestones === undefined) return getScenePosterStage(earned, target);
+  for (const threshold of [100, 75, 50, 25] as const) {
+    if (confirmedMilestones.includes(threshold)) return threshold;
+  }
+  return 0;
+}

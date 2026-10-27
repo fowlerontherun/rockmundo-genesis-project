@@ -62,7 +62,7 @@ describe('City Scene three-source verified daily/weekly/monthly coverage', () =>
       expect(text).toContain('for update;');
       expect(text).toContain("'15 minutes'");
       expect(text).toContain("source_health_snapshot->>'scoring_enabled'");
-      expect(text).toContain('updated_at=now()');
+      expect(text).toMatch(/updated_at\s*=\s*now\(\)/);
       expect(text).toContain('backlog_pending');
       expect(text).toContain('security invoker');
       expect(text).toContain('to service_role');
