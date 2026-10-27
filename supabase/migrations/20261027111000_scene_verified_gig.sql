@@ -8,6 +8,14 @@ alter table public.scene_processor_cursors
   check (source_key in ('verified_jam','completed_recording','verified_gig'));
 
 update public.scene_challenge_templates
+set action_type='jam:verified_collaboration',
+    title='Jam With Local Musicians',
+    description='Complete a jam with other verified musicians in your city.',
+    art_theme='rehearsal',
+    version=version+1
+where slug='daily-band-meeting' and enabled is false;
+
+update public.scene_challenge_templates
 set action_type='gig:verified_performance',
     title='Rock Your Local Stage',
     description='Play a completed gig with a verified performed lineup.',
