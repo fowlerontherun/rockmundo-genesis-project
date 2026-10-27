@@ -1,5 +1,6 @@
--- Remove all existing YouTube video resources and create new skill-linked ones
-DELETE FROM public.education_youtube_resources;
+-- Replace legacy video rows with skill-linked entries while retaining curated
+-- playlist resources that share this historical table but have no video_url.
+DELETE FROM public.education_youtube_resources WHERE video_url IS NOT NULL;
 
 -- Insert new videos directly linked to valid skills
 INSERT INTO public.education_youtube_resources (title, description, video_url, category, difficulty_level, duration_minutes, tags) VALUES
