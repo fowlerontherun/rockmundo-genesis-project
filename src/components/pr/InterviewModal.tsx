@@ -108,8 +108,11 @@ export const InterviewModal = () => {
                 </p>
               </CardContent>
             </Card>
-            <Button onClick={startInterview} disabled={loading} className="w-full font-oswald">
+            <Button onClick={() => startInterview()} disabled={loading} className="w-full font-oswald">
               {loading ? "Preparing interview..." : "Go Live"}
+            </Button>
+            <Button variant="outline" onClick={() => startInterview(true)} disabled={loading} className="w-full font-oswald">
+              Skip interview (random outcome)
             </Button>
           </div>
         )}

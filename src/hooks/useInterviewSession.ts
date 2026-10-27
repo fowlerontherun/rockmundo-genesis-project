@@ -106,7 +106,38 @@ export const useInterviewSession = () => {
     checkedRef.current = false;
   }, [bandId]);
 
-  const startInterview = useCallback(async () => {
+  const calculateTotalEffects = useCallback((qs: InterviewQuestion[], ans: InterviewAnswer[]): InterviewEffects => {
+    let fameMult = 0;
+    let fanMult = 0;
+    let cashMult = 0;
+    const reputation: Record<string, number> = {};
+
+    ans.forEach((answer, index) => {
+      const question = qs[index];
+      const key = `option_${answer.chosen_option}_effects` as keyof InterviewQuestion;
+      const effects = question?.[key] as unknown as InterviewEffects | undefined;
+      if (!effects) return;
+
+      const timeoutPenalty = answer.timed_out ? 0.97 : 1;
+      fameMult += (effects.fame_mult || 1) * timeoutPenalty;
+      fanMult += (effects.fan_mult || 1) * timeoutPenalty;
+      cashMult += effects.cash_mult || 1;
+      Object.entries(effects.reputation || {}).forEach(([axis, value]) => {
+        reputation[axis] = (reputation[axis] || 0) + value;
+      });
+      if (answer.timed_out) reputation.awkward = (reputation.awkward || 0) + 2;
+    });
+
+    const divisor = Math.max(1, ans.length);
+    return {
+      fame_mult: fameMult / divisor,
+      fan_mult: fanMult / divisor,
+      cash_mult: cashMult / divisor,
+      reputation,
+    };
+  }, []);
+
+  const startInterview = useCallback(async (skip = false) => {
     if (!pending) return;
     setLoading(true);
     try {
@@ -149,45 +180,27 @@ export const useInterviewSession = () => {
       answerLockRef.current = false;
       setTotalEffects(null);
       setTimeLeft(QUESTION_TIME_SECONDS);
-      setPhase("question");
+      if (skip) {
+        // Skipping answers every question at random, giving a random outcome.
+        const randomAnswers: InterviewAnswer[] = selected.map((q) => ({
+          question_id: q.id,
+          chosen_option: (["a", "b", "c", "d"] as const)[Math.floor(Math.random() * 4)],
+          timed_out: false,
+        }));
+        setAnswers(randomAnswers);
+        setTotalEffects(calculateTotalEffects(selected, randomAnswers));
+        setPhase("results");
+      } else {
+        setPhase("question");
+      }
     } catch (error) {
       console.error("Could not prepare media interview", error);
       toast({ title: "Couldn\u0027t start interview", description: "The questions could not be loaded. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [pending, userId, bandId, toast]);
+  }, [pending, userId, bandId, toast, calculateTotalEffects]);
 
-  const calculateTotalEffects = useCallback((qs: InterviewQuestion[], ans: InterviewAnswer[]): InterviewEffects => {
-    let fameMult = 0;
-    let fanMult = 0;
-    let cashMult = 0;
-    const reputation: Record<string, number> = {};
-
-    ans.forEach((answer, index) => {
-      const question = qs[index];
-      const key = `option_${answer.chosen_option}_effects` as keyof InterviewQuestion;
-      const effects = question?.[key] as unknown as InterviewEffects | undefined;
-      if (!effects) return;
-
-      const timeoutPenalty = answer.timed_out ? 0.97 : 1;
-      fameMult += (effects.fame_mult || 1) * timeoutPenalty;
-      fanMult += (effects.fan_mult || 1) * timeoutPenalty;
-      cashMult += effects.cash_mult || 1;
-      Object.entries(effects.reputation || {}).forEach(([axis, value]) => {
-        reputation[axis] = (reputation[axis] || 0) + value;
-      });
-      if (answer.timed_out) reputation.awkward = (reputation.awkward || 0) + 2;
-    });
-
-    const divisor = Math.max(1, ans.length);
-    return {
-      fame_mult: fameMult / divisor,
-      fan_mult: fanMult / divisor,
-      cash_mult: cashMult / divisor,
-      reputation,
-    };
-  }, []);
 
   const handleAnswer = useCallback((option: "a" | "b" | "c" | "d", timedOut = false) => {
     if (answerLockRef.current || reacting || phase !== "question") return;
