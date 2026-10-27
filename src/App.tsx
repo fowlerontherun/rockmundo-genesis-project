@@ -295,6 +295,7 @@ const CityTreasuryDetail = lazyWithRetry(() => import("./pages/admin/CityTreasur
 const PracticeTracksAdmin = lazyWithRetry(() => import("./pages/admin/PracticeTracksAdmin"));
 const About = lazyWithRetry(() => import("./pages/About"));
 const WorldEnvironment = lazyWithRetry(() => import("./pages/WorldEnvironment"));
+const CitySceneChallenges = lazyWithRetry(() => import("./pages/CitySceneChallenges"));
 const Employment = lazyWithRetry(() => import("./pages/Employment"));
 const RadioBrowser = lazyWithRetry(() => import("./pages/media/RadioBrowser"));
 const MusicVideos = lazyWithRetry(() => import("./pages/MusicVideos"));
@@ -692,6 +693,7 @@ function App() {
                     <Route path="cities" element={<WorldEnvironment />} />
                     <Route path="cities/treasury" element={<CitiesTreasury />} />
                     <Route path="cities/:cityId" element={<City />} />
+                    <Route path="cities/:cityId/scene-challenges" element={<CitySceneChallenges />} />
                     <Route path="cities/:cityId/election" element={<CityElection />} />
                     <Route path="cities/:cityId/mayor-dashboard" element={<MayorDashboard />} />
                     <Route path="world-parliament" element={<WorldParliament />} />
