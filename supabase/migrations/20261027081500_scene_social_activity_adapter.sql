@@ -125,7 +125,7 @@ begin
         )
       order by c.starts_at, c.cadence, o.id
     loop
-      v_cap := case v_obj.cadence when 'daily' then 3 when 'weekly' then 10 else 25 end;
+      v_cap := case v_obj.cadence when 'daily' then 5 when 'weekly' then 10 else 25 end;
 
       -- Account/cycle lock serialises the full-period cap across all dates.
       -- A single event may count in different cadences; never double-count
