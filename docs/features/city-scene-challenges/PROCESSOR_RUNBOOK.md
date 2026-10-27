@@ -70,3 +70,9 @@ A successful payout must update `player_xp_wallet.xp_balance`, `lifetime_xp`, `s
 Staging fixtures must exercise (1) exact-once replay and two simultaneous payout calls, (2) rollback after a deliberate ledger-write exception, (3) disabled flag and disabled policy, (4) expiry boundary at midnight UTC, (5) inactive/deleted/mismatched owner, (6) rewards for two separate characters on the same account, and (7) city-completion rewards when one objective is overfilled but another is unfinished. Keep both flags off and the function unconnected to scheduling until these pass.
 
 For emergency rollback, set `scene_reward_payout_controls.payouts_enabled=false` first; then suspend the worker invocation and inspect the receipt-ledger-wallet relationships before doing any compensating financial operation. **Never delete historical grant receipts to allow replay.**
+
+### Payout-time revalidation (supplemental staging fix)
+
+The additive `20261027131500_scene_reward_payout_revalidation.sql` replaces only the protected grant routine. It rechecks non-invalidated personal contributions against the enabled policy's minimum, capped community progress against city-completion policies, an ended eligible cycle, and the frozen end-of-cycle entitlement timestamp **within the same locked payout transaction**. Thus a reward created before an abuse correction does not remain payable after its underlying gig, recording or jam credit has been invalidated. It does not enable any payout flags.
+
+The staging-only `city_scene_xp_grant_staging_harness.sql` now checks the revoked-contribution case before restoring fixture credit, processing one valid award, and replaying the same claim. Run the full migration sequence including the revalidation override before this harness. Any failure must abort with `ON_ERROR_STOP=1`; all fixture writes are inside `BEGIN ... ROLLBACK`.
