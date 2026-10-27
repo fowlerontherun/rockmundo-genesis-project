@@ -31,7 +31,9 @@ begin
     or v_session.completed_at < v_session.scheduled_end
     or not exists (
       select 1 from public.jam_session_finalizations f
-      where f.session_id = p_session_id and f.applied_at <= v_session.completed_at
+      where f.session_id = p_session_id
+        and f.applied_at >= coalesce(v_session.started_at, v_session.created_at)
+        and f.applied_at <= now()
     )
   then
     return 0;
