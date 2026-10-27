@@ -11,7 +11,8 @@ begin
     'scene_challenge_objectives', 'scene_daily_affiliations',
     'scene_contributions', 'scene_milestones', 'scene_reward_claims',
     'scene_processor_cursors', 'scene_reward_policies',
-    'scene_reward_payout_controls', 'scene_reward_grant_receipts'
+    'scene_reward_payout_controls', 'scene_reward_grant_receipts',
+    'scene_rollout_controls', 'scene_source_controls'
   ] loop
     if to_regclass('public.' || v_table) is null then
       raise exception 'Scene table missing: %', v_table;
@@ -112,6 +113,13 @@ begin
 
   if exists(select 1 from public.scene_reward_grant_receipts)
   then raise exception 'Unexpected XP receipts before reviewed rollout';
+  end if;
+
+  if exists (
+    select 1 from public.scene_rollout_controls
+    where cycle_generation_enabled or scoring_enabled
+  ) or exists(select 1 from public.scene_source_controls where enabled)
+  then raise exception 'City scene rollout unexpectedly enabled before pilot';
   end if;
 
   if exists(select 1 from public.scene_contributions)
