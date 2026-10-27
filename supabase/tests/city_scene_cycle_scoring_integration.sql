@@ -25,6 +25,9 @@ begin
   end if;
 
   update public.scene_challenge_templates set enabled = true;
+  update public.scene_source_controls set enabled = true;
+  update public.scene_rollout_controls set cycle_generation_enabled=true,
+    scoring_enabled=true,monthly_first_start='2099-01-01';
   if (select count(*) from public.scene_challenge_templates where cadence='daily') <> 3
     or (select count(*) from public.scene_challenge_templates where cadence='weekly') <> 3
     or (select count(*) from public.scene_challenge_templates where cadence='monthly') <> 1
@@ -32,8 +35,8 @@ begin
     raise exception 'INCORRECT_SCENE_TEMPLATE_COUNTS';
   end if;
 
-  if private.reconcile_city_scene_cycles(now(),v_city) <> 3 then
-    raise exception 'EXPECTED_THREE_SCENE_CYCLES';
+  if private.reconcile_city_scene_cycles(now(),v_city) <> 2 then
+    raise exception 'EXPECTED_TWO_PILOT_CYCLES_AND_MONTHLY_DEFERRED';
   end if;
   if private.reconcile_city_scene_cycles(now(),v_city) <> 0 then
     raise exception 'CYCLE_RECONCILIATION_NOT_IDEMPOTENT';
@@ -49,9 +52,8 @@ begin
   if not exists(select 1 from public.scene_challenge_cycles
     where id=v_daily and target_total=3 and active_population_snapshot=1)
     or not exists(select 1 from public.scene_challenge_cycles
-    where id=v_weekly and target_total=6 and active_population_snapshot=1)
-    or not exists(select 1 from public.scene_challenge_cycles
-    where id=v_monthly and target_total=12 and active_population_snapshot=1)
+    where id=v_weekly and target_total=3 and active_population_snapshot=1)
+    or v_monthly is not null
   then
     raise exception 'SCENE_TARGET_EXCEEDS_ALLOWED_CAP_OR_WRONG_SCALE';
   end if;
@@ -61,9 +63,7 @@ begin
     or (select count(*) from public.scene_challenge_objectives
     where cycle_id=v_daily) <> 3
     or (select coalesce(sum(target_points),0) from public.scene_challenge_objectives
-    where cycle_id=v_weekly) <> 6
-    or (select coalesce(sum(target_points),0) from public.scene_challenge_objectives
-    where cycle_id=v_monthly) <> 12
+    where cycle_id=v_weekly) <> 3
   then
     raise exception 'SCENE_OBJECTIVE_TARGET_DISTRIBUTION_INVALID';
   end if;
@@ -127,7 +127,7 @@ begin
 
   perform set_config('request.jwt.claim.sub',v_user::text,true);
   v_board := public.get_city_scene_board(v_city);
-  if jsonb_array_length(v_board->'cycles') <> 3
+  if jsonb_array_length(v_board->'cycles') <> 2
     or not exists (
       select 1 from jsonb_array_elements(v_board->'cycles') item
       where item->>'cadence'='daily'
