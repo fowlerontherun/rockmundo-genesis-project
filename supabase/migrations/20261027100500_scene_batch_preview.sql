@@ -40,10 +40,16 @@ begin
     'backlog_pending', v_count > p_limit,
     'cursor_at', v_last_time,
     'settled_before', v_cutoff,
-    'scoring_templates_enabled', exists (
+    'scoring_sources_ready', exists (
       select 1 from public.scene_challenge_templates t
+      join public.scene_challenge_objectives o on o.template_id = t.id
+      join public.scene_challenge_cycles cycle on cycle.id = o.cycle_id
       where t.enabled is true
         and t.action_type in ('jam:verified_collaboration', 'scene:verified_community')
+        and o.status in ('active','completed')
+        and cycle.status in ('active','completed','expired')
+        and cycle.ends_at >= now() - interval '7 days'
+        and coalesce(o.source_health_snapshot->>'scoring_enabled','false') = 'true'
     )
   );
 end;
