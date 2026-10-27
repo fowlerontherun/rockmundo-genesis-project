@@ -23,9 +23,7 @@ security definer
 set search_path=pg_catalog,public,private
 as $$
 begin
-  if new.enabled is true and (
-     tg_op='INSERT' or old.enabled is distinct from true
-  ) then
+  if new.enabled is true then
     if not exists(
       select 1 from private.scene_reward_activation_authorizations a
       where a.singleton is true
@@ -55,9 +53,7 @@ security definer
 set search_path=pg_catalog,public,private
 as $$
 begin
-  if new.payouts_enabled is true and (
-    tg_op='INSERT' or old.payouts_enabled is distinct from true
-  ) then
+  if new.payouts_enabled is true then
     if not exists(
       select 1 from private.scene_reward_activation_authorizations a
       where a.singleton is true
