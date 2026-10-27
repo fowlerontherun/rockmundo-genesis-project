@@ -72,16 +72,19 @@ test('historical YouTube video seeds coexist with curated playlists on clean Pos
     await db.exec(dropLegacyTrigger);
     await db.exec(createLegacyTrigger);
     await db.exec(videoSeed);
-    // The later December migration inserts only legacy video fields; it must
-    // succeed without weakening the original curated NOT NULL requirements.
-    await db.exec(replacementSeed);
+    const { rows: initial } = await db.query(`SELECT COUNT(*)::integer AS count
+      FROM public.education_youtube_resources WHERE collection_key = 'legacy-education-videos'`);
+    assert.equal(initial[0].count, seededCount);
+    // The later December migration replaces video rows but must keep curated
+    // playlist entries and populate mandatory metadata on each legacy insert.
+    await db.exec(replacementSeedMigration);
 
     const { rows: counts } = await db.query(`SELECT
       COUNT(*) FILTER (WHERE collection_key = 'curated')::integer AS curated_count,
       COUNT(*) FILTER (WHERE collection_key = 'legacy-education-videos')::integer AS video_count
       FROM public.education_youtube_resources`);
     assert.equal(counts[0].curated_count, 1);
-    assert.equal(counts[0].video_count, seededCount + replacementCount);
+    assert.equal(counts[0].video_count, replacementCount);
 
     const { rows: curated } = await db.query(`SELECT collection_title, resource_name, resource_url
       FROM public.education_youtube_resources WHERE collection_key = 'curated'`);
@@ -91,15 +94,11 @@ test('historical YouTube video seeds coexist with curated playlists on clean Pos
       resource_url: 'https://example.invalid/resource',
     });
 
-    const { rows: videos } = await db.query(`SELECT title, resource_name, resource_focus,
-      resource_format, resource_summary, resource_url, video_url
-      FROM public.education_youtube_resources WHERE title = 'Guitar Basics for Beginners'`);
-    assert.equal(videos.length, 1);
-    assert.equal(videos[0].resource_name, videos[0].title);
-    assert.equal(videos[0].resource_focus, 'Guitar');
-    assert.equal(videos[0].resource_format, 'video');
-    assert.equal(videos[0].resource_url, videos[0].video_url);
-    assert.equal(videos[0].resource_summary, 'Learn first chords and strumming.');
+    // The initial video seed is removed by the historical replacement, not
+    // the curated playlist row.
+    const { rows: oldVideo } = await db.query(`SELECT id FROM public.education_youtube_resources
+      WHERE title = 'Guitar Basics for Beginners'`);
+    assert.equal(oldVideo.length, 0);
     const { rows: laterVideos } = await db.query(`SELECT title, resource_name, resource_focus, resource_url, video_url
       FROM public.education_youtube_resources WHERE title = 'Guitar Basics: First Chords'`);
     assert.equal(laterVideos.length, 1);
