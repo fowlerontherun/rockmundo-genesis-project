@@ -72,6 +72,14 @@ The first action makes the periodic worker return without writing; the second re
 - RLS is active across all `scene_*` tables. Ordinary authenticated players cannot invoke the worker, contribution ingesters or the XP grant procedure; reward policies and payout controls remain disabled.
 - Only complete, XP-bearing band rehearsals belonging to the validated paying band member are credited. Confirmed invitations without durable attendance are never credited.
 
+## XP reward canary safety intervention — 27 October, 14:54 UTC
+
+A live audit at 14:53 UTC found reward settings had changed since the initial pilot deployment: `scene_reward_payout_controls.payouts_enabled=true`, the `daily_participation_xp` policy enabled at 20 XP, and an additional hourly scheduled payout job (`rockmundo-city-scene-xp-canary-v1`, job #158) calling `private.grant_scene_earned_xp(10)`. A 14:35 UTC invocation had succeeded, but **zero** City Scene reward claims, receipts and `city_scene_reward` XP ledger rows existed.
+
+As a fail-safe pending independent economy/rollout validation, the payout switch was returned to **false**, the participation policy returned to **disabled**, and job #158 was **unscheduled**. Re-check confirmed zero enabled reward policies, zero claims/receipts/XP ledger rows and no XP canary job. The regular verified-action scoring job #157 remains active.
+
+Two further migrations were visible on main: `20261027160000_scene_balanced_reward_policies.sql` and `20261027161500_scene_immediate_source_kill_switches.sql`. The policy migration defines candidate XP amounts but itself sets no payout flags. Source kill-switch functions were separately reviewed. Do not reactivate the canary without explicit payout approval, a reproducible staging grant test, a scoped reward-policy rollout plan and monitoring. Be alert to concurrent agent changes in the same production environment.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
