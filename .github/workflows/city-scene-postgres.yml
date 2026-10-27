@@ -66,6 +66,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_rehearsal_integration.sql
       - name: Verify operator approval expiry and deny unauthorised XP activation
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_operator_approval_integration.sql
+      - name: Verify late finalisation, revocation and mural rollback in PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_late_event_reconciliation_integration.sql
       - name: Exercise real XP grant and replay transaction
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
       - name: Verify transaction rollback preserved payout safety
