@@ -7,7 +7,7 @@ on:
       - "src/pages/CitySceneChallenges.tsx"
       - "supabase/functions/scene-challenges-processor/**"
       - "supabase/migrations/*scene*.sql"
-      - "supabase/tests/city_scene_challenges_staging_smoke.sql"
+      - "supabase/tests/city_scene_*.sql"
       - ".github/workflows/city-scene-challenges.yml"
       - "supabase/config.toml"
   workflow_dispatch:
