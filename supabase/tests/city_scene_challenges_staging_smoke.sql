@@ -10,7 +10,7 @@ begin
     'scene_challenge_templates', 'scene_challenge_cycles',
     'scene_challenge_objectives', 'scene_daily_affiliations',
     'scene_contributions', 'scene_milestones', 'scene_reward_claims',
-    'scene_processor_cursors'
+    'scene_processor_cursors', 'scene_reward_policies'
   ] loop
     if to_regclass('public.' || v_table) is null then
       raise exception 'Scene table missing: %', v_table;
@@ -39,7 +39,8 @@ begin
     'public.scene_ingest_verified_jam(uuid)',
     'public.scene_reconcile_milestones(uuid)',
     'public.scene_process_verified_jam_batch(integer)',
-    'public.scene_preview_verified_jam_batch(integer)'
+    'public.scene_preview_verified_jam_batch(integer)',
+    'public.scene_reconcile_reward_entitlements(uuid)'
   ] loop
     if to_regprocedure(v_function) is null then
       raise exception 'Scene server RPC missing: %', v_function;
@@ -68,6 +69,10 @@ begin
 
   if exists(select 1 from public.scene_challenge_templates where enabled)
   then raise exception 'Unexpected active templates before reviewed rollout';
+  end if;
+
+  if exists(select 1 from public.scene_reward_policies where enabled)
+  then raise exception 'Unexpected active reward policies before reviewed rollout';
   end if;
 
   if exists(select 1 from public.scene_contributions)
