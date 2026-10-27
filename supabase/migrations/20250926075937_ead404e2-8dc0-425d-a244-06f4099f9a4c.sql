@@ -66,6 +66,19 @@ CREATE TABLE IF NOT EXISTS public.education_youtube_resources (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- The September 21 curated-resource migration may have created this table
+-- with playlist-specific columns already. CREATE TABLE IF NOT EXISTS above
+-- does not reconcile that shape. Preserve curated rows and add the legacy
+-- video seed fields required by the December 18 migration on clean replay.
+ALTER TABLE public.education_youtube_resources
+  ADD COLUMN IF NOT EXISTS title varchar,
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS video_url varchar,
+  ADD COLUMN IF NOT EXISTS category varchar,
+  ADD COLUMN IF NOT EXISTS difficulty_level integer DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS duration_minutes integer,
+  ADD COLUMN IF NOT EXISTS tags text[];
+
 ALTER TABLE public.education_youtube_resources ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "YouTube resources are viewable by everyone"
