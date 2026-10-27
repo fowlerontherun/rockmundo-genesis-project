@@ -43,6 +43,11 @@ as $$
             where o.cycle_id = cc.id and sc.invalidated_at is null
           ), 0),
           'theme_slug', cc.theme_slug,
+          'milestones', coalesce((
+            select jsonb_agg(sm.percent_threshold order by sm.percent_threshold)
+            from public.scene_milestones sm
+            where sm.cycle_id = cc.id
+          ), '[]'::jsonb),
           'objectives', coalesce((
             select jsonb_agg(jsonb_build_object(
               'id', ob.id,
