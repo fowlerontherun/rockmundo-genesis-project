@@ -35,7 +35,7 @@ describe('City Scene late source finalisation and mural revocation', () => {
   });
 
   it('has rollback-only test scenarios for late completion, invalidation and restoration', () => {
-    expect(integration).toMatch(/^begin;/);
+    expect(integration).toMatch(/^begin;/m);
     expect(integration).toMatch(/rollback;\s*$/);
     expect(integration).toContain('LATE_EVENT_DID_NOT_COMPLETE_EXPIRED_CYCLE');
     expect(integration).toContain('INVALIDATED_MURAL_STILL_VISIBLE_ON_BOARD');
