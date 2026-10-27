@@ -46,6 +46,28 @@ type PersonalSceneProgress = {
   cycles: PersonalCycle[];
 };
 
+type SceneReward = {
+  cycle_id: string;
+  cadence: SceneCadence;
+  reward_key: string;
+  reward_kind: 'xp';
+  reward_amount: number;
+  status: 'pending' | 'processing' | 'granted' | 'retry_required' | 'expired';
+  entitled_at: string;
+  expires_at: string | null;
+  granted_at: string | null;
+};
+
+function validSceneRewards(value: unknown): value is SceneReward[] {
+  return Array.isArray(value) && value.every((entry) =>
+    entry && typeof entry === 'object' &&
+    typeof entry.reward_key === 'string' &&
+    typeof entry.reward_amount === 'number' &&
+    typeof entry.status === 'string'
+  );
+}
+
+
 function validPersonalProgress(value: unknown): value is PersonalSceneProgress {
   if (!value || typeof value !== 'object') return false;
   const data = value as Partial<PersonalSceneProgress>;
@@ -95,6 +117,7 @@ export default function CitySceneChallenges() {
   const { cityId } = useParams<{ cityId: string }>();
   const [board, setBoard] = useState<SceneBoard | null>(null);
   const [personal, setPersonal] = useState<PersonalSceneProgress | null>(null);
+  const [myRewards, setMyRewards] = useState<SceneReward[] | null>(null);
   const [active, setActive] = useState<SceneCadence>('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +129,7 @@ export default function CitySceneChallenges() {
     setError(null);
     setBoard(null);
     setPersonal(null);
+    setMyRewards(null);
     if (!cityId || !/^[0-9a-fA-F-]{36}$/.test(cityId)) {
       setError('Choose a valid city to view its challenges.');
       setLoading(false);
@@ -130,6 +154,19 @@ export default function CitySceneChallenges() {
           }
         } catch {
           // Personal progress is unavailable, not silently reported as zero.
+        }
+        // Separate owner-only reward query: never expose claim IDs, profile
+        // identifiers or private XP ledger rows on the shared board.
+        try {
+          const rewards = await (supabase as any).rpc('get_my_scene_reward_history', {
+            p_city_id: cityId,
+            p_limit: 20,
+          });
+          if (!cancelled && !rewards.error && validSceneRewards(rewards.data)) {
+            setMyRewards(rewards.data);
+          }
+        } catch {
+          // Reward display is optional during gradual database rollout.
         }
       } catch {
         if (!cancelled) setError('City Scene Challenges are not available yet. Please try again later.');
@@ -321,6 +358,44 @@ export default function CitySceneChallenges() {
               </>
             )}
           </section>
+          {myRewards && myRewards.length > 0 && (
+            <section aria-label="Your City Scene XP rewards" className="space-y-3">
+              <div>
+                <h3 className="text-xl font-bold">Your City Scene rewards</h3>
+                <p className="text-sm text-muted-foreground">
+                  Verified community XP awards are added to your character wallet after processing.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {myRewards.map((reward) => (
+                  <Card key={`${reward.cycle_id}:${reward.reward_key}`}
+                    className="overflow-hidden border-amber-500/20">
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
+                        <Trophy className="h-6 w-6" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <p className="truncate text-sm font-semibold capitalize">
+                          {reward.cadence.replace(/_/g, ' ')} scene reward
+                        </p>
+                        <p className="font-bold tabular-nums text-amber-500">
+                          +{reward.reward_amount.toLocaleString()} XP
+                        </p>
+                        <Badge variant={reward.status === 'granted' ? 'secondary' : 'outline'}
+                          className="capitalize">
+                          {reward.status === 'granted'
+                            ? 'Awarded'
+                            : reward.status === 'pending'
+                              ? 'Awaiting processing'
+                              : reward.status.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
           <p className="text-xs text-muted-foreground">
             Contributions count only after trusted game events are verified. Creating bookings, sending invites or repeatedly clicking does not earn scene points.
           </p>
