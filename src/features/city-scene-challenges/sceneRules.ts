@@ -40,9 +40,9 @@ export function getSceneTarget(cadence: SceneCadence, eligibleAccounts: number):
   }
   const n = Math.max(1, eligibleAccounts);
   switch (cadence) {
-    case 'daily': return 3 * n;
-    case 'weekly': return 6 * n;
-    case 'monthly': return 12 * n;
+    case 'daily': return 3 * Math.max(1, Math.ceil(n / 20));
+    case 'weekly': return 3 * Math.max(1, Math.ceil(n / 8));
+    case 'monthly': return 3 * Math.max(1, Math.ceil(n / 4));
     default: throw new RangeError('Unsupported scene cadence');
   }
 }
