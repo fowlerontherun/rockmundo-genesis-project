@@ -50,33 +50,26 @@ Deno.serve(async (request) => {
       ? body.maxEvents!
       : 50;
   const now = new Date();
-  const lastSevenDays = new Date(now.getTime() - 7 * 86_400_000);
   const client = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   try {
-    // Only the durable finalisation table is scanned. A browser booking, jam
-    // invitation or 'completed' flag is not sufficient evidence to score.
-    const { data: candidates, error: candidatesError } = await client
-      .from('jam_session_finalizations')
-      .select('session_id,applied_at')
-      .gte('applied_at', lastSevenDays.toISOString())
-      .lte('applied_at', now.toISOString())
-      .order('applied_at', { ascending: false })
-      .limit(maxEvents + 1);
-
-    if (candidatesError) throw candidatesError;
-
-    const hasMore = (candidates?.length ?? 0) > maxEvents;
-    const selected = (candidates ?? []).slice(0, maxEvents);
     if (dryRun) {
+      // The preview is read-only and uses the same persisted cursor and
+      // finalisation settling window as the mutating database worker.
+      const { data: preview, error: previewError } = await client
+        .rpc('scene_preview_verified_jam_batch', { p_limit: maxEvents });
+      if (previewError) throw previewError;
+
       return json({
         dryRun: true,
         configured: true,
-        candidateSessions: selected.length,
-        truncated: hasMore,
-        lastSevenDays: lastSevenDays.toISOString(),
+        candidateSessions: Number(preview?.candidate_sessions ?? 0),
+        backlogPending: preview?.backlog_pending === true,
+        scoringTemplatesEnabled: preview?.scoring_templates_enabled === true,
+        cursorAt: preview?.cursor_at ?? null,
+        settledBefore: preview?.settled_before ?? null,
         cyclesCreated: 0,
         eventsProcessed: 0,
         contributionRowsInserted: 0,
