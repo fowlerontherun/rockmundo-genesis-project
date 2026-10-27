@@ -48,6 +48,9 @@ begin
     'public.scene_ingest_verified_gig(uuid)',
     'public.scene_process_verified_gig_batch(integer)',
     'public.scene_preview_verified_gig_batch(integer)',
+    'public.scene_ingest_verified_rehearsal(uuid)',
+    'public.scene_process_verified_rehearsal_batch(integer)',
+    'public.scene_preview_verified_rehearsal_batch(integer)',
     'public.scene_grant_earned_xp(integer)'
   ] loop
     if to_regprocedure(v_function) is null then
@@ -86,7 +89,7 @@ begin
 
   if (select count(distinct action_type) from public.scene_challenge_templates
       where cadence='daily' and action_type in
-        ('jam:verified_collaboration','recording:completed','gig:verified_performance')
+        ('rehearsal:completed','recording:completed','gig:verified_performance')
         and enabled=false
      ) < 3 then
     raise exception 'Daily verified music source catalogue is incomplete';
@@ -94,7 +97,7 @@ begin
 
   if (select count(distinct action_type) from public.scene_challenge_templates
       where cadence='weekly' and action_type in
-        ('jam:verified_collaboration','recording:completed','gig:verified_performance')
+        ('rehearsal:completed','recording:completed','gig:verified_performance')
         and enabled=false
      ) < 3 then
     raise exception 'Weekly verified music source catalogue is incomplete';
