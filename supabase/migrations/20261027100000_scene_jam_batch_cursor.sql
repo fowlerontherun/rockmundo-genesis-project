@@ -36,8 +36,14 @@ begin
   -- Do not consume source events while every compatible template is disabled.
   if not exists (
     select 1 from public.scene_challenge_templates t
-    where t.enabled = true and t.action_type in
-      ('jam:verified_collaboration', 'scene:verified_community')
+    join public.scene_challenge_objectives o on o.template_id = t.id
+    join public.scene_challenge_cycles cycle on cycle.id = o.cycle_id
+    where t.enabled is true
+      and t.action_type in ('jam:verified_collaboration', 'scene:verified_community')
+      and o.status in ('active','completed')
+      and cycle.status in ('active','completed','expired')
+      and cycle.ends_at >= now() - interval '7 days'
+      and coalesce(o.source_health_snapshot->>'scoring_enabled','false') = 'true'
   ) then
     return jsonb_build_object('events_processed', 0, 'contributions_inserted', 0,
       'backlog_pending', false, 'disabled', true);
