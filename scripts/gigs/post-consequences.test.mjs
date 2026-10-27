@@ -10,6 +10,13 @@ const gig = '00000000-0000-0000-0000-000000000001';
 const band = '00000000-0000-0000-0000-000000000002';
 const claim = '00000000-0000-0000-0000-000000000003';
 const duplicate = '00000000-0000-0000-0000-000000000004';
+test('gig consequences migration retains valid PostgreSQL dollar-quoted blocks', () => {
+  assert.match(migration, /RETURNS trigger LANGUAGE plpgsql SET search_path='' AS \$\$/);
+  assert.match(migration, /\bDO \$\$\s*DECLARE v record/);
+  assert.equal((migration.match(/\bEND \$\$;/g) || []).length, 4);
+  assert.doesNotMatch(migration, /\bAS \$\s*\n|\bDO \$\s*\n|\bEND \$;/);
+});
+
 function table(source, name) {
   const start = source.indexOf(`CREATE TABLE IF NOT EXISTS public.${name} (`);
   return source.slice(start, source.indexOf('\n);', start) + 3);
@@ -69,7 +76,13 @@ for (const variant of ['live', 'planned']) {
       assert.equal(before.processing.length, 1);
       if (variant === 'live') {
         assert.equal(before.processing[0].id, claim);
-        assert.equal(before.processing[0].audit_history[0].rows[0].id, duplicate);
+        assert.equal(before.processing[0].audit_history[0].archive_count, 1);
+        const archived = (await db.query(`SELECT original_processing_id,canonical_processing_id,original_row,original_checksum
+          FROM gig_processing_claim_history WHERE original_processing_id='${duplicate}'`)).rows[0];
+        assert.equal(archived.original_processing_id, duplicate);
+        assert.equal(archived.canonical_processing_id, claim);
+        assert.equal(archived.original_row.id, duplicate);
+        assert.equal(typeof archived.original_checksum, 'string');
       }
       assert.deepEqual(await run(db), { status: 'completed', alreadyProcessed: false });
       const settled = await state(db);
