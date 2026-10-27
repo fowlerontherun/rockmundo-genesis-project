@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 const processor = readFileSync(
-  fileURLToPath(new URL('../../../supabase/functions/scene-challenges-processor/index.ts', import.meta.url)),
+  resolve(process.cwd(), 'supabase/functions/scene-challenges-processor/index.ts'),
   'utf8',
 );
 const milestone = readFileSync(
-  fileURLToPath(new URL('../../../supabase/migrations/20261027085000_scene_milestone_reconciliation.sql', import.meta.url)),
+  resolve(process.cwd(), 'supabase/migrations/20261027085000_scene_milestone_reconciliation.sql'),
   'utf8',
 );
 const config = readFileSync(
-  fileURLToPath(new URL('../../../supabase/config.toml', import.meta.url)),
+  resolve(process.cwd(), 'supabase/config.toml'),
   'utf8',
 );
 
