@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 const migration = readFileSync(
-  fileURLToPath(new URL('../../../supabase/migrations/20261027070000_city_scene_challenges_foundation.sql', import.meta.url)),
+  resolve(process.cwd(), 'supabase/migrations/20261027070000_city_scene_challenges_foundation.sql'),
   'utf8',
 );
 

@@ -2,6 +2,9 @@
 -- Separate, additive migration. No server event adapters, payouts, or cron jobs.
 begin;
 
+-- Some staging databases have not yet created the private schema.
+create schema if not exists private;
+
 insert into public.scene_challenge_templates
   (slug, cadence, title, description, action_type, target_weight, enabled, art_theme)
 values
@@ -9,7 +12,7 @@ values
   ('daily-afterparty', 'daily', 'Keep The Night Alive', 'Join a verified afterparty after a local gig.', 'social:gig_afterparty', 1, false, 'neon-nightlife'),
   ('daily-release-party', 'daily', 'Celebrate A Release', 'Celebrate a local artist through a verified release gathering.', 'social:release_celebration', 1, false, 'record-store'),
   ('weekly-scene-dinner', 'weekly', 'Bring The Scene Together', 'Complete verified community dinners with local musicians.', 'social:team_dinner', 1, false, 'gig-posters'),
-  ('weekly-open-jam', 'weekly', 'Jam With The Locals', 'Complete verified collaborative sessions with local artists.', 'jam:verified_cross_band', 1, false, 'rehearsal'),
+  ('weekly-open-jam', 'weekly', 'Jam With The Locals', 'Complete verified collaborative sessions with local artists.', 'jam:verified_collaboration', 1, false, 'rehearsal'),
   ('weekly-gig-support', 'weekly', 'Back Local Gigs', 'Attend and support completed local gigs.', 'gig:verified_attendance', 1, false, 'stage-lights'),
   ('monthly-scene-revival', 'monthly', 'Live Music Revival', 'Build your city scene together through verified music activities.', 'scene:verified_community', 1, false, 'city-mural')
 on conflict (slug) do nothing;
@@ -40,6 +43,11 @@ as $$
             where o.cycle_id = cc.id and sc.invalidated_at is null
           ), 0),
           'theme_slug', cc.theme_slug,
+          'milestones', coalesce((
+            select jsonb_agg(sm.percent_threshold order by sm.percent_threshold)
+            from public.scene_milestones sm
+            where sm.cycle_id = cc.id
+          ), '[]'::jsonb),
           'objectives', coalesce((
             select jsonb_agg(jsonb_build_object(
               'id', ob.id,

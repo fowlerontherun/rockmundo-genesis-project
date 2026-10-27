@@ -26,6 +26,7 @@ type SceneCycle = {
   ends_at: string;
   target_total: number;
   earned_points: number;
+  milestones: number[];
   objectives: SceneObjective[];
 };
 type SceneBoard = {
@@ -33,6 +34,23 @@ type SceneBoard = {
   city_name: string;
   cycles: SceneCycle[];
 };
+
+type PersonalCycle = {
+  cycle_id: string;
+  cadence: SceneCadence;
+  earned_points: number;
+  verified_actions: number;
+};
+type PersonalSceneProgress = {
+  city_id: string;
+  cycles: PersonalCycle[];
+};
+
+function validPersonalProgress(value: unknown): value is PersonalSceneProgress {
+  if (!value || typeof value !== 'object') return false;
+  const data = value as Partial<PersonalSceneProgress>;
+  return typeof data.city_id === 'string' && Array.isArray(data.cycles);
+}
 
 const cadences: { key: SceneCadence; title: string; description: string }[] = [
   { key: 'daily', title: 'Daily', description: 'Quick ways to support your local scene' },
@@ -61,6 +79,7 @@ function formatEnd(value: string): string {
 export default function CitySceneChallenges() {
   const { cityId } = useParams<{ cityId: string }>();
   const [board, setBoard] = useState<SceneBoard | null>(null);
+  const [personal, setPersonal] = useState<PersonalSceneProgress | null>(null);
   const [active, setActive] = useState<SceneCadence>('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +90,7 @@ export default function CitySceneChallenges() {
     setLoading(true);
     setError(null);
     setBoard(null);
+    setPersonal(null);
     if (!cityId || !/^[0-9a-fA-F-]{36}$/.test(cityId)) {
       setError('Choose a valid city to view its challenges.');
       setLoading(false);
@@ -85,6 +105,17 @@ export default function CitySceneChallenges() {
         if (rpcError) throw rpcError;
         if (!validBoard(data)) throw new Error('The city challenge board is not yet available.');
         if (!cancelled) setBoard(data);
+
+        // Optional owner-only totals. A failing personal RPC must not
+        // prevent an otherwise healthy community board from rendering.
+        try {
+          const mine = await (supabase as any).rpc('get_my_city_scene_progress', { p_city_id: cityId });
+          if (!cancelled && !mine.error && validPersonalProgress(mine.data)) {
+            setPersonal(mine.data);
+          }
+        } catch {
+          // Personal progress is unavailable, not silently reported as zero.
+        }
       } catch {
         if (!cancelled) setError('City Scene Challenges are not available yet. Please try again later.');
       } finally {
@@ -97,6 +128,7 @@ export default function CitySceneChallenges() {
 
   const current = board?.cycles.find((cycle) => cycle.cadence === active);
   const monthly = board?.cycles.find((cycle) => cycle.cadence === 'monthly');
+  const myCurrent = personal?.cycles.find((cycle) => cycle.cycle_id === current?.id);
 
   return (
     <FMPageScaffold
@@ -156,6 +188,20 @@ export default function CitySceneChallenges() {
             </Card>
           )}
 
+          {monthly && (
+            <section aria-label="City scene poster milestones" className="grid grid-cols-4 gap-2">
+              {[25, 50, 75, 100].map((threshold) => {
+                const unlocked = monthly.milestones?.includes(threshold) ?? false;
+                return (
+                  <div key={threshold} className={`rounded-lg border px-2 py-3 text-center transition-colors ${unlocked ? 'border-amber-400/70 bg-amber-400/10 text-foreground' : 'border-border/60 bg-muted/20 text-muted-foreground'}`}>
+                    <p className="text-base font-black tabular-nums sm:text-lg">{threshold}%</p>
+                    <p className="text-[11px] font-semibold">{unlocked ? 'Unlocked' : 'Locked'}</p>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+
           <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Challenge period">
             {cadences.map((cadence) => {
               const cycle = board.cycles.find((item) => item.cadence === cadence.key);
@@ -205,6 +251,22 @@ export default function CitySceneChallenges() {
                   </div>
                   <Progress value={percent(current.earned_points, current.target_total)} aria-label="City community progress" />
                 </CardContent></Card>
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                    <div>
+                      <p className="text-sm font-semibold">Your impact on the city</p>
+                      <p className="text-xs text-muted-foreground">Only verified completed activities count towards these totals.</p>
+                    </div>
+                    {myCurrent ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Badge variant="outline">{myCurrent.verified_actions} verified {myCurrent.verified_actions === 1 ? 'activity' : 'activities'}</Badge>
+                        <Badge variant="secondary">{myCurrent.earned_points} scene {myCurrent.earned_points === 1 ? 'point' : 'points'}</Badge>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Personal progress unavailable</span>
+                    )}
+                  </CardContent>
+                </Card>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {current.objectives.map((objective) => (
                     <Card key={objective.id}>
