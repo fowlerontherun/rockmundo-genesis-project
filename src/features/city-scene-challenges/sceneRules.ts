@@ -31,15 +31,18 @@ export function getSceneCycleBounds(cadence: SceneCadence, at: Date): SceneCycle
   return { startsAt: new Date(start).toISOString(), endsAt: new Date(end).toISOString() };
 }
 
+/** Balance targets must remain strictly below aggregate source-account caps.
+ * Retune with gameplay telemetry, not hard-coded impossible monthly thresholds.
+ */
 export function getSceneTarget(cadence: SceneCadence, eligibleAccounts: number): number {
   if (!Number.isSafeInteger(eligibleAccounts) || eligibleAccounts < 0) {
     throw new RangeError('Eligible account count must be a non-negative integer');
   }
   const n = Math.max(1, eligibleAccounts);
   switch (cadence) {
-    case 'daily': return Math.max(4, 3 * n);
-    case 'weekly': return Math.max(12, 10 * n);
-    case 'monthly': return Math.max(40, 35 * n);
+    case 'daily': return 3 * n;
+    case 'weekly': return 6 * n;
+    case 'monthly': return 12 * n;
     default: throw new RangeError('Unsupported scene cadence');
   }
 }
