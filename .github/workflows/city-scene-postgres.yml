@@ -64,5 +64,18 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
       - name: Verify transaction rollback preserved payout safety
         run: |
-          psql -X -v ON_ERROR_STOP=1 -c "select case when exists(select 1 from public.scene_reward_payout_controls where payouts_enabled) then 1/0 else 1 end;"
-          psql -X -v ON_ERROR_STOP=1 -c "select case when exists(select 1 from public.scene_reward_grant_receipts) then 1/0 else 1 end;"
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $
+          begin
+            if exists(select 1 from public.scene_reward_payout_controls where payouts_enabled) then
+              raise exception 'Rollback failed: scene XP payouts left enabled';
+            end if;
+            if exists(select 1 from public.scene_reward_grant_receipts) then
+              raise exception 'Rollback failed: scene XP payout receipts persisted';
+            end if;
+            if exists(select 1 from public.scene_reward_claims) then
+              raise exception 'Rollback failed: scene XP reward claims persisted';
+            end if;
+          end;
+          $;
+          SQL
