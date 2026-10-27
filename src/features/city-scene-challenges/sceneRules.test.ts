@@ -31,9 +31,9 @@ describe('City Scene Challenge cycle boundaries', () => {
 describe('City Scene Challenge scaling and mural milestones', () => {
   it('keeps smaller scenes playable without zero targets', () => {
     expect(getSceneTarget('daily', 0)).toBe(3);
-    expect(getSceneTarget('weekly', 1)).toBe(6);
-    expect(getSceneTarget('monthly', 1)).toBe(12);
-    expect(getSceneTarget('daily', 10)).toBe(30);
+    expect(getSceneTarget('weekly', 1)).toBe(3);
+    expect(getSceneTarget('monthly', 1)).toBe(3);
+    expect(getSceneTarget('daily', 10)).toBe(3);
   });
 
   it('never requires more city points than participating accounts could earn', () => {
@@ -46,8 +46,11 @@ describe('City Scene Challenge scaling and mural milestones', () => {
         expect(target).toBeLessThanOrEqual(capAccounts * caps[cadence]);
       }
     }
-    expect(getSceneTarget('monthly', 100)).toBe(1200);
-    expect(getSceneTarget('weekly', 100)).toBe(600);
+    expect(getSceneTarget('monthly', 100)).toBe(75);
+    expect(getSceneTarget('weekly', 100)).toBe(39);
+    expect(getSceneTarget('daily', 19)).toBe(3);
+    expect(getSceneTarget('weekly', 19)).toBe(9);
+    expect(getSceneTarget('monthly', 19)).toBe(15);
   });
 
   it('allocates all target points with stable tie-breaking', () => {
