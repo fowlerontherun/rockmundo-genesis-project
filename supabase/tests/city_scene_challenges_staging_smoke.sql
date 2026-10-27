@@ -10,7 +10,8 @@ begin
     'scene_challenge_templates', 'scene_challenge_cycles',
     'scene_challenge_objectives', 'scene_daily_affiliations',
     'scene_contributions', 'scene_milestones', 'scene_reward_claims',
-    'scene_processor_cursors', 'scene_reward_policies'
+    'scene_processor_cursors', 'scene_reward_policies',
+    'scene_reward_payout_controls', 'scene_reward_grant_receipts'
   ] loop
     if to_regclass('public.' || v_table) is null then
       raise exception 'Scene table missing: %', v_table;
@@ -46,7 +47,8 @@ begin
     'public.scene_preview_completed_recording_batch(integer)',
     'public.scene_ingest_verified_gig(uuid)',
     'public.scene_process_verified_gig_batch(integer)',
-    'public.scene_preview_verified_gig_batch(integer)'
+    'public.scene_preview_verified_gig_batch(integer)',
+    'public.scene_grant_earned_xp(integer)'
   ] loop
     if to_regprocedure(v_function) is null then
       raise exception 'Scene server RPC missing: %', v_function;
@@ -63,7 +65,8 @@ begin
 
   foreach v_function in array array[
     'public.get_city_scene_board(uuid)',
-    'public.get_my_city_scene_progress(uuid)'
+    'public.get_my_city_scene_progress(uuid)',
+    'public.get_my_scene_reward_history(uuid,integer)'
   ] loop
     if to_regprocedure(v_function) is null
       or not has_function_privilege('authenticated', v_function, 'EXECUTE')
@@ -95,6 +98,17 @@ begin
         and enabled=false
      ) < 3 then
     raise exception 'Weekly verified music source catalogue is incomplete';
+  end if;
+
+  if exists (
+    select 1 from public.scene_reward_payout_controls
+    where payouts_enabled is true
+  ) then
+    raise exception 'Unexpected XP payout enablement in staging smoke';
+  end if;
+
+  if exists(select 1 from public.scene_reward_grant_receipts)
+  then raise exception 'Unexpected XP receipts before reviewed rollout';
   end if;
 
   if exists(select 1 from public.scene_contributions)
