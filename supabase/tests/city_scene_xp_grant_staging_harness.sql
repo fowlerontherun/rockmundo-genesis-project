@@ -95,9 +95,24 @@ begin
     raise exception 'XP_GRANTED_WITH_PAYOUTS_DISABLED';
   end if;
 
+  -- Revoked source contributions must never pay a previously qualified
+  -- pending claim, even though it passed entitlement creation.
+  update public.scene_contributions
+  set invalidated_at=now()
+  where objective_id=v_objective and account_id=v_user;
+
   update public.scene_reward_payout_controls
      set payouts_enabled=true,updated_at=now()
    where singleton is true;
+
+  v_payload := public.scene_grant_earned_xp(25);
+  if (v_payload->>'xp_granted')::int <> 0 then
+    raise exception 'REVOKED_CONTRIBUTION_PAID_XP: %',v_payload;
+  end if;
+
+  update public.scene_contributions
+  set invalidated_at=null
+  where objective_id=v_objective and account_id=v_user;
 
   v_payload := public.scene_grant_earned_xp(25);
   if (v_payload->>'disabled')::boolean is true
