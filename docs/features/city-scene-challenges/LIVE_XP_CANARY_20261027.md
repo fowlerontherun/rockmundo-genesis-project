@@ -19,7 +19,7 @@ The canary is limited to **one daily participation claim per account per cycle**
 
 ## Activation and schedules
 
-The activation is committed as [city_scene_daily_xp_canary_activation.sql](../../ops/city_scene_daily_xp_canary_activation.sql) (a reviewed operations script, **not** a normal schema migration). SQL prerequisites require no existing claims, receipts, enabled reward policy or active payout switch.
+The activation is committed as [city_scene_daily_xp_canary_activation.sql](../../../supabase/ops/city_scene_daily_xp_canary_activation.sql) (a reviewed operations script, **not** a normal schema migration). SQL prerequisites require no existing claims, receipts, enabled reward policy or active payout switch.
 
 - Community scoring: pg_cron **job #157**, `rockmundo-city-scene-verified-v1`, every 15 minutes.
 - XP canary: pg_cron **job #158**, `rockmundo-city-scene-xp-canary-v1`, at minute 35 every hour, invokes `private.grant_scene_earned_xp(10)`.
@@ -56,6 +56,6 @@ from public.scene_reward_grant_receipts;
 
 ## Emergency stop
 
-Run [city_scene_daily_xp_canary_stop.sql](../../ops/city_scene_daily_xp_canary_stop.sql). It atomically sets `payouts_enabled=false`, disables the canary policy and unschedules the reward job. It does **not** erase already-granted XP, canonical ledger entries or receipts.
+Run [city_scene_daily_xp_canary_stop.sql](../../../supabase/ops/city_scene_daily_xp_canary_stop.sql). It atomically sets `payouts_enabled=false`, disables the canary policy and unschedules the reward job. It does **not** erase already-granted XP, canonical ledger entries or receipts.
 
 The original [live pilot record](LIVE_PILOT_20261027.md) documents the earlier all-rewards-off phase. This file supersedes that portion of the pilot record.
