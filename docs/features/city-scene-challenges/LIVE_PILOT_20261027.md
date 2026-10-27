@@ -81,3 +81,28 @@ The first action makes the periodic worker return without writing; the second re
 5. Review privacy-safe scene news/announcements and the first full November monthly campaign.
 
 See [deployment record](LIVE_SCHEMA_DEPLOYMENT_20261027.md) and [processor runbook](PROCESSOR_RUNBOOK.md).
+
+## Post-pilot economy review and independent source switch hardening
+
+After four successful scheduled processing runs (13:00, 13:15, 13:30 and 13:45 UTC), the XP economy was compared with live experience-ledger entries. Median recent awards included **13 XP for work shifts, 8 XP for recording completions, around 142 XP for university attendance and 260 XP for mentorship**. The original provisional City Scene rates (100 daily, 350 weekly and 1,000 monthly XP) and high participation thresholds were revised:
+
+| Policy | Minimum personal points | Proposed XP |
+|---|---:|---:|
+| Daily participation | 1 | 20 |
+| Daily city-completion bonus | 1 plus city success | 20 |
+| Weekly participation | 2 | 75 |
+| Monthly participation | 3 | 250 |
+
+A fully eligible player could earn no more than **1,865 XP** from City Scene in a 31-day month with five weekly award periods. The policies remain **disabled** and are not a promise of a payout. There are zero grant receipts and no payout schedule.
+
+The additive migration `20261027161500_scene_immediate_source_kill_switches.sql` now makes the per-source controls effective *immediately* in each protected ingester, cursor-processing batch and read-only preview. Disabling any one of `gig:verified_performance`, `recording:completed` or `rehearsal:completed` prevents that source's events from being consumed while preserving the cursor. Monthly scoring also requires the separate `scene:verified_community` gate. A rollback-only test against the live database confirmed disabled queues report `disabled=true`, previews report `source_ready=false` and none of the three cursors advanced. The pilot flags were restored by the rollback.
+
+Individual source shutdown (an example for recordings):
+
+```sql
+update public.scene_source_controls
+set enabled=false,updated_at=now()
+where action_type='recording:completed';
+```
+
+This switch does not affect gig or rehearsal sources. Resume only after investigating the underlying adapter or data issue. All source function grants remain service-only.
