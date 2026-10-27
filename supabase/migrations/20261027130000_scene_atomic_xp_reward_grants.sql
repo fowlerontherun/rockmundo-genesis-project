@@ -137,8 +137,8 @@ begin
       and cyc.ends_at <= now()
       and cyc.ends_at > now() - interval '7 days'
     order by c.entitled_at,c.id
-    for update of c skip locked
     limit p_limit
+    for update of c skip locked
   loop
     select p.id,p.user_id into v_profile
       from public.profiles p
