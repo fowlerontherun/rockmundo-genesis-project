@@ -1,5 +1,7 @@
 # City Scene Challenges — Direct main database deployment
 
+> **Later same-day update:** This record captures the initial fail-closed schema deployment. The controlled four-city daily/weekly pilot is now LIVE, the Edge processor is at version 2, and verified scoring runs under pg_cron job #157 every 15 minutes. See [LIVE_PILOT_20261027.md](LIVE_PILOT_20261027.md) for authoritative current status. XP reward policies and payouts remain OFF.
+
 **Applied:** 27 October 2026 (UTC)  
 **Project:** RockMundo main Supabase, `eu-west-2`  
 **Code source:** `fowlerontherun/rockmundo-genesis-project`, `main`  
