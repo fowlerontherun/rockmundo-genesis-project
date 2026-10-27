@@ -67,7 +67,7 @@ Deno.serve(async (request) => {
         configured: true,
         candidateSessions: Number(preview?.candidate_sessions ?? 0),
         backlogPending: preview?.backlog_pending === true,
-        scoringTemplatesEnabled: preview?.scoring_templates_enabled === true,
+        scoringSourcesReady: preview?.scoring_sources_ready === true,
         cursorAt: preview?.cursor_at ?? null,
         settledBefore: preview?.settled_before ?? null,
         cyclesCreated: 0,
