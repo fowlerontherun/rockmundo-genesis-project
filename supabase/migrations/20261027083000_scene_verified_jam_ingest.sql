@@ -120,6 +120,7 @@ begin
         and coalesce(o.source_health_snapshot->>'scoring_enabled', 'false') = 'true'
         and (t.action_type = 'jam:verified_collaboration'
           or (c.cadence = 'monthly' and t.action_type = 'scene:verified_community'))
+      order by c.starts_at, c.cadence, o.id
     loop
       v_cap := case v_obj.cadence when 'daily' then 3 when 'weekly' then 10 else 25 end;
       if exists (
@@ -130,14 +131,16 @@ begin
           and source_event_id = p_session_id::text
       ) then continue; end if;
 
+      perform pg_advisory_xact_lock(hashtext(
+        'rockmundo:scene:cycle:' || v_actor.account_id::text || ':' || v_obj.cycle_id::text
+      ));
+
       select coalesce(sum(sc.points),0)::integer into v_current_points
       from public.scene_contributions sc
       join public.scene_challenge_objectives so on so.id = sc.objective_id
       where so.cycle_id = v_obj.cycle_id
         and sc.account_id = v_actor.account_id
-        and sc.invalidated_at is null
-        and (sc.source_completed_at at time zone 'UTC')::date =
-          (v_session.completed_at at time zone 'UTC')::date;
+        and sc.invalidated_at is null;
 
       if v_current_points >= v_cap then continue; end if;
 
