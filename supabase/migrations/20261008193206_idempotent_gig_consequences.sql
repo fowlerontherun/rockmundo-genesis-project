@@ -33,10 +33,10 @@ REVOKE ALL ON public.gig_processing_claim_history FROM PUBLIC,anon,authenticated
 GRANT SELECT ON public.gig_processing_claim_history TO service_role;
 -- Never silently accept an already-modified audit record.
 CREATE OR REPLACE FUNCTION public.prevent_gig_claim_history_mutation()
-RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $
+RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$
 BEGIN
   RAISE EXCEPTION 'Historical gig processing claims are immutable' USING ERRCODE='42501';
-END $;
+END $$;
 DROP TRIGGER IF EXISTS gig_claim_history_immutable ON public.gig_processing_claim_history;
 CREATE TRIGGER gig_claim_history_immutable BEFORE UPDATE OR DELETE
   ON public.gig_processing_claim_history FOR EACH ROW
@@ -45,7 +45,7 @@ REVOKE ALL ON FUNCTION public.prevent_gig_claim_history_mutation() FROM PUBLIC,a
 
 -- Prevent concurrent inserts while the canonical one-gig index is created.
 LOCK TABLE public.gig_post_processing IN SHARE ROW EXCLUSIVE MODE;
-DO $
+DO $$
 DECLARE v record; v_expected bigint; v_actual bigint;
 BEGIN
   SELECT count(*)-count(DISTINCT gig_id) INTO v_expected FROM public.gig_post_processing;
@@ -93,7 +93,7 @@ BEGIN
     RAISE EXCEPTION 'Incomplete gig claim preservation (% of %)',
       (SELECT count(*) FROM public.gig_processing_claim_history),v_expected;
   END IF;
-END $;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS gig_post_processing_one_gig ON public.gig_post_processing(gig_id);
 UPDATE public.gig_consequence_snapshots s SET processing_id=p.id
 FROM public.gig_post_processing p WHERE p.gig_id=s.gig_id AND s.processing_id IS NULL;
