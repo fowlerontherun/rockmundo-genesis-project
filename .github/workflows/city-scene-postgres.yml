@@ -67,7 +67,7 @@ jobs:
       - name: Verify transaction rollback preserved payout safety
         run: |
           psql -X -v ON_ERROR_STOP=1 <<'SQL'
-          do $
+          do $$
           begin
             if exists(select 1 from public.scene_reward_payout_controls where payouts_enabled) then
               raise exception 'Rollback failed: scene XP payouts left enabled';
@@ -79,5 +79,5 @@ jobs:
               raise exception 'Rollback failed: scene XP reward claims persisted';
             end if;
           end;
-          $;
+          $$;
           SQL
