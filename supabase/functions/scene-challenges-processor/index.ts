@@ -66,6 +66,10 @@ Deno.serve(async (request) => {
         .rpc('scene_preview_completed_recording_batch', { p_limit: maxEvents });
       if (recordingPreviewError) throw recordingPreviewError;
 
+      const { data: gigPreview, error: gigPreviewError } = await client
+        .rpc('scene_preview_verified_gig_batch', { p_limit: maxEvents });
+      if (gigPreviewError) throw gigPreviewError;
+
       return json({
         dryRun: true,
         configured: true,
@@ -79,6 +83,12 @@ Deno.serve(async (request) => {
           backlogPending: recordingPreview?.backlog_pending === true,
           scoringSourceReady: recordingPreview?.source_ready === true,
           cursorAt: recordingPreview?.cursor_at ?? null,
+        },
+        gigs: {
+          candidateOutcomes: Number(gigPreview?.candidate_sessions ?? 0),
+          backlogPending: gigPreview?.backlog_pending === true,
+          scoringSourceReady: gigPreview?.source_ready === true,
+          cursorAt: gigPreview?.cursor_at ?? null,
         },
         cyclesCreated: 0,
         eventsProcessed: 0,
@@ -103,14 +113,22 @@ Deno.serve(async (request) => {
       .rpc('scene_process_completed_recording_batch', { p_limit: maxEvents });
     if (recordingError) throw recordingError;
 
+    const { data: gigBatch, error: gigError } = await client
+      .rpc('scene_process_verified_gig_batch', { p_limit: maxEvents });
+    if (gigError) throw gigError;
+
     const processingDisabled = batch?.disabled === true;
     const backlogPending = batch?.backlog_pending === true ||
-      recordingBatch?.backlog_pending === true;
-    const allSourcesDisabled = processingDisabled && recordingBatch?.disabled === true;
+      recordingBatch?.backlog_pending === true ||
+      gigBatch?.backlog_pending === true;
+    const allSourcesDisabled = processingDisabled &&
+      recordingBatch?.disabled === true && gigBatch?.disabled === true;
     const processed = Number(batch?.events_processed ?? 0) +
-      Number(recordingBatch?.events_processed ?? 0);
+      Number(recordingBatch?.events_processed ?? 0) +
+      Number(gigBatch?.events_processed ?? 0);
     const inserted = Number(batch?.contributions_inserted ?? 0) +
-      Number(recordingBatch?.contributions_inserted ?? 0);
+      Number(recordingBatch?.contributions_inserted ?? 0) +
+      Number(gigBatch?.contributions_inserted ?? 0);
 
     const { data: milestones, error: milestoneError } = await client
       .rpc('scene_reconcile_milestones');
@@ -143,6 +161,12 @@ Deno.serve(async (request) => {
           eventsProcessed: Number(recordingBatch?.events_processed ?? 0),
           contributionsInserted: Number(recordingBatch?.contributions_inserted ?? 0),
           backlogPending: recordingBatch?.backlog_pending === true,
+        },
+        gig: {
+          disabled: gigBatch?.disabled === true,
+          eventsProcessed: Number(gigBatch?.events_processed ?? 0),
+          contributionsInserted: Number(gigBatch?.contributions_inserted ?? 0),
+          backlogPending: gigBatch?.backlog_pending === true,
         },
       },
       // A queued backlog is transparent; repeat explicitly or connect the
