@@ -1,0 +1,83 @@
+name: City Scene PostgreSQL Migration Integration
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*scene*.sql"
+      - "supabase/tests/city_scene_*.sql"
+      - ".github/workflows/city-scene-postgres.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: city-scene-sql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-postgres-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: scene_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d scene_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: scene_test
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Bootstrap only the external source contracts
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_ci_fixture_schema.sql
+      - name: Apply all City Scene migrations in creation order
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t scene_migrations < <(find supabase/migrations -maxdepth 1 -name '20261027*scene*.sql' -print | LC_ALL=C sort)
+          test "${#scene_migrations[@]}" -ge 18
+          for migration in "${scene_migrations[@]}"; do
+            echo "::group::Applying ${migration}"
+            psql -X -v ON_ERROR_STOP=1 -f "${migration}"
+            echo "::endgroup::"
+          done
+      - name: Verify security, RLS and default-off settings
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_challenges_staging_smoke.sql
+      - name: Verify actual cycle targets, objective caps and mural unlocks
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_cycle_scoring_integration.sql
+      - name: Exercise real XP grant and replay transaction
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
+      - name: Verify transaction rollback preserved payout safety
+        run: |
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if exists(select 1 from public.scene_reward_payout_controls where payouts_enabled) then
+              raise exception 'Rollback failed: scene XP payouts left enabled';
+            end if;
+            if exists(select 1 from public.scene_reward_grant_receipts) then
+              raise exception 'Rollback failed: scene XP payout receipts persisted';
+            end if;
+            if exists(select 1 from public.scene_reward_claims) then
+              raise exception 'Rollback failed: scene XP reward claims persisted';
+            end if;
+          end;
+          $$;
+          SQL
