@@ -18,6 +18,7 @@ function createClient(routes: Record<string, (state: any) => any>) {
         select(cols: string) { state.select = cols; return builder; },
         order(col: string, opts?: any) { state.order = [col, opts]; return builder; },
         limit(n: number) { state.limit = n; return builder; },
+        range(from: number, to: number) { state.range = [from, to]; return builder; },
         eq(col: string, val: any) { state.filters.push(["eq", col, val]); return builder; },
         in(col: string, val: any[]) { state.filters.push(["in", col, val]); return builder; },
         or(expr: string) { state.or = expr; return builder; },

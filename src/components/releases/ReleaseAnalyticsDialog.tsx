@@ -1,4 +1,6 @@
 import { useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,17 +14,29 @@ import { ReleaseCityPeriodAnalytics } from "./ReleaseCityPeriodAnalytics";
 interface ReleaseAnalyticsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  release: any;
+  release: {
+    id: string;
+    title: string;
+    band_id?: string | null;
+    release_songs?: Array<{ song_id: string }> | null;
+    label_contract_id?: string | null;
+    label_revenue_share_pct?: number | null;
+    total_streams?: number | null;
+    units_sold?: number | null;
+    total_cost?: number | null;
+  } | null;
 }
 
 export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseAnalyticsDialogProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  // This reporting RPC is not yet represented in the generated client schema.
+  const reportsClient = supabase as unknown as SupabaseClient;
 
   const { data: streamingData, isLoading: loadingStreaming } = useQuery({
     queryKey: ["release-streaming-analytics", release?.id],
     queryFn: async () => {
       if (!release?.release_songs?.length) return null;
-      const songIds = release.release_songs.map((rs: any) => rs.song_id);
+      const songIds = release.release_songs.map((rs) => rs.song_id);
       const { data, error } = await supabase
         .from("song_releases")
         .select("*, streaming_platforms(platform_name, platform_icon_url, base_payout_per_stream)")
@@ -30,7 +44,13 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
       if (error) throw error;
 
       const platformStats: Record<string, { name: string; streams: number; revenue: number }> = {};
-      (data || []).forEach((sr: any) => {
+      type StreamingRow = {
+        platform_id: string | null;
+        total_streams: number | null;
+        total_revenue: number | null;
+        streaming_platforms: { platform_name: string | null } | null;
+      };
+      ((data || []) as StreamingRow[]).forEach((sr) => {
         const name = sr.streaming_platforms?.platform_name || sr.platform_id || "Unknown";
         platformStats[name] ??= { name, streams: 0, revenue: 0 };
         platformStats[name].streams += Number(sr.total_streams || 0);
@@ -50,12 +70,21 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
     queryKey: ["release-sales-analytics", release?.id],
     queryFn: async () => {
       if (!release?.id) return null;
-      const { data, error } = await (supabase as any).rpc("get_release_sales_breakdown", {
+      const { data, error } = await reportsClient.rpc("get_release_sales_breakdown", {
         p_release_id: release.id,
         p_sale_date: null,
       });
       if (error) throw error;
-      const formats = (data || []).map((row: any) => ({
+      type SalesRow = {
+        format_type: string | null;
+        units: number | null;
+        gross_cents: number | null;
+        tax_cents: number | null;
+        dist_cents: number | null;
+        manufacturer_cents: number | null;
+        net_cents: number | null;
+      };
+      const formats = ((data || []) as SalesRow[]).map((row) => ({
         format: row.format_type || "unknown",
         units: Number(row.units || 0),
         gross: minorToMajor(Number(row.gross_cents || 0)),
@@ -63,15 +92,15 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
         dist: minorToMajor(Number(row.dist_cents || 0)),
         manufacturer: minorToMajor(Number(row.manufacturer_cents || 0)),
         net: minorToMajor(Number(row.net_cents || 0)),
-      })).filter((row: any) => row.units > 0);
+      })).filter((row) => row.units > 0);
       return {
         formats,
-        totalUnits: formats.reduce((sum: number, row: any) => sum + row.units, 0),
-        totalRevenue: formats.reduce((sum: number, row: any) => sum + row.gross, 0),
-        totalNet: formats.reduce((sum: number, row: any) => sum + row.net, 0),
-        totalTax: formats.reduce((sum: number, row: any) => sum + row.tax, 0),
-        totalDist: formats.reduce((sum: number, row: any) => sum + row.dist, 0),
-        totalManufacturer: formats.reduce((sum: number, row: any) => sum + row.manufacturer, 0),
+        totalUnits: formats.reduce((sum, row) => sum + row.units, 0),
+        totalRevenue: formats.reduce((sum, row) => sum + row.gross, 0),
+        totalNet: formats.reduce((sum, row) => sum + row.net, 0),
+        totalTax: formats.reduce((sum, row) => sum + row.tax, 0),
+        totalDist: formats.reduce((sum, row) => sum + row.dist, 0),
+        totalManufacturer: formats.reduce((sum, row) => sum + row.manufacturer, 0),
       };
     },
     enabled: open && !!release?.id,
@@ -105,13 +134,14 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
     queryKey: ["release-chart-analytics", release?.id],
     queryFn: async () => {
       if (!release?.release_songs?.length) return null;
-      const songIds = release.release_songs.map((rs: any) => rs.song_id);
+      const songIds = release.release_songs.map((rs) => rs.song_id);
       const { data, error } = await supabase.from("chart_entries").select("*").in("song_id", songIds).order("rank", { ascending: true }).limit(50);
       if (error) throw error;
       const best: Record<string, { country: string; rank: number; chartType: string }> = {};
-      (data || []).forEach((entry: any) => {
+      ((data || []) as Array<{ country: string | null; rank: number | null; chart_type: string | null }>).forEach((entry) => {
         const country = entry.country || "Global";
-        if (!best[country] || entry.rank < best[country].rank) best[country] = { country, rank: entry.rank, chartType: entry.chart_type };
+        const rank = entry.rank ?? 0;
+        if (!best[country] || rank < best[country].rank) best[country] = { country, rank, chartType: entry.chart_type ?? "unknown" };
       });
       return { chartPositions: Object.values(best).sort((a, b) => a.rank - b.rank), totalEntries: data?.length || 0 };
     },
@@ -185,7 +215,7 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
           <TabsContent value="sales" className="space-y-4 mt-4">
             {isLoading ? <Loading label="sales data" /> : salesData?.formats?.length ? <>
               <div className="grid grid-cols-2 gap-4"><Metric icon={Package} label="Units Sold" value={salesData.totalUnits.toLocaleString()} /><Metric icon={DollarSign} label="Sales Revenue" value={`$${salesData.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} /></div>
-              <Card><CardHeader><CardTitle className="text-sm">By Format</CardTitle></CardHeader><CardContent className="space-y-2">{salesData.formats.map((fmt: any) => <div key={fmt.format} className="p-2 bg-muted/30 rounded"><div className="flex justify-between text-sm"><strong className="capitalize">{fmt.format}</strong><span>{fmt.units.toLocaleString()} units</span></div><div className="text-xs text-muted-foreground mt-1">Gross ${fmt.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Net ${fmt.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div></div>)}</CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-sm">By Format</CardTitle></CardHeader><CardContent className="space-y-2">{salesData.formats.map((fmt) => <div key={fmt.format} className="p-2 bg-muted/30 rounded"><div className="flex justify-between text-sm"><strong className="capitalize">{fmt.format}</strong><span>{fmt.units.toLocaleString()} units</span></div><div className="text-xs text-muted-foreground mt-1">Gross ${fmt.gross.toLocaleString(undefined, { maximumFractionDigits: 0 })} · Net ${fmt.net.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div></div>)}</CardContent></Card>
             </> : <Empty icon={Package} label="No sales data available yet" />}
           </TabsContent>
 
@@ -202,7 +232,7 @@ export function ReleaseAnalyticsDialog({ open, onOpenChange, release }: ReleaseA
   );
 }
 
-function Metric({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-sm mb-1"><Icon className="h-4 w-4" />{label}</div><p className="text-2xl font-bold">{value}</p></CardContent></Card>;
 }
 
@@ -214,6 +244,6 @@ function Loading({ label }: { label: string }) {
   return <div className="py-8 text-center text-muted-foreground">Loading {label}...</div>;
 }
 
-function Empty({ icon: Icon, label }: { icon: any; label: string }) {
+function Empty({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return <div className="py-8 text-center text-muted-foreground"><Icon className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>{label}</p></div>;
 }
