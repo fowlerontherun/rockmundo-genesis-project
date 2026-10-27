@@ -62,6 +62,10 @@ Deno.serve(async (request) => {
         .rpc('scene_preview_verified_jam_batch', { p_limit: maxEvents });
       if (previewError) throw previewError;
 
+      const { data: recordingPreview, error: recordingPreviewError } = await client
+        .rpc('scene_preview_completed_recording_batch', { p_limit: maxEvents });
+      if (recordingPreviewError) throw recordingPreviewError;
+
       return json({
         dryRun: true,
         configured: true,
@@ -70,6 +74,12 @@ Deno.serve(async (request) => {
         scoringSourcesReady: preview?.scoring_sources_ready === true,
         cursorAt: preview?.cursor_at ?? null,
         settledBefore: preview?.settled_before ?? null,
+        recording: {
+          candidateSessions: Number(recordingPreview?.candidate_sessions ?? 0),
+          backlogPending: recordingPreview?.backlog_pending === true,
+          scoringSourceReady: recordingPreview?.source_ready === true,
+          cursorAt: recordingPreview?.cursor_at ?? null,
+        },
         cyclesCreated: 0,
         eventsProcessed: 0,
         contributionRowsInserted: 0,
@@ -89,10 +99,18 @@ Deno.serve(async (request) => {
       .rpc('scene_process_verified_jam_batch', { p_limit: maxEvents });
     if (batchError) throw batchError;
 
+    const { data: recordingBatch, error: recordingError } = await client
+      .rpc('scene_process_completed_recording_batch', { p_limit: maxEvents });
+    if (recordingError) throw recordingError;
+
     const processingDisabled = batch?.disabled === true;
-    const backlogPending = batch?.backlog_pending === true;
-    const processed = Number(batch?.events_processed ?? 0);
-    const inserted = Number(batch?.contributions_inserted ?? 0);
+    const backlogPending = batch?.backlog_pending === true ||
+      recordingBatch?.backlog_pending === true;
+    const allSourcesDisabled = processingDisabled && recordingBatch?.disabled === true;
+    const processed = Number(batch?.events_processed ?? 0) +
+      Number(recordingBatch?.events_processed ?? 0);
+    const inserted = Number(batch?.contributions_inserted ?? 0) +
+      Number(recordingBatch?.contributions_inserted ?? 0);
 
     const { data: milestones, error: milestoneError } = await client
       .rpc('scene_reconcile_milestones');
@@ -112,10 +130,24 @@ Deno.serve(async (request) => {
       eventsProcessed: processed,
       contributionRowsInserted: inserted,
       backlogPending,
-      processingDisabled,
+      processingDisabled: allSourcesDisabled,
+      sources: {
+        jam: {
+          disabled: processingDisabled,
+          eventsProcessed: Number(batch?.events_processed ?? 0),
+          contributionsInserted: Number(batch?.contributions_inserted ?? 0),
+          backlogPending: batch?.backlog_pending === true,
+        },
+        recording: {
+          disabled: recordingBatch?.disabled === true,
+          eventsProcessed: Number(recordingBatch?.events_processed ?? 0),
+          contributionsInserted: Number(recordingBatch?.contributions_inserted ?? 0),
+          backlogPending: recordingBatch?.backlog_pending === true,
+        },
+      },
       // A queued backlog is transparent; repeat explicitly or connect the
       // existing audited job scheduler only after all rollout gates pass.
-      healthy: !processingDisabled && !backlogPending,
+      healthy: !allSourcesDisabled && !backlogPending,
     });
   } catch (error) {
     console.error('scene processor failed', error instanceof Error ? error.message : 'unknown');
