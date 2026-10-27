@@ -103,9 +103,14 @@ Deno.serve(async (request) => {
       inserted += Number(credited ?? 0);
     }
 
+    const { data: milestones, error: milestoneError } = await client
+      .rpc('scene_reconcile_milestones');
+    if (milestoneError) throw milestoneError;
+
     return json({
       dryRun: false,
       cyclesCreated: Number(cycles ?? 0),
+      posterMilestonesUnlocked: Number(milestones ?? 0),
       candidateSessions: selected.length,
       truncated: hasMore,
       eventsProcessed: processed,
