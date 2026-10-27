@@ -77,3 +77,22 @@ jobs:
           name: supabase-logs
           path: supabase/.branches/**/logs/**
           if-no-files-found: ignore
+
+  # Node's built-in test runner must execute its own .test.mjs contract suites.
+  # Vitest transforms import.meta.url and breaks filesystem fixtures in these
+  # modules; use a separate job so failed Node contracts cannot be hidden.
+  native-node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Node-native test suites
+        run: node scripts/run-native-node-tests.mjs
