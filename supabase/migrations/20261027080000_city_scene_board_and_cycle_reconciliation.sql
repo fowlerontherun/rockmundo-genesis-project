@@ -2,6 +2,9 @@
 -- Separate, additive migration. No server event adapters, payouts, or cron jobs.
 begin;
 
+-- Some staging databases have not yet created the private schema.
+create schema if not exists private;
+
 insert into public.scene_challenge_templates
   (slug, cadence, title, description, action_type, target_weight, enabled, art_theme)
 values
