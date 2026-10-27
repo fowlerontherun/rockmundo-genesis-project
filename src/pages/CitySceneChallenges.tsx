@@ -1,0 +1,237 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { CalendarDays, Clock3, Music2, RefreshCw, Trophy, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
+import type { SceneCadence } from '@/features/city-scene-challenges/sceneRules';
+
+type SceneObjective = {
+  id: string;
+  title: string;
+  description: string;
+  action_type: string;
+  target_points: number;
+  earned_points: number;
+  status: string;
+};
+type SceneCycle = {
+  id: string;
+  cadence: SceneCadence;
+  starts_at: string;
+  ends_at: string;
+  target_total: number;
+  earned_points: number;
+  objectives: SceneObjective[];
+};
+type SceneBoard = {
+  city_id: string;
+  city_name: string;
+  cycles: SceneCycle[];
+};
+
+const cadences: { key: SceneCadence; title: string; description: string }[] = [
+  { key: 'daily', title: 'Daily', description: 'Quick ways to support your local scene' },
+  { key: 'weekly', title: 'Weekly', description: 'Band cooperation and shared effort' },
+  { key: 'monthly', title: 'Monthly', description: 'Build a lasting music legacy together' },
+];
+
+function percent(earned: number, target: number): number {
+  return target > 0 ? Math.max(0, Math.min(100, Math.floor(earned / target * 100))) : 0;
+}
+
+function validBoard(value: unknown): value is SceneBoard {
+  if (!value || typeof value !== 'object') return false;
+  const board = value as Partial<SceneBoard>;
+  return typeof board.city_id === 'string' && typeof board.city_name === 'string'
+    && Array.isArray(board.cycles);
+}
+
+function formatEnd(value: string): string {
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime())
+    ? 'Time not available'
+    : `Ends ${new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(instant)} UTC`;
+}
+
+export default function CitySceneChallenges() {
+  const { cityId } = useParams<{ cityId: string }>();
+  const [board, setBoard] = useState<SceneBoard | null>(null);
+  const [active, setActive] = useState<SceneCadence>('daily');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setBoard(null);
+    if (!cityId || !/^[0-9a-fA-F-]{36}$/.test(cityId)) {
+      setError('Choose a valid city to view its challenges.');
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        // This RPC exposes only city-level aggregates, never raw private
+        // contribution events, profile IDs, or reward-grant information.
+        const { data, error: rpcError } = await (supabase as any).rpc('get_city_scene_board', { p_city_id: cityId });
+        if (rpcError) throw rpcError;
+        if (!validBoard(data)) throw new Error('The city challenge board is not yet available.');
+        if (!cancelled) setBoard(data);
+      } catch {
+        if (!cancelled) setError('City Scene Challenges are not available yet. Please try again later.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [cityId, refresh]);
+
+  const current = board?.cycles.find((cycle) => cycle.cadence === active);
+  const monthly = board?.cycles.find((cycle) => cycle.cadence === 'monthly');
+
+  return (
+    <FMPageScaffold
+      title="City Scene Challenges"
+      subtitle="Make music, support other artists and build the scene together."
+      icon={Music2}
+      backTo={cityId ? `/cities/${cityId}` : '/cities'}
+      headerActions={
+        <Button variant="outline" size="sm" disabled={loading} onClick={() => setRefresh((n) => n + 1)}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        </Button>
+      }
+    >
+      {loading ? (
+        <Card><CardContent className="py-10 text-center text-muted-foreground" role="status">
+          Loading the city music scene…
+        </CardContent></Card>
+      ) : error ? (
+        <Card><CardContent className="py-8 text-center">
+          <p role="alert" className="text-muted-foreground">{error}</p>
+          <Button asChild variant="outline" className="mt-4"><Link to="/cities">Browse cities</Link></Button>
+        </CardContent></Card>
+      ) : board ? (
+        <div className="space-y-5">
+          <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 px-5 py-6 text-white sm:px-8">
+            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/25" aria-hidden="true">
+              <Music2 className="h-24 w-24 sm:h-32 sm:w-32" />
+            </div>
+            <div className="relative">
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-purple-200">RockMundo • Local Music Scene</p>
+              <h2 className="mt-1 text-2xl font-black uppercase tracking-tight sm:text-4xl">{board.city_name}</h2>
+              <p className="mt-2 max-w-xl text-sm text-purple-100">
+                Every verified contribution helps your city. Explore daily, weekly and monthly community goals.
+              </p>
+            </div>
+          </div>
+
+          {monthly ? (
+            <ScenePoster
+              cityName={board.city_name}
+              campaignTitle="Live Music Revival"
+              monthLabel={new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(monthly.starts_at))}
+              earnedPoints={monthly.earned_points}
+              targetPoints={monthly.target_total}
+            />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex items-center gap-3 py-6">
+                <Music2 className="h-10 w-10 shrink-0 text-purple-500" />
+                <div>
+                  <p className="font-semibold">The monthly scene mural is being prepared</p>
+                  <p className="text-sm text-muted-foreground">
+                    It will unlock alongside verified community challenges. No points or rewards are available yet.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Challenge period">
+            {cadences.map((cadence) => {
+              const cycle = board.cycles.find((item) => item.cadence === cadence.key);
+              return (
+                <button
+                  key={cadence.key}
+                  role="tab"
+                  aria-selected={active === cadence.key}
+                  type="button"
+                  onClick={() => setActive(cadence.key)}
+                  className={`rounded-lg border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${active === cadence.key ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/50'}`}
+                >
+                  <span className="block text-sm font-semibold sm:text-base">{cadence.title}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {cycle ? `${percent(cycle.earned_points, cycle.target_total)}% complete` : 'Coming soon'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <section aria-label={`${active} challenges`} role="tabpanel" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h3 className="text-xl font-bold">{cadences.find((entry) => entry.key === active)?.title} scene challenges</h3>
+                <p className="text-sm text-muted-foreground">{cadences.find((entry) => entry.key === active)?.description}</p>
+              </div>
+              {current && <Badge variant="outline" className="gap-1">
+                <Clock3 className="h-3 w-3" /> {formatEnd(current.ends_at)}
+              </Badge>}
+            </div>
+
+            {!current ? (
+              <Card><CardContent className="flex items-start gap-3 py-8">
+                <CalendarDays className="h-6 w-6 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="font-semibold">No active {active} challenge yet</p>
+                  <p className="text-sm text-muted-foreground">The next verified community cycle has not started. No progress is being counted for this period.</p>
+                </div>
+              </CardContent></Card>
+            ) : (
+              <>
+                <Card><CardContent className="space-y-3 py-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-semibold"><Users className="h-5 w-5 text-primary" /> Shared city progress</div>
+                    <span className="text-sm tabular-nums">{current.earned_points} / {current.target_total} points</span>
+                  </div>
+                  <Progress value={percent(current.earned_points, current.target_total)} aria-label="City community progress" />
+                </CardContent></Card>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {current.objectives.map((objective) => (
+                    <Card key={objective.id}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Trophy className="h-4 w-4 shrink-0 text-primary" /> {objective.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="min-h-10 text-sm text-muted-foreground">{objective.description}</p>
+                        <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+                          <span>{objective.status === 'completed' ? 'Completed' : 'Community progress'}</span>
+                          <span className="tabular-nums">{objective.earned_points} / {objective.target_points}</span>
+                        </div>
+                        <Progress value={percent(objective.earned_points, objective.target_points)} />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+          <p className="text-xs text-muted-foreground">
+            Contributions count only after trusted game events are verified. Creating bookings, sending invites or repeatedly clicking does not earn scene points.
+          </p>
+        </div>
+      ) : null}
+    </FMPageScaffold>
+  );
+}
