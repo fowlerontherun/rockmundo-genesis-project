@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sql = readFileSync(resolve(process.cwd(),
-  'supabase/migrations/20261028130000_scene_daily_weekly_legacy.sql'), 'utf8');
+  'supabase/migrations/20261028125354_scene_daily_weekly_legacy.sql'), 'utf8');
 const page = readFileSync(resolve(process.cwd(),
   'src/pages/CitySceneChallenges.tsx'), 'utf8');
 const postgresWorkflow = readFileSync(resolve(process.cwd(),
