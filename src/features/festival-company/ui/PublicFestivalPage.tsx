@@ -23,6 +23,7 @@ import {
 } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
+import { FestivalGrounds } from "./FestivalGrounds";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
@@ -324,7 +325,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <span className="font-semibold">Confirmed artists</span>
               <span className="block text-xs text-muted-foreground">Explore the line-up</span>
             </button>
-            <button type="button" onClick={() => setActiveFestivalTab("timetable")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <button type="button" onClick={() => setActiveFestivalTab("grounds")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               <span className="block text-2xl font-bold">{f.stages.length}</span>
               <span className="font-semibold">Festival stages</span>
               <span className="block text-xs text-muted-foreground">See published set times</span>
@@ -352,6 +353,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
         <Tabs value={activeFestivalTab} onValueChange={setActiveFestivalTab}>
           <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="grounds">Stages & grounds</TabsTrigger>
             <TabsTrigger value="lineup">Line-up</TabsTrigger>
             <TabsTrigger value="timetable">Timetable</TabsTrigger>
             <TabsTrigger value="tickets">Tickets</TabsTrigger>
@@ -382,6 +384,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 </section>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="grounds">
+            <FestivalGrounds stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} onViewTimetable={() => setActiveFestivalTab("timetable")} />
           </TabsContent>
 
           <TabsContent value="lineup">
