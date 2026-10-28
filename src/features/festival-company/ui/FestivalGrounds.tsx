@@ -5,6 +5,12 @@ interface FestivalGroundsProps {
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
+  visitorInformation: {
+    travel: string | null;
+    camping: string | null;
+    accessibility: string | null;
+    foodAndDrink: string | null;
+  };
   onViewTimetable: () => void;
 }
 
@@ -12,13 +18,20 @@ interface FestivalGroundsProps {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ stages, lineup, timezone, onViewTimetable }: FestivalGroundsProps) {
+export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
     : [];
+
+  const facilities = [
+    { label: "Travel & arrival", icon: "🚌", details: visitorInformation.travel },
+    { label: "Camping", icon: "⛺", details: visitorInformation.camping },
+    { label: "Food & drink", icon: "🍲", details: visitorInformation.foodAndDrink },
+    { label: "Accessibility", icon: "♿", details: visitorInformation.accessibility },
+  ].filter((facility) => facility.details?.trim());
 
   return (
     <section aria-labelledby="festival-grounds-title" className="space-y-4">
@@ -77,6 +90,22 @@ export function FestivalGrounds({ stages, lineup, timezone, onViewTimetable }: F
           </div>
         </div>
       )}
+      <section aria-labelledby="festival-visitor-facilities-title" className="space-y-3">
+        <h3 id="festival-visitor-facilities-title" className="text-xl font-bold">Plan your festival visit</h3>
+        {facilities.length === 0 ? (
+          <p className="rounded-xl border p-4 text-sm text-muted-foreground">Visitor facilities and travel information have not been published yet.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {facilities.map((facility) => (
+              <article key={facility.label} className="rounded-xl border bg-card p-4">
+                <h4 className="font-semibold"><span aria-hidden="true">{facility.icon}</span> {facility.label}</h4>
+                <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{facility.details}</p>
+              </article>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">Locations and walking routes will appear only when the organiser publishes a verified site layout.</p>
+      </section>
     </section>
   );
 }
