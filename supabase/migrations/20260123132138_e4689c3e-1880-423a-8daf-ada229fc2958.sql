@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_entities (
   CONSTRAINT entity_has_band_or_artist CHECK (band_id IS NOT NULL OR artist_profile_id IS NOT NULL)
 );
 
+-- November 25 already creates public.sponsorship_entities without solo artists.
+-- CREATE TABLE IF NOT EXISTS above does not add its later artist column.
+-- Reconcile the earlier schema before the January unique index and RLS policies,
+-- retaining existing band sponsorships and their ownership constraints.
+ALTER TABLE public.sponsorship_entities
+  ADD COLUMN IF NOT EXISTS artist_profile_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE;
+
 -- Create unique constraints
 CREATE UNIQUE INDEX IF NOT EXISTS sponsorship_entities_band_id_key ON sponsorship_entities(band_id) WHERE band_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS sponsorship_entities_artist_key ON sponsorship_entities(artist_profile_id) WHERE artist_profile_id IS NOT NULL;
