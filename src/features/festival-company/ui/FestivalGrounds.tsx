@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 
 interface FestivalGroundsProps {
@@ -45,27 +46,7 @@ export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, 
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-emerald-950/20 via-violet-950/15 to-amber-950/20 p-4">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Festival stage guide</span>
-              <span className="text-xs text-muted-foreground">{stages.length} stages</span>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {stages.map((stage, index) => (
-                <button
-                  key={stage.id}
-                  type="button"
-                  aria-pressed={selectedStage?.id === stage.id}
-                  onClick={() => setSelectedStageId(stage.id)}
-                  className={`min-h-32 rounded-xl border-2 p-4 text-left shadow-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStage?.id === stage.id ? "border-primary bg-primary/10" : "border-border bg-card/80 hover:border-primary/60"}`}
-                >
-                  <span aria-hidden="true" className="mb-3 block text-2xl">{index === 0 ? "🎸" : index % 2 ? "🎤" : "🎵"}</span>
-                  <span className="block text-lg font-bold">{stage.name}</span>
-                  <span className="block text-xs text-muted-foreground">Capacity {stage.capacity.toLocaleString("en-GB")}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
