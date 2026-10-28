@@ -1,4 +1,6 @@
--- Ensure onboarding can gracefully handle username collisions during signup
+-- Ensure onboarding can gracefully handle username collisions during signup.
+-- Character slot columns do not exist until the October 1 migration; that
+-- migration replaces this function after adding slot metadata.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -46,10 +48,7 @@ BEGIN
         health,
         gender,
         city_of_birth,
-        age,
-        slot_number,
-        unlock_cost,
-        is_active
+        age
       )
       VALUES (
         NEW.id,
@@ -60,10 +59,7 @@ BEGIN
         DEFAULT,
         DEFAULT,
         DEFAULT,
-        DEFAULT,
-        1,
-        0,
-        true
+        DEFAULT
       )
       RETURNING * INTO new_profile;
 
