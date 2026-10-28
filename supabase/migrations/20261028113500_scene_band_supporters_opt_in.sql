@@ -14,6 +14,9 @@ create table public.scene_band_leaderboard_opt_ins (
 create index scene_band_leaderboard_opt_ins_city_enabled
   on public.scene_band_leaderboard_opt_ins(city_id)
   where enabled is true;
+create index scene_band_leaderboard_opt_ins_updated_by_account
+  on public.scene_band_leaderboard_opt_ins(updated_by_account)
+  where updated_by_account is not null;
 alter table public.scene_band_leaderboard_opt_ins enable row level security;
 revoke all on public.scene_band_leaderboard_opt_ins from public, anon, authenticated;
 grant all on public.scene_band_leaderboard_opt_ins to service_role;
