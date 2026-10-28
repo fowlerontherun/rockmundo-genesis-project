@@ -486,7 +486,7 @@ export default function CitySceneChallenges() {
                     );
                   })}
                 </div>
-                {active === 'monthly' && <SceneMonthlyActions />}
+                {active === 'monthly' && !currentExpired && <SceneMonthlyActions />}
               </>
             )}
           </section>
