@@ -83,6 +83,8 @@ with
       coalesce((select payouts_enabled from public.scene_reward_payout_controls where singleton is true), true) as payouts_enabled,
       (select count(*) from public.scene_reward_policies where enabled) as enabled_policies,
       (select count(*) from public.scene_reward_grant_receipts) as grant_receipts,
+      (select count(*) from private.scene_reward_activation_authorizations
+        where singleton is true) as approval_record_count,
       coalesce((select approved_until > now()
         from private.scene_reward_activation_authorizations where singleton is true), false) as live_reward_approval,
       (select count(*) from cron.job where active and jobname like '%scene%xp%') as active_xp_schedules
@@ -93,19 +95,20 @@ select
     when not coalesce((select cycle_generation_enabled and scoring_enabled
                        and monthly_first_start = date '2026-11-01' from rollout), false)
       or (select required_enabled from source_flags) <> 4
+      or (select jam_enabled from source_flags)
       or (select enabled_count from monthly_template) = 0
       or not coalesce((select active and schedule = '*/15 * * * *'
                        and expected_command from worker), false)
       or (select duplicate_groups from duplicates) > 0
       or (select cycle_count from bad_monthly_objectives) > 0
       or (select payouts_enabled or enabled_policies > 0
-                       or grant_receipts > 0 or live_reward_approval or active_xp_schedules > 0 from rewards)
+                       or grant_receipts > 0 or approval_record_count <> 1
+                       or live_reward_approval or active_xp_schedules > 0 from rewards)
       then 'BLOCKED'
     when not coalesce((select status = 'succeeded'
                        and start_time >= now() - interval '45 minutes'
                        from latest_worker_run), false)
       or (select recent_count from worker_failures) > 0
-      or (select jam_enabled from source_flags)
       or (now() >= timestamptz '2026-11-02 00:00:00+00'
           and (select cycle_count from monthly) = 0)
       then 'WATCH'
@@ -137,6 +140,7 @@ select
     'payouts_enabled', (select payouts_enabled from rewards),
     'enabled_reward_policies', (select enabled_policies from rewards),
     'xp_grant_receipts', (select grant_receipts from rewards),
+    'reward_approval_record_count', (select approval_record_count from rewards),
     'active_reward_approval', (select live_reward_approval from rewards),
     'active_xp_schedules', (select active_xp_schedules from rewards)
   ) as evidence;
