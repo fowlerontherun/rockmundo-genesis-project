@@ -9,6 +9,7 @@ const readMigration = name =>
 const onboarding = readMigration('20250925211737_handle_new_user_username_retry.sql');
 const characterSlots = readMigration('20261001090000_add_profile_character_slots.sql');
 const profileScopedSkills = readMigration('20260315090000_add_character_slots.sql');
+const retiredSkills = readMigration('20251005114213_b3fe1aa6-a8a6-4d71-abe5-4b542c6a0957.sql');
 
 test('September signup uses only the user-scoped skill and feed columns that exist before character slots', async () => {
   assert.doesNotMatch(onboarding, /\bslot_number\s*,|\bunlock_cost\s*,/);
@@ -20,6 +21,10 @@ test('September signup uses only the user-scoped skill and feed columns that exi
   assert.doesNotMatch(onboarding, /INSERT INTO public\.player_skills \(\s*user_id,\s*profile_id/);
   assert.doesNotMatch(onboarding, /INSERT INTO public\.activity_feed \(user_id, profile_id/);
   assert.match(onboarding, /ON CONFLICT \(user_id\) DO NOTHING/);
+  assert.match(retiredSkills, /DROP COLUMN IF EXISTS business/);
+  assert.match(retiredSkills, /DROP COLUMN IF EXISTS marketing/);
+  const skillInsert = onboarding.slice(onboarding.indexOf('INSERT INTO public.player_skills'), onboarding.indexOf('INSERT INTO public.fan_demographics'));
+  assert.doesNotMatch(skillInsert, /\bbusiness\b|\bmarketing\b/);
   assert.match(onboarding, /ON CONFLICT \(profile_id\) DO UPDATE SET/);
 
   const db = new PGlite();
@@ -80,6 +85,23 @@ test('September signup uses only the user-scoped skill and feed columns that exi
     const { rows: attributes } = await db.query(`SELECT physical_endurance, attribute_points
       FROM public.player_attributes`);
     assert.deepEqual(attributes, [{ physical_endurance: 5, attribute_points: 0 }]);
+
+    // Historical replay later removes these columns while the September
+    // handle_new_user() function still services the December label seed.
+    await db.exec(retiredSkills);
+    await db.exec(`INSERT INTO auth.users (id, raw_user_meta_data)
+      VALUES ('00000000-0000-0000-0000-000000000003',
+        '{"username":"catalogue","display_name":"System catalogue"}')`);
+    const { rows: afterDrop } = await db.query(`SELECT p.username, s.guitar, s.vocals, s.technical
+      FROM public.profiles p
+      JOIN public.player_skills s ON s.user_id = p.user_id
+      WHERE p.username = 'catalogue'`);
+    assert.deepEqual(afterDrop, [{ username: 'catalogue', guitar: 5, vocals: 5, technical: 5 }]);
+    const { rows: afterDropAttributes } = await db.query(`SELECT a.business, a.marketing, a.attribute_points
+      FROM public.player_attributes a
+      JOIN public.profiles p ON p.id = a.profile_id
+      WHERE p.username = 'catalogue'`);
+    assert.deepEqual(afterDropAttributes, [{ business: 5, marketing: 5, attribute_points: 0 }]);
   } finally {
     await db.close();
   }

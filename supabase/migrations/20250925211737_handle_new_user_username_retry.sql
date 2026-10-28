@@ -4,7 +4,10 @@
 -- The September skill and activity tables are user-scoped; their profile_id
 -- columns are added by the March 2026 migration, so keep this historical
 -- registration function on user_id and the then-existing attributes profile
--- index. Current per-character registration is defined by later migrations.
+-- index. The October 5 migration removes legacy business and marketing
+-- skill columns; leave those to the attributes system rather than inserting
+-- columns which no longer exist when the December system user is seeded.
+-- Current per-character registration is defined by later migrations.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -92,14 +95,10 @@ BEGIN
     songwriting,
     composition,
     creativity,
-    technical,
-    business,
-    marketing
+    technical
   )
   VALUES (
     NEW.id,
-    5,
-    5,
     5,
     5,
     5,
