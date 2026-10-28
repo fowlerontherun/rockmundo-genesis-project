@@ -134,7 +134,10 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
                 <>
                   <p className="mt-1 text-sm">Reported crowd: <strong>{festivalCrowdBandLabels[selectedCrowd.crowdBand]}</strong></p>
                   <p className="text-sm">Audience mood: <strong>{festivalCrowdMoodLabels[selectedCrowd.mood]}</strong></p>
-                  <p className="mt-1 text-xs text-muted-foreground">Festival runtime snapshot. Not a live headcount or queue estimate.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Snapshot: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(selectedCrowd.lastCalculatedAt))} (festival time).
+                    Not a live headcount or queue estimate.
+                  </p>
                 </>
               ) : (
                 <p className="mt-1 text-sm text-muted-foreground">No unambiguous stage crowd snapshot is available.</p>

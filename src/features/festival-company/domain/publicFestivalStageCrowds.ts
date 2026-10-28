@@ -7,6 +7,8 @@ import {
 export interface PublicFestivalStageCrowd {
   stageName: string;
   stageId: string;
+  festivalDate: string;
+  lastCalculatedAt: string;
   crowdBand: AttendanceBand;
   mood: FestivalCrowdState;
 }
@@ -21,10 +23,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * Interpret the anonymous public experience only for the expected edition.
  *
- * The current public RPC does not provide a crowd snapshot date with each
- * stage. Require a festival-day context and exclude duplicate stage names,
- * which can indicate snapshots from multiple days. The UI must describe
- * remaining values as reported snapshots, not live audience counts.
+ * Only accept snapshots dated to the festival day reported by the same
+ * public endpoint. Older revisions of the RPC omitted festivalDate and
+ * must fail closed instead of displaying stale data as current.
+ * Duplicate stage names still fail closed to avoid ambiguous snapshots.
+ * These values remain reported snapshots, not live headcounts.
  */
 export function readPublicFestivalStageCrowds(
   value: unknown,
@@ -42,6 +45,10 @@ export function readPublicFestivalStageCrowds(
     if (!isRecord(item) || typeof item.stageName !== "string" ||
         !item.stageName.trim() || typeof item.stageId !== "string" ||
         !item.stageId.trim() ||
+        typeof item.festivalDate !== "string" ||
+        item.festivalDate !== value.currentDay ||
+        typeof item.lastCalculatedAt !== "string" ||
+        !Number.isFinite(Date.parse(item.lastCalculatedAt)) ||
         !crowdBands.includes(item.crowdBand as AttendanceBand) ||
         !FESTIVAL_CROWD_STATES.includes(item.mood as FestivalCrowdState)) {
       continue;
@@ -49,6 +56,8 @@ export function readPublicFestivalStageCrowds(
     candidates.push({
       stageName: item.stageName.trim(),
       stageId: item.stageId,
+      festivalDate: item.festivalDate,
+      lastCalculatedAt: item.lastCalculatedAt,
       crowdBand: item.crowdBand as AttendanceBand,
       mood: item.mood as FestivalCrowdState,
     });

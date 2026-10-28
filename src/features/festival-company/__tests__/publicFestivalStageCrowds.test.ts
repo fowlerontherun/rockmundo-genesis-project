@@ -9,6 +9,8 @@ const launchId = "123e4567-e89b-42d3-a456-426614174000";
 const crowd = {
   stageId: "123e4567-e89b-42d3-a456-426614174001",
   stageName: "Main Stage",
+  festivalDate: "2026-10-28",
+  lastCalculatedAt: "2026-10-28T15:15:00Z",
   crowdBand: "busy",
   mood: "excited",
   stageStatus: "ready",
@@ -25,11 +27,21 @@ describe("public festival stage crowd snapshots", () => {
     expect(readPublicFestivalStageCrowds(payload([crowd]), launchId)).toEqual([{
       stageId: crowd.stageId,
       stageName: crowd.stageName,
+      festivalDate: crowd.festivalDate,
+      lastCalculatedAt: crowd.lastCalculatedAt,
       crowdBand: crowd.crowdBand,
       mood: crowd.mood,
     }]);
     expect(festivalCrowdBandLabels.busy).toBe("Busy");
     expect(festivalCrowdMoodLabels.excited).toBe("Excited");
+  });
+
+  it("rejects previous-day, future-day and legacy unversioned crowd snapshots", () => {
+    const legacy = Object.fromEntries(Object.entries(crowd).filter(([key]) => key !== "festivalDate"));
+    expect(readPublicFestivalStageCrowds(payload([legacy]), launchId)).toEqual([]);
+    expect(readPublicFestivalStageCrowds(payload([{ ...crowd, festivalDate: "2026-10-27" }]), launchId)).toEqual([]);
+    expect(readPublicFestivalStageCrowds(payload([{ ...crowd, festivalDate: "2026-10-29" }]), launchId)).toEqual([]);
+    expect(readPublicFestivalStageCrowds(payload([{ ...crowd, lastCalculatedAt: "bad-timestamp" }]), launchId)).toEqual([]);
   });
 
   it("does not leak crowd data across festival editions", () => {
@@ -52,12 +64,14 @@ describe("public festival stage crowd snapshots", () => {
     ]), launchId)).toEqual([]);
   });
 
-  it("suppresses duplicate stage names rather than selecting a stale festival-day snapshot", () => {
+  it("suppresses duplicate stage names instead of selecting an ambiguous snapshot", () => {
     const duplicate = { ...crowd, stageId: "other-day", stageName: " MAIN STAGE ", mood: "tired" };
     const secondary = { ...crowd, stageId: "other-stage", stageName: "Acoustic Stage", crowdBand: "quiet", mood: "calm" };
     expect(readPublicFestivalStageCrowds(payload([crowd, duplicate, secondary]), launchId)).toEqual([{
       stageId: "other-stage",
       stageName: "Acoustic Stage",
+      festivalDate: crowd.festivalDate,
+      lastCalculatedAt: crowd.lastCalculatedAt,
       crowdBand: "quiet",
       mood: "calm",
     }]);
