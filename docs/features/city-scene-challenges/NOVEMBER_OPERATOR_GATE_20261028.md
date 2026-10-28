@@ -15,8 +15,8 @@ It returns one row with `launch_gate`, `launch_phase`, `checked_utc` and an `evi
 - **READY / PRE_LAUNCH:** Existing daily and weekly processing is healthy; the first monthly campaign is configured for November. **Zero monthly cycles is expected now.**
 - **READY / ACTIVATION_WINDOW:** The monthly start date has arrived, but the first verified worker tick may not yet have produced eligible-city cycles. Check evidence rather than assuming a failure or inventing a monthly board.
 - **READY / POST_START_REVIEW:** At least one November cycle exists and baseline checks pass. Confirm per-city eligibility and created-objective counts separately; READY does **not** certify every city.
-- **WATCH:** Latest worker result is stale/unsuccessful, recent cron failures, jam scoring unexpectedly enabled, or no November monthly cycles by **2 November UTC**. Investigate before changing controls.
-- **BLOCKED:** Source or template misconfiguration, missing/incorrect cron schedule, duplicate November cycles, a monthly cycle without exactly one objective, or an XP authorization/payout/receipt unexpectedly active. Do not bypass these controls to force launch.
+- **WATCH:** Latest worker result is stale/unsuccessful, recent cron failures, or no November monthly cycles by **2 November UTC**. Investigate before changing controls.
+- **BLOCKED:** Source or template misconfiguration (including an unexpectedly enabled jam source), missing/incorrect cron schedule, duplicate November cycles, a monthly cycle without exactly one objective, a missing private reward approval record, or an XP authorization/payout/receipt unexpectedly active. Do not bypass these controls to force launch.
 
 If the city has no recently active eligible account, the worker may correctly skip monthly generation. If monthly cycles are still missing on 2 November, inspect eligibility and cron history before changing any configuration.
 
