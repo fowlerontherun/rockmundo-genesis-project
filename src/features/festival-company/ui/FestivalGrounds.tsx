@@ -31,7 +31,10 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
+  // Clock-based visual styling only; not astronomical sunrise/sunset or weather.
+  const hourPart = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: timezone }).formatToParts(new Date(currentTime)).find((part) => part.type === "hour");
+  const localHour = hourPart ? Number(hourPart.value) : undefined;
+    const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
@@ -70,7 +73,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} localHour={localHour} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
