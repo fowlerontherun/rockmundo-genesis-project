@@ -50,6 +50,29 @@ CREATE TABLE IF NOT EXISTS public.venue_bookings (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- The September 19 venue_bookings table already exists on clean replay
+-- with player-owned user_id / event_date fields. CREATE TABLE IF NOT EXISTS
+-- above does not add the company / band booking fields needed by the policies,
+-- indexes and subsequent venue management logic below. Preserve the original
+-- ownership fields and add the missing columns without deleting any bookings.
+ALTER TABLE public.venue_bookings
+  ADD COLUMN IF NOT EXISTS band_id uuid REFERENCES public.bands(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS gig_id uuid REFERENCES public.gigs(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS booking_type text NOT NULL DEFAULT 'gig',
+  ADD COLUMN IF NOT EXISTS booking_date date,
+  ADD COLUMN IF NOT EXISTS start_time time,
+  ADD COLUMN IF NOT EXISTS end_time time,
+  ADD COLUMN IF NOT EXISTS rental_fee numeric(10,2),
+  ADD COLUMN IF NOT EXISTS ticket_revenue_share_pct numeric(5,2) DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS bar_revenue_share_pct numeric(5,2) DEFAULT 100;
+
+-- Keep earlier calendar bookings visible in the new date-based venue manager.
+-- event_date remains the source of truth for existing player booking records.
+UPDATE public.venue_bookings
+SET booking_date = event_date::date
+WHERE booking_date IS NULL
+  AND event_date IS NOT NULL;
+
 -- Create venue financial transactions table
 CREATE TABLE IF NOT EXISTS public.venue_financial_transactions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
