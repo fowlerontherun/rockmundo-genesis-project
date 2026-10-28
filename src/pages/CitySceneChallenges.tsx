@@ -392,7 +392,7 @@ export default function CitySceneChallenges() {
                 >
                   <span className="block text-sm font-semibold sm:text-base">{cadence.title}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {cycle ? `${percent(cycle.earned_points, cycle.target_total)}% complete` : 'Coming soon'}
+                    {cycle ? `${percent(cycle.earned_points, cycle.target_total)}% ${Number.isFinite(Date.parse(cycle.ends_at)) && clockNow >= Date.parse(cycle.ends_at) ? 'at close · ended' : 'complete'}` : 'Not active'}
                   </span>
                 </button>
               );
