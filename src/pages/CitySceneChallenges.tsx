@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalendarDays, Clock3, Disc3, Music2, RefreshCw, Trophy, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
+import { SceneMonthlyActions } from '@/features/city-scene-challenges/SceneMonthlyActions';
+import { SceneCycleCountdown, findNextSceneCycleExpiry } from '@/features/city-scene-challenges/SceneCycleCountdown';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
 import { SceneLeaderboard } from '@/features/city-scene-challenges/SceneLeaderboard';
 import { SceneBandSupporters } from '@/features/city-scene-challenges/SceneBandSupporters';
@@ -133,12 +135,24 @@ export default function CitySceneChallenges() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const handledCycleIds = useRef(new Set<string>());
+  const lastLoadedCity = useRef<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const initialCityLoad = lastLoadedCity.current !== cityId;
+    // Refresh in place: do not remove the community board when a rollover or
+    // scheduled refresh fetches new data. Owner details fail closed instead.
+    if (initialCityLoad) {
+      setLoading(true);
+      setBoard(null);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
-    setBoard(null);
+    setRefreshError(false);
     setPersonal(null);
     setMyRewards(null);
     setCredits(null);
@@ -155,7 +169,10 @@ export default function CitySceneChallenges() {
         const { data, error: rpcError } = await (supabase as any).rpc('get_city_scene_board', { p_city_id: cityId });
         if (rpcError) throw rpcError;
         if (!validBoard(data)) throw new Error('The city challenge board is not yet available.');
-        if (!cancelled) setBoard(data);
+        if (!cancelled) {
+          setBoard(data);
+          lastLoadedCity.current = cityId;
+        }
 
         // Optional owner-only totals. A failing personal RPC must not
         // prevent an otherwise healthy community board from rendering.
@@ -194,14 +211,68 @@ export default function CitySceneChallenges() {
           // Reward display is optional during gradual database rollout.
         }
       } catch {
-        if (!cancelled) setError('City Scene Challenges are not available yet. Please try again later.');
+        if (!cancelled) {
+          if (initialCityLoad) {
+            setError('City Scene Challenges are not available yet. Please try again later.');
+          } else {
+            setRefreshError(true);
+          }
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     })();
 
     return () => { cancelled = true; };
   }, [cityId, refresh]);
+
+  // A quiet, low-frequency refetch lets a new monthly cycle appear after the
+  // 15-minute verified-worker tick even when the board stayed open at midnight.
+  // Hidden tabs do not poll; returning to a long-idle tab refreshes once.
+  useEffect(() => {
+    if (!cityId) return;
+    let lastRefreshAt = Date.now();
+    const refreshIfStale = () => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      if (now - lastRefreshAt < 15 * 60_000) return;
+      lastRefreshAt = now;
+      setRefresh((n) => n + 1);
+    };
+    const timer = window.setInterval(refreshIfStale, 60_000);
+    window.addEventListener('focus', refreshIfStale);
+    document.addEventListener('visibilitychange', refreshIfStale);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshIfStale);
+      document.removeEventListener('visibilitychange', refreshIfStale);
+    };
+  }, [cityId]);
+
+  // UTC cycle boundaries are authoritative on the server. When the earliest
+  // displayed cycle expires, re-fetch once and let the periodic worker create
+  // the next cycle. Track handled IDs to prevent loops during cron delay or
+  // when the device clock differs from server time.
+  useEffect(() => {
+    if (!board || board.city_id !== cityId) return;
+    const next = findNextSceneCycleExpiry(board.cycles, handledCycleIds.current);
+    if (!next) return;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const checkDeadline = () => {
+      const wait = next.endsAtMs - Date.now() + 1_500;
+      if (wait > 0) {
+        timeout = window.setTimeout(checkDeadline, Math.min(wait, 60 * 60 * 1_000));
+      } else {
+        handledCycleIds.current.add(next.id);
+        setRefresh((n) => n + 1);
+      }
+    };
+    checkDeadline();
+    return () => { if (timeout !== undefined) window.clearTimeout(timeout); };
+  }, [board, cityId]);
 
   const current = board?.cycles.find((cycle) => cycle.cadence === active);
   const monthly = board?.cycles.find((cycle) => cycle.cadence === 'monthly');
@@ -214,8 +285,8 @@ export default function CitySceneChallenges() {
       icon={Music2}
       backTo={cityId ? `/cities/${cityId}` : '/cities'}
       headerActions={
-        <Button variant="outline" size="sm" disabled={loading} onClick={() => setRefresh((n) => n + 1)}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        <Button variant="outline" size="sm" disabled={loading || refreshing} onClick={() => setRefresh((n) => n + 1)}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       }
     >
@@ -230,6 +301,11 @@ export default function CitySceneChallenges() {
         </CardContent></Card>
       ) : board ? (
         <div className="space-y-5">
+          {refreshError && (
+            <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm text-muted-foreground">
+              We couldn't refresh the scene yet. Showing the last confirmed city progress; try Refresh again.
+            </p>
+          )}
           <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 px-5 py-6 text-white sm:px-8">
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/25" aria-hidden="true">
               <Music2 className="h-24 w-24 sm:h-32 sm:w-32" />
@@ -259,7 +335,9 @@ export default function CitySceneChallenges() {
                 <div>
                   <p className="font-semibold">The monthly scene mural is being prepared</p>
                   <p className="text-sm text-muted-foreground">
-                    It will unlock alongside verified community challenges. No points or rewards are available yet.
+                    {Date.now() < Date.parse('2026-11-01T00:00:00Z')
+                      ? 'The first full monthly mural is scheduled from 1 November 2026 UTC. Daily and weekly challenges are already live.'
+                      : 'The monthly mural starts when this city receives its verified monthly challenge. Daily and weekly contributions remain available.'}
                   </p>
                 </div>
               </CardContent>
@@ -309,9 +387,12 @@ export default function CitySceneChallenges() {
                 <h3 className="text-xl font-bold">{cadences.find((entry) => entry.key === active)?.title} scene challenges</h3>
                 <p className="text-sm text-muted-foreground">{cadences.find((entry) => entry.key === active)?.description}</p>
               </div>
-              {current && <Badge variant="outline" className="gap-1">
-                <Clock3 className="h-3 w-3" /> {formatEnd(current.ends_at)}
-              </Badge>}
+              {current && <div className="flex flex-wrap items-center gap-2">
+                <SceneCycleCountdown endsAt={current.ends_at} />
+                <Badge variant="outline" className="gap-1">
+                  <Clock3 className="h-3 w-3" /> {formatEnd(current.ends_at)}
+                </Badge>
+              </div>}
             </div>
 
             {!current ? (
@@ -382,6 +463,7 @@ export default function CitySceneChallenges() {
                     );
                   })}
                 </div>
+                {active === 'monthly' && <SceneMonthlyActions />}
               </>
             )}
           </section>
