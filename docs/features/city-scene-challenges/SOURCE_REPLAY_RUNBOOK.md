@@ -24,6 +24,38 @@ Run the dedicated City Scene PostgreSQL CI workflow, including `city_scene_sourc
 
 The City Scene PostgreSQL integration suite passed on GitHub PR [#4659](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4659), including event backfill, deduplication, control gates and rollback-only XP safety. Focused feature tests and TypeScript verification also passed. A separate rollback-only execution against the real production schema checked 11 candidate events and recovered zero additional credits, leaving no tables or controls installed. Following deployment the live replay tables and indexes were created, control ACLs checked, and the same 11-event sweep was deliberately activated through the bounded worker. Do not change player credits manually or reset the existing forward cursors.
 
+## Protected replay health and lag monitoring
+
+As of 28 October 2026, the additive migration `20261028133000_scene_replay_health_snapshot.sql` is installed on main Supabase with canonical migration history. The read-only snapshot is available to the database operator and service role, **not** to ordinary players. It contains aggregate source and cursor metrics only, with no player identifiers or private contribution details.
+
+```sql
+select private.scene_replay_health_snapshot(30);
+```
+
+The argument is the tolerated number of minutes **past** a source's scheduled `next_scan_at` before its cursor is declared stale. A value of 30 is the recommended default, allowing two 15-minute worker ticks; valid values are 15–180. Important fields:
+
+- `status='healthy'`: replay enabled, scoring enabled, all three source cursors present and none overdue beyond the threshold
+- `status='waiting_initial_sweep'`: replay enabled but one or more cursors have not yet been created; check first worker execution
+- `status='stalled'`: at least one expected source has a cursor overdue by more than the selected threshold; review the scoring cron and source controls before any manual recovery
+- `status='disabled'` or `'scoring_disabled'`: an intentional feature gate is off; **not** automatically an incident
+- `sources_pending`: the number whose next scan is due; pending alone is normal until the next cron run
+- `events_rechecked_total` and `contributions_recovered_total`: cumulative event and accepted-credit counters across the three independent replay cursors
+
+The health function is a **point-in-time read-only diagnostic**, not an automatic notification or alerting service. For the cron that drives it, check the latest executions separately:
+
+```sql
+select status,start_time,end_time,return_message
+from cron.job_run_details
+where jobid = (
+  select jobid from cron.job
+  where jobname='rockmundo-city-scene-verified-v1'
+)
+order by start_time desc
+limit 10;
+```
+
+If replay is stalled, inspect cron errors and `scene_source_replay_cursors` first. If replay is causing errors or excessive work, turn off `scene_source_replay_controls.enabled` using the independent kill switch below while leaving the standard scoring job intact. Never delete or rewind credited contributions to resume a scan.
+
 ## Controlled activation (DB operator only)
 
 After reviewing source volume and CI, enable the dedicated replay switch:
