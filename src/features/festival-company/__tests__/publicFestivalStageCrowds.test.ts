@@ -37,7 +37,7 @@ describe("public festival stage crowd snapshots", () => {
   });
 
   it("rejects previous-day, future-day and legacy unversioned crowd snapshots", () => {
-    const { festivalDate: _removed, ...legacy } = crowd;
+    const legacy = Object.fromEntries(Object.entries(crowd).filter(([key]) => key !== "festivalDate"));
     expect(readPublicFestivalStageCrowds(payload([legacy]), launchId)).toEqual([]);
     expect(readPublicFestivalStageCrowds(payload([{ ...crowd, festivalDate: "2026-10-27" }]), launchId)).toEqual([]);
     expect(readPublicFestivalStageCrowds(payload([{ ...crowd, festivalDate: "2026-10-29" }]), launchId)).toEqual([]);
