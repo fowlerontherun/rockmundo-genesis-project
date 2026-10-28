@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const migration = readFileSync(
-  resolve(process.cwd(), 'supabase/migrations/20261028080000_scene_privacy_safe_pulse.sql'),
+  resolve(process.cwd(), 'supabase/migrations/20261028071729_scene_privacy_safe_pulse.sql'),
   'utf8',
 );
 const board = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
