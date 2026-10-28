@@ -55,7 +55,7 @@ test('January company venue policies work with September user-owned bookings on 
     await db.exec(companyVenues);
 
     const { rows: existing } = await db.query(`SELECT user_id, event_date,
-      booking_date, booking_type, notes FROM public.venue_bookings
+      booking_date::text AS booking_date, booking_type, notes FROM public.venue_bookings
       WHERE notes = 'Legacy record'`);
     assert.equal(existing.length, 1);
     assert.equal(existing[0].user_id, userId);
@@ -67,7 +67,7 @@ test('January company venue policies work with September user-owned bookings on 
       venue_id, user_id, band_id, booking_date, booking_type, notes
     ) VALUES ($1, $2, $3, '2026-03-13', 'gig', 'Band booking')`,
     [venueId, userId, bandId]);
-    const { rows: modern } = await db.query(`SELECT band_id, booking_date,
+    const { rows: modern } = await db.query(`SELECT band_id, booking_date::text AS booking_date,
       user_id FROM public.venue_bookings WHERE notes = 'Band booking'`);
     assert.equal(modern[0].band_id, bandId);
     assert.equal(modern[0].booking_date, '2026-03-13');
