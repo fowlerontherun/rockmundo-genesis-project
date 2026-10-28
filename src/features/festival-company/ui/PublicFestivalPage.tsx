@@ -387,7 +387,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="grounds">
-            <FestivalGrounds key={f.id} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
+            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
           </TabsContent>
 
           <TabsContent value="lineup">
