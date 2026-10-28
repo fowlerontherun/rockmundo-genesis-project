@@ -25,7 +25,7 @@ describe('City Scene background refresh contract', () => {
     expect(page).toContain('handledCycleIds.current.add(next.id)');
     // Browser window.setTimeout returns a numeric ID even when Node types are
     // present in the shared TypeScript project. The timer must be clearable.
-    expect(page).toContain('let timeout: ReturnType<typeof window.setTimeout> | undefined;');
+    expect(page).toContain('let timeout: number | undefined;');
     expect(page).toContain('timeout = window.setTimeout(checkDeadline,');
     expect(page).toContain('window.clearTimeout(timeout)');
   });
