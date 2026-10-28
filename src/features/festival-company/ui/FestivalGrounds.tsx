@@ -26,7 +26,7 @@ interface FestivalGroundsProps {
 export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const live = usePublicFestivalLiveStatus(slug);
   const experience = usePublicFestivalLiveExperience(slug);
-  const verifiedLive = live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
+  const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const verified = record?.festivalLaunchId === festivalLaunchId ? record : null;

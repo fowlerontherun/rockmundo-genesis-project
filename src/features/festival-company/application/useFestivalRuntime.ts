@@ -7,7 +7,21 @@ export const useFestivalRuntimeStageDashboard=(id:string)=>useQuery({queryKey:["
 export const useMyFestivalArtistRuntime=()=>useQuery({queryKey:["festival-runtime","artist","me"],queryFn:festivalRuntimeRepository.myArtist});
 export const useMyFestivalStaffRuntime=()=>useQuery({queryKey:["festival-runtime","staff","me"],queryFn:festivalRuntimeRepository.myStaff});
 export const useMyFestivalSupplierRuntime=()=>useQuery({queryKey:["festival-runtime","supplier","me"],queryFn:festivalRuntimeRepository.mySupplier});
-export const usePublicFestivalLiveStatus=(slug:string)=>useQuery({queryKey:["festival-public-live",slug],queryFn:()=>festivalRuntimeRepository.publicLive(slug),enabled:Boolean(slug),refetchInterval:15_000});
+const isUnavailablePublicRuntime = (error: Error | null) =>
+  error?.message === "festival_public_runtime_not_deployed";
+export const publicRuntimePolling = {
+  retry: (attempt: number, error: Error) => !isUnavailablePublicRuntime(error) && attempt < 2,
+  refetchInterval: (query: { state: { error: Error | null } }) =>
+    isUnavailablePublicRuntime(query.state.error) ? false : 15_000,
+  refetchOnWindowFocus: (query: { state: { error: Error | null } }) =>
+    !isUnavailablePublicRuntime(query.state.error),
+};
+export const usePublicFestivalLiveStatus=(slug:string)=>useQuery({
+  queryKey:["festival-public-live",slug],
+  queryFn:()=>festivalRuntimeRepository.publicLive(slug),
+  enabled:Boolean(slug),
+  ...publicRuntimePolling,
+});
 export const useFestivalRuntimeEventLog=(id:string)=>useQuery({queryKey:[...key(id),"events"],queryFn:()=>festivalRuntimeRepository.eventLog(id),enabled:Boolean(id)});
 export const useFestivalCrowdRuntime=(id:string)=>useQuery({queryKey:[...key(id),"crowds"],queryFn:()=>festivalRuntimeRepository.crowds(id),enabled:Boolean(id),refetchInterval:15_000});
 export const useFestivalIncidentDashboard=(id:string)=>useQuery({queryKey:[...key(id),"incidents"],queryFn:()=>festivalRuntimeRepository.incidents(id),enabled:Boolean(id),refetchInterval:10_000});
@@ -15,6 +29,11 @@ export const useFestivalVendorSales=(id:string)=>useQuery({queryKey:[...key(id),
 export const useFestivalSponsorActivations=(id:string)=>useQuery({queryKey:[...key(id),"sponsors"],queryFn:()=>festivalRuntimeRepository.sponsorActivations(id),enabled:Boolean(id),refetchInterval:15_000});
 export const useFestivalOperationalOutcomes=(id:string)=>useQuery({queryKey:[...key(id),"outcomes"],queryFn:()=>festivalRuntimeRepository.operationalOutcomes(id),enabled:Boolean(id)});
 export const useFestivalPerformanceSimulationJobs=(id:string)=>useQuery({queryKey:[...key(id),"simulation-jobs"],queryFn:()=>festivalRuntimeRepository.simulationJobs(id),enabled:Boolean(id),refetchInterval:5_000});
-export const usePublicFestivalLiveExperience=(slug:string)=>useQuery({queryKey:["festival-public-experience",slug],queryFn:()=>festivalRuntimeRepository.publicExperience(slug),enabled:Boolean(slug),refetchInterval:15_000});
+export const usePublicFestivalLiveExperience=(slug:string)=>useQuery({
+  queryKey:["festival-public-experience",slug],
+  queryFn:()=>festivalRuntimeRepository.publicExperience(slug),
+  enabled:Boolean(slug),
+  ...publicRuntimePolling,
+});
 export const usePrepareFestivalRuntime=()=>{const q=useQueryClient();return useMutation({mutationFn:(x:{launchId:string;version:number;idempotencyKey:string})=>festivalRuntimeRepository.prepare(x.launchId,x.version,x.idempotencyKey),onSuccess:r=>q.invalidateQueries({queryKey:key(r.id)})})};
 export const useFestivalRuntimeAction=()=>{const q=useQueryClient();return useMutation({mutationFn:(x:{name:FestivalRuntimeAction;args:Record<string,unknown>;runtimeId?:string})=>festivalRuntimeRepository.action(x.name,x.args),onSuccess:(_,x)=>x.runtimeId&&q.invalidateQueries({queryKey:key(x.runtimeId)})})};

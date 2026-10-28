@@ -1,8 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 import { parseFestivalPerformanceSimulationJob,parseFestivalPublicLiveStatus,parseFestivalRuntimeCrowd,parseFestivalRuntimeIncident,parseFestivalRuntimeList,parseFestivalRuntimeSession,parseFestivalRuntimeWeather,parseFestivalStageCrowd,parseFestivalVendorSales,type FestivalPerformanceSimulationJob,type FestivalPublicLiveStatus,type FestivalRuntimeCrowd,type FestivalRuntimeIncident,type FestivalRuntimeSession,type FestivalRuntimeWeather,type FestivalStageCrowd,type FestivalVendorSales } from "../domain/festivalRuntime";
-type RpcArgs=Record<string,unknown>; type RpcResult={data:unknown;error:{message?:string}|null};
-const rpc=async(name:string,args:RpcArgs={}):Promise<unknown>=>{const {data,error}=await (supabase.rpc as unknown as (n:string,a?:RpcArgs)=>Promise<RpcResult>)(name,args);if(error)throw mapFestivalRuntimeError(error.message);return data};
-export const mapFestivalRuntimeError=(message="festival_runtime_failed")=>new Error(message.includes("stale")?"festival_runtime_stale":message.includes("forbidden")?"festival_runtime_forbidden":message.includes("blocked")?"festival_runtime_blocked":message);
+type RpcArgs=Record<string,unknown>; type RpcResult={data:unknown;error:{message?:string;code?:string}|null};
+const rpc=async(name:string,args:RpcArgs={}):Promise<unknown>=>{const {data,error}=await (supabase.rpc as unknown as (n:string,a?:RpcArgs)=>Promise<RpcResult>)(name,args);if(error)throw mapFestivalRuntimeError(error.message,error.code);return data};
+export const mapFestivalRuntimeError = (message = "festival_runtime_failed", code?: string) => {
+  // The launch-scoped public runtime is absent from some environments where
+  // the canonical annual-edition runtime is already live. Do not spam missing
+  // RPC calls every 15 seconds or disguise this as an empty crowd.
+  if ((code === "PGRST202" || message.includes("Could not find the function")) &&
+      /get_public_festival_live_(?:status|experience)/.test(message)) {
+    return new Error("festival_public_runtime_not_deployed");
+  }
+  return new Error(message.includes("stale") ? "festival_runtime_stale"
+    : message.includes("forbidden") ? "festival_runtime_forbidden"
+    : message.includes("blocked") ? "festival_runtime_blocked" : message);
+};
 export const festivalRuntimeRepository={
  get:async(id:string)=>rpc("get_festival_runtime",{p_runtime_session_id:id}), ownerDashboard:async(id:string)=>rpc("get_festival_runtime_owner_dashboard",{p_runtime_session_id:id}), stageDashboard:async(id:string)=>rpc("get_festival_runtime_stage_dashboard",{p_runtime_stage_id:id}),
  myArtist:async()=>rpc("get_my_festival_artist_runtime"),myStaff:async()=>rpc("get_my_festival_staff_runtime"),mySupplier:async()=>rpc("get_my_festival_supplier_runtime"),eventLog:async(id:string,after?:string)=>rpc("get_festival_runtime_event_log",{p_runtime_session_id:id,p_after:after??null}),
