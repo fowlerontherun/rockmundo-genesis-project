@@ -1,6 +1,6 @@
 # City Scene source replay — rollout and recovery
 
-**Status:** Review and test only. The replay feature is disabled by default; do not enable until the isolated PostgreSQL replay integration passes.
+**Status — 28 October 2026:** Live replay **enabled** in main Supabase after both dedicated workflows passed. The migration `20261028121000_scene_late_source_replay.sql` is deployed with canonical migration version recorded. Production's first guarded sweep at **12:17 UTC** rechecked 3 gigs, 3 recordings and 5 rehearsals and recovered **0 missed credits**. An immediate second tick respected the one-hour cooldown, rechecking **0 events**. The regular 15-minute scoring cron remains active; all XP reward policies and payouts remain **off**. The replay migration itself remains disabled by default on new environments.
 
 ## Why this exists
 
@@ -18,11 +18,11 @@ The normal gig and rehearsal scoring cursors progress by `completed_at`; recordi
 - **No XP payout function is invoked.** Scene reward policies and the separate payout-approval gate remain independent.
 - Private replay functions and control/cursor tables have no player-facing grant or RLS access.
 
-## Verification before enabling
+## Verification and deployment evidence
 
 Run the dedicated City Scene PostgreSQL CI workflow, including `city_scene_source_replay_weekly_integration.sql`, on a disposable Postgres database. The fixture reproduces an older gig, recording and rehearsal after the main cursors have advanced, then confirms recovered contributions, no duplicates, source kill switches, cooldown and zero XP grants. The migration has additionally passed a rollback-only execution against the real RockMundo schema with replay disabled.
 
-After CI passes, verify that the live three source cursors, RLS and indexes are healthy, and inspect the initial scan candidate volume. Do not change player credits manually or reset the existing forward cursors.
+The City Scene PostgreSQL integration suite passed on GitHub PR [#4659](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4659), including event backfill, deduplication, control gates and rollback-only XP safety. Focused feature tests and TypeScript verification also passed. A separate rollback-only execution against the real production schema checked 11 candidate events and recovered zero additional credits, leaving no tables or controls installed. Following deployment the live replay tables and indexes were created, control ACLs checked, and the same 11-event sweep was deliberately activated through the bounded worker. Do not change player credits manually or reset the existing forward cursors.
 
 ## Controlled activation (DB operator only)
 
