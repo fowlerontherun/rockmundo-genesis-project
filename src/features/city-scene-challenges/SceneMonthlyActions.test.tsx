@@ -7,8 +7,8 @@ import { resolve } from 'node:path';
 
 describe('Monthly City Scene launch pathways', () => {
   it('links players to real verified activities without claiming page visits earn points', () => {
-    const html = renderToStaticMarkup(<MemoryRouter><SceneMonthlyActions /></MemoryRouter>);
-    expect(html).toContain('/gig-booking');
+    const html = renderToStaticMarkup(<MemoryRouter><SceneMonthlyActions cityId="20000000-0000-0000-0000-000000000071" /></MemoryRouter>);
+    expect(html).toContain('/gig-booking?cityId=20000000-0000-0000-0000-000000000071');
     expect(html).toContain('/recording-studio');
     expect(html).toContain('/rehearsals');
     expect(html).toContain('Only completed events');
@@ -18,7 +18,7 @@ describe('Monthly City Scene launch pathways', () => {
 
   it('uses real monthly objective and non-user-controlled, server-verified sources', () => {
     const page = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
-    expect(page).toContain("active === 'monthly' && !currentExpired && <SceneMonthlyActions />");
+    expect(page).toContain("active === 'monthly' && !currentExpired && <SceneMonthlyActions cityId={board.city_id} />");
     expect(page).toContain('action && !currentExpired');
     expect(page).toContain("? 'at close · ended' : 'complete'");
     expect(page).toContain('clockNow >= Date.parse(current.ends_at)');

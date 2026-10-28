@@ -5,6 +5,9 @@ on:
     paths:
       - "src/features/city-scene-challenges/**"
       - "src/pages/CitySceneChallenges.tsx"
+      - "src/pages/TodaysNews.tsx"
+      - "src/components/news/CitySceneNews*"
+      - "src/pages/GigBooking.tsx"
       - "supabase/functions/scene-challenges-processor/**"
       - "supabase/migrations/*scene*.sql"
       - "supabase/tests/city_scene_*.sql"
@@ -36,6 +39,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: City Scene rules and security contracts
-        run: npx vitest run src/features/city-scene-challenges --reporter=default
+        run: npx vitest run src/features/city-scene-challenges src/components/news/CitySceneNews.test.tsx --reporter=default
       - name: Typecheck
         run: npm run typecheck

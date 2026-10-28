@@ -20,6 +20,7 @@ import { PersonalUpdates } from "@/components/news/PersonalUpdates";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
 import { BattleOfTheBandsNews } from "@/components/news/BattleOfTheBandsNews";
 import { LocalDailyBrief } from "@/components/news/LocalDailyBrief";
+import { CitySceneNews } from "@/components/news/CitySceneNews";
 import { NewsList } from "@/components/news/NewsList";
 
 export default function TodaysNewsPage() {
@@ -111,6 +112,7 @@ export default function TodaysNewsPage() {
               <RandomEventsNews />
             </div>
             <LocalDailyBrief />
+            <CitySceneNews />
           </NewsCategory>
           <NewsCategory title="Music, Charts & Releases" description="New music and chart movement">
             <div className="grid items-start gap-4 md:grid-cols-2">
