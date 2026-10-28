@@ -89,11 +89,15 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
             {crowd ? (
               <span className="mt-3 block rounded-lg bg-muted/50 p-2">
                 <span className="block text-xs font-medium">Crowd: {FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].label}</span>
-                <span className="mt-1 flex gap-1" role="img" aria-label={`Stage crowd band: ${FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].label}`}>
-                  {Array.from({ length: 5 }, (_, segment) => (
-                    <span key={segment} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${segment < FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].intensity ? "bg-emerald-500/80" : "bg-muted"}`} />
+                <span aria-hidden="true" className="mt-2 flex h-9 items-end justify-center gap-px overflow-hidden rounded-md bg-gradient-to-t from-slate-900/15 to-transparent">
+                  {Array.from({ length: 15 }, (_, silhouette) => (
+                    <span key={silhouette} className={`flex w-2 shrink-0 flex-col items-center ${(silhouette * 7) % 15 < FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].intensity * 3 ? "opacity-90" : "opacity-10"}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                      <span className="mt-px h-4 w-2 rounded-t-md bg-violet-600" />
+                    </span>
                   ))}
                 </span>
+                <span className="mt-1 block text-[10px] text-muted-foreground">Stylised crowd art, not headcounts</span>
                 <span className="mt-1 block text-xs">Mood: {FESTIVAL_STAGE_CROWD_MOODS[crowd.mood]}</span>
               </span>
             ) : <span className="mt-2 block text-xs text-muted-foreground">Stage crowd update unavailable</span>}
