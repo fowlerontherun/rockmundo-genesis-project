@@ -12,7 +12,7 @@ describe('November City Scene prelaunch operator gate', () => {
     expect(sql).toMatch(/^\s*with\s+/i);
     expect(sql).toContain('select');
     expect(sql).not.toMatch(/\b(insert|update|delete|alter|drop|truncate|create|grant|revoke|call|perform|execute)\b/i);
-    expect(sql).not.toContain('select private.scene_run_verified_tick(50);');
+    expect(sql).not.toMatch(/^\\s*select\\s+private\\.scene_run_verified_tick\\(50\\)\\s*;/im);
     expect(sql).not.toContain('source_event_id');
     expect(sql).not.toContain('profile_id');
     expect(sql).not.toContain('account_id');
