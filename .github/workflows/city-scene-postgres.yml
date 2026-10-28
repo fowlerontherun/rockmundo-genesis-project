@@ -58,6 +58,19 @@ jobs:
             psql -X -v ON_ERROR_STOP=1 -f "${migration}"
             echo "::endgroup::"
           done
+      - name: Bootstrap CI social privacy source contracts
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_social_privacy_ci_fixture.sql
+      - name: Apply 28 October Scene additions in creation order
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t scene_additions < <(find supabase/migrations -maxdepth 1 -name '20261028*scene*.sql' -print | LC_ALL=C sort)
+          test "${#scene_additions[@]}" -ge 3
+          for migration in "${scene_additions[@]}"; do
+            echo "::group::Applying ${migration}"
+            psql -X -v ON_ERROR_STOP=1 -f "${migration}"
+            echo "::endgroup::"
+          done
       - name: Verify security, RLS and default-off settings
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_challenges_staging_smoke.sql
       - name: Verify actual cycle targets, objective caps and mural unlocks
@@ -72,6 +85,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_source_integrity_integration.sql
       - name: Exercise real XP grant and replay transaction
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
+      - name: Verify opt-in City Scene leaderboard in PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_leaderboard_integration.sql
       - name: Verify transaction rollback preserved payout safety
         run: |
           psql -X -v ON_ERROR_STOP=1 <<'SQL'
