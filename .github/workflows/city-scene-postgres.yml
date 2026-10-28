@@ -89,6 +89,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_source_replay_weekly_integration.sql
       - name: Exercise real XP grant and replay transaction
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
+      - name: Verify Scene Pulse maps canonical ledger evidence and protects small groups
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_pulse_integration.sql
       - name: Verify opt-in City Scene leaderboard in PostgreSQL
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_leaderboard_integration.sql
       - name: Verify band scene consent and leader safety in PostgreSQL
