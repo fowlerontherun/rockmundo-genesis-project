@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -29,6 +30,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const verified = record?.festivalLaunchId === festivalLaunchId ? record : null;
+  const stageCrowds = readPublicFestivalStageCrowds(experience.isError ? null : experience.data, festivalLaunchId);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
@@ -45,6 +47,9 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
   const hourPart = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: timezone }).formatToParts(new Date(currentTime)).find((part) => part.type === "hour");
   const localHour = hourPart ? Number(hourPart.value) : undefined;
     const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
+  const selectedCrowd = selectedStage
+    ? stageCrowds.find((item) => item.stageName.toLocaleLowerCase("en-GB") === selectedStage.name.trim().toLocaleLowerCase("en-GB"))
+    : undefined;
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
@@ -94,7 +99,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} localHour={localHour} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} localHour={localHour} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
@@ -121,6 +126,18 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
                 </>
+              )}
+            </div>
+            <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+              <h4 className="text-sm font-semibold">Stage audience snapshot</h4>
+              {selectedCrowd ? (
+                <>
+                  <p className="mt-1 text-sm">Reported crowd: <strong>{festivalCrowdBandLabels[selectedCrowd.crowdBand]}</strong></p>
+                  <p className="text-sm">Audience mood: <strong>{festivalCrowdMoodLabels[selectedCrowd.mood]}</strong></p>
+                  <p className="mt-1 text-xs text-muted-foreground">Festival runtime snapshot. Not a live headcount or queue estimate.</p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">No unambiguous stage crowd snapshot is available.</p>
               )}
             </div>
             <h4 className="mt-5 font-semibold">Announced artists</h4>
