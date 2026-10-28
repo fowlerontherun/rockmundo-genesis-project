@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Users, TrendingUp, Music, MapPin } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { parseCityBandFilter } from "@/features/city-scene-challenges/sceneCityFilter";
 
 interface Band {
   id: string;
@@ -23,10 +24,7 @@ interface Band {
 
 export default function BandBrowser() {
   const [searchParams] = useSearchParams();
-  const requestedCityId = searchParams.get("city");
-  const cityId = requestedCityId && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(requestedCityId)
-    ? requestedCityId : null;
-  const invalidCity = requestedCityId !== null && !cityId;
+  const { cityId, invalidCity } = parseCityBandFilter(searchParams.get("city"));
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
