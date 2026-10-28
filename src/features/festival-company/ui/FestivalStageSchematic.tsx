@@ -1,11 +1,13 @@
 import type { FestivalPublicStage } from "../domain/festivalLaunch";
 import type { AttendanceBand, FestivalPublicLiveStatus } from "../domain/festivalRuntime";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalStageSchematicProps {
   stages: FestivalPublicStage[];
   selectedStageId: string | undefined;
   attendanceBand?: AttendanceBand | null;
   performances?: FestivalPublicLiveStatus["performances"];
+  stageCrowds?: PublicFestivalStageCrowd[];
   localHour?: number;
   onSelectStage: (id: string) => void;
 }
@@ -23,7 +25,7 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, performances = [], localHour, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, performances = [], stageCrowds = [], localHour, onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
@@ -59,6 +61,10 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
           const current = performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
           const delayed = performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
           const activeLighting = Boolean(current) && afterDark;
+          const crowd = stageCrowds.find(
+            (item) => item.stageName.toLocaleLowerCase("en-GB") === stage.name.trim().toLocaleLowerCase("en-GB"),
+          );
+          const band = crowd ? atmosphereBands[crowd.crowdBand] : null;
           return (
           <button
             key={stage.id}
@@ -83,6 +89,17 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
               <span className="mt-2 block rounded-full bg-amber-600 px-2 py-1 text-xs font-semibold text-white">Delayed · {delayed.artistName}</span>
             ) : null}
             <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>
+            {crowd && band ? (
+              <span className="mt-3 block rounded-lg border bg-background/80 px-2 py-2 text-left">
+                <span className="block text-xs font-semibold">Reported crowd · {festivalCrowdBandLabels[crowd.crowdBand]}</span>
+                <span className="mt-1 flex gap-1" role="img" aria-label={`Reported stage audience: ${festivalCrowdBandLabels[crowd.crowdBand]}`}>
+                  {Array.from({ length: 5 }, (_, segment) => (
+                    <span key={segment} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${segment < band.intensity ? "bg-emerald-500" : "bg-muted"}`} />
+                  ))}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">Mood · {festivalCrowdMoodLabels[crowd.mood]}</span>
+              </span>
+            ) : <span className="mt-3 block text-xs text-muted-foreground">Stage crowd not reported</span>}
           </button>
           );
         })}
