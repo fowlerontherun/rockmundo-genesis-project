@@ -53,11 +53,35 @@ jobs:
           docker info
       - name: Start local Supabase stack
         run: |
+          set -o pipefail
           mkdir -p finance-verification-diagnostics
           supabase stop --no-backup || true
-          set -o pipefail
-          supabase start --debug 2>&1 | tee finance-verification-diagnostics/supabase-start.log
-          echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+
+          # setup-cli sets the GHCR-only override, which cannot fall back if
+          # GitHub-hosted runners hit a shared-IP GHCR rate limit. Keep the
+          # pinned CLI and image tags, but try official Supabase registries.
+          for registry in public.ecr.aws ghcr.io docker.io; do
+            attempt_log="finance-verification-diagnostics/supabase-start-${registry//./-}.log"
+            echo "Trying official Supabase registry: $registry"
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry" supabase start --debug 2>&1 | tee "$attempt_log"; then
+              echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+
+            # Retry only registry rate limiting; never mask a migration,
+            # startup, configuration, or SQL failure by switching registries.
+            if ! grep -Eqi 'toomanyrequests|429.*(Too Many Requests|Rate exceeded)' "$attempt_log"; then
+              echo "Supabase failed for a non-registry reason; stopping." >&2
+              supabase stop --no-backup || true
+              exit 1
+            fi
+
+            echo "Registry $registry throttled; cleaning up before fallback." >&2
+            supabase stop --no-backup || true
+          done
+
+          echo "All official Supabase registries failed to start the stack." >&2
+          exit 1
       - name: Export local database URL
         run: |
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')"
