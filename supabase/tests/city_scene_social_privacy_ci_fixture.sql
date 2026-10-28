@@ -29,3 +29,9 @@ create table public.profile_mutes (
   mute_until timestamptz,
   removed_at timestamptz
 );
+
+-- Band attribution contracts for leader-consented October scene recognition.
+alter table public.bands
+  add column name varchar(120) not null default 'CI Band',
+  add column status text not null default 'active',
+  add column leader_id uuid references public.profiles(id);
