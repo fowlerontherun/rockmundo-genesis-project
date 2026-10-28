@@ -8,6 +8,12 @@ BEGIN
  IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname LIKE 'festival_runtime_%' AND c.relname IN('festival_runtime_crowds','festival_runtime_stage_crowds','festival_runtime_incidents','festival_runtime_vendor_sales') AND NOT c.relrowsecurity) THEN RAISE EXCEPTION 'runtime operational RLS missing'; END IF;
  SELECT pg_get_functiondef('public.get_public_festival_live_experience(text)'::regprocedure) INTO public_definition;
  IF public_definition ~* 'private_operational_details|staff_outcomes|response_department' THEN RAISE EXCEPTION 'public experience leaks private operations'; END IF;
+ -- The public stage crowd projection must not aggregate snapshots across days.
+ IF public_definition !~* 'd\\.festival_date[[:space:]]*=[[:space:]]*current_date'
+    OR public_definition !~* 'd\\.id[[:space:]]*=[[:space:]]*c\\.runtime_day_id'
+    OR public_definition NOT LIKE '%festivalDate%'
+    OR public_definition NOT LIKE '%lastCalculatedAt%'
+ THEN RAISE EXCEPTION 'public festival stage crowd projection is not day scoped'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.festival_runtime_stage_crowds'::regclass AND pg_get_constraintdef(oid)~'current_crowd <= stage_capacity') THEN RAISE EXCEPTION 'stage capacity invariant missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='public.festival_runtime_vendor_sales'::regclass AND pg_get_constraintdef(oid)~'units_sold.*waste_units.*remaining_stock.*opening_stock') THEN RAISE EXCEPTION 'stock conservation invariant missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='festival_runtime_revenue_postings' AND indexdef LIKE '%UNIQUE%posting_key%') THEN RAISE EXCEPTION 'exactly-once revenue key missing'; END IF;
