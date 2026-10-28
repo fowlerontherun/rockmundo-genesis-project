@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
+import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
 import { SceneLeaderboard } from '@/features/city-scene-challenges/SceneLeaderboard';
 import { SceneBandSupporters } from '@/features/city-scene-challenges/SceneBandSupporters';
@@ -264,6 +265,8 @@ export default function CitySceneChallenges() {
               </CardContent>
             </Card>
           )}
+
+          <ScenePosterArchive cityId={board.city_id} cityName={board.city_name} refresh={refresh} />
 
           {monthly && (
             <section aria-label="City scene poster milestones" className="grid grid-cols-4 gap-2">
