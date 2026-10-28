@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 
@@ -21,11 +21,21 @@ interface FestivalGroundsProps {
  */
 export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
     : [];
+
+  const publishedActs = acts.filter((act) => act.startsAt && act.endsAt && Number.isFinite(Date.parse(act.startsAt)) && Number.isFinite(Date.parse(act.endsAt)));
+  const scheduledNow = publishedActs.find((act) => Date.parse(act.startsAt!) <= currentTime && currentTime < Date.parse(act.endsAt!));
+  const scheduledNext = publishedActs.find((act) => Date.parse(act.startsAt!) > currentTime);
+  const scheduleLabel = scheduledNow ? "Scheduled now" : scheduledNext ? "Next scheduled set" : "No further published sets";
 
   const facilities = [
     { label: "Travel & arrival", icon: "🚌", details: visitorInformation.travel },
@@ -50,6 +60,18 @@ export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, 
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
+            <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/5 p-3" role="status">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{scheduleLabel}</p>
+              {scheduledNow || scheduledNext ? (
+                <>
+                  <p className="mt-1 font-bold">{(scheduledNow ?? scheduledNext)!.artistName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date((scheduledNow ?? scheduledNext)!.startsAt!))}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Based on published timetable, not live stage confirmation.</p>
+                </>
+              ) : <p className="mt-1 text-sm text-muted-foreground">Check back for programme updates.</p>}
+            </div>
             <h4 className="mt-5 font-semibold">Announced artists</h4>
             {acts.length ? (
               <ul className="mt-3 space-y-3">
