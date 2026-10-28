@@ -26,8 +26,23 @@ END
 $mentor_city_dependencies$;
 
 -- CORE SKILLS (basic_* not yet covered)
-INSERT INTO education_mentors (name, focus_skill, description, specialty, cost, cooldown_hours, base_xp, difficulty, skill_gain_ratio, city_id, available_day, discovery_type, is_discoverable, lore_biography, discovery_hint)
-VALUES
+-- The curated September mentors table requires required_skill_value and
+-- bonus_description. January's legendary-masters overhaul removed the skill
+-- prerequisite (set to 0); keep that behaviour while retaining meaningful
+-- per-mentor bonus copy from the seeded specialty. SELECT from VALUES avoids
+-- rewriting the full historical mentor catalogue or relaxing NOT NULL rules.
+INSERT INTO public.education_mentors (
+  name, focus_skill, description, specialty, cost, cooldown_hours, base_xp,
+  difficulty, required_skill_value, skill_gain_ratio, bonus_description,
+  city_id, available_day, discovery_type, is_discoverable, lore_biography, discovery_hint
+)
+SELECT
+  seed.name, seed.focus_skill, seed.description, seed.specialty,
+  seed.cost, seed.cooldown_hours, seed.base_xp, seed.difficulty,
+  0, seed.skill_gain_ratio, seed.specialty,
+  seed.city_id, seed.available_day, seed.discovery_type, seed.is_discoverable,
+  seed.lore_biography, seed.discovery_hint
+FROM (VALUES
 -- Singing & Vocals
 ('Vocal Queen Amara', 'basic_singing', 'West African vocal powerhouse', 'Vocal technique & breath control', 20000, 168, 180, 'intermediate', 2.0, (SELECT id FROM public.cities WHERE lower(name)=lower('Accra') LIMIT 1), 1, 'exploration', true, 'Born in Accra, Amara''s voice carries the spirit of West African highlife. She has trained Grammy winners in vocal dynamics.', 'Listen for her singing at dawn near the markets of Accra'),
 ('Dame Cecilia Bright', 'basic_singing', 'Classical-trained vocal coach', 'Opera and projection', 35000, 168, 220, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('Vienna') LIMIT 1), 3, 'exploration', true, 'A retired Vienna State Opera soprano who now trains the next generation.', 'She holds court at a famous Viennese café every Wednesday'),
@@ -193,7 +208,12 @@ VALUES
 ('Pro DJ Spinner Oakenfold', 'professional_djing', 'Professional DJ techniques', 'Advanced mixing and crowd reading', 35000, 168, 280, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('Amsterdam') LIMIT 1), 4, 'exploration', true, 'Amsterdam trance DJ legend.', 'He spins at an Amsterdam club on Thursdays'),
 ('Pro Crowd Master Festival', 'professional_crowd_engagement', 'Professional crowd engagement', 'Festival-level crowd management', 30000, 168, 250, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 5, 'exploration', true, 'London festival MC and crowd engagement expert.', 'He appears at London festivals on Fridays'),
 ('Pro Beatmaker J Dilla Jr', 'professional_beatmaking', 'Professional beatmaking', 'Advanced sampling and rhythm programming', 35000, 168, 280, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('Detroit') LIMIT 1), 6, 'exploration', true, 'Detroit beat scientist carrying on the legacy of Motor City production.', 'His Detroit studio vibrates on Saturdays'),
-('Pro AI Music Researcher', 'professional_ai_music_integration', 'Professional AI music tools', 'Advanced AI-assisted composition', 40000, 168, 300, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('San Francisco') LIMIT 1), 2, 'exploration', true, 'San Francisco AI music startup founder.', 'He presents at a San Francisco tech hub on Tuesdays');
+('Pro AI Music Researcher', 'professional_ai_music_integration', 'Professional AI music tools', 'Advanced AI-assisted composition', 40000, 168, 300, 'advanced', 2.5, (SELECT id FROM public.cities WHERE lower(name)=lower('San Francisco') LIMIT 1), 2, 'exploration', true, 'San Francisco AI music startup founder.', 'He presents at a San Francisco tech hub on Tuesdays')
+) AS seed(
+  name, focus_skill, description, specialty, cost, cooldown_hours, base_xp,
+  difficulty, skill_gain_ratio, city_id, available_day, discovery_type,
+  is_discoverable, lore_biography, discovery_hint
+);
 
 -- ===========================================
 -- PART 2: ADD MORE INSTRUMENT UNIVERSITY COURSES
