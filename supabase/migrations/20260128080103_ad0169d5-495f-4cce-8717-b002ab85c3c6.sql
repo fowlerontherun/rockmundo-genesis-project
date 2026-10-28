@@ -23,9 +23,11 @@ UPDATE player_xp_wallet SET
   attribute_points_lifetime = FLOOR(COALESCE(lifetime_xp, 0) * 0.10)::INTEGER
 WHERE skill_xp_balance = 0 OR skill_xp_balance IS NULL;
 
--- Update existing grants to have grant_date
-UPDATE profile_daily_xp_grants 
-SET grant_date = DATE(created_at)
+-- Update legacy grants using the timestamp retained by the September 2025
+-- stipend-table migration. That migration intentionally dropped created_at
+-- in favour of claimed_at, so clean replay cannot reference created_at.
+UPDATE public.profile_daily_xp_grants
+SET grant_date = DATE(claimed_at)
 WHERE grant_date IS NULL;
 
 -- Delete existing dual_xp config if any, then insert fresh
