@@ -1,12 +1,18 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-// RockMundo uses both DOM and Node types in CI; window.setTimeout must be
-// treated as a browser numeric timer ID, never NodeJS.Timeout.
+const page = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
+
+// DOM and Node overloads coexist in this project. ReturnType<typeof
+// window.setTimeout> can resolve to NodeJS.Timeout, but invoking the browser
+// window.setTimeout produces a numeric ID. The page must declare number.
 describe('City Scene browser deadline timer typing', () => {
-  it('uses the browser timer return type and releases its scheduled callback', () => {
-    expectTypeOf<ReturnType<typeof window.setTimeout>>().toEqualTypeOf<number>();
-    // A DOM overload must resolve to a number, even with @types/node installed.
-    const timerId: ReturnType<typeof window.setTimeout> = 123;
-    expect(typeof timerId).toBe('number');
+  it('stores the DOM timer ID as number and clears it on effect cleanup', () => {
+    expect(page).toContain('let timeout: number | undefined;');
+    expect(page).toContain('timeout = window.setTimeout(checkDeadline,');
+    expect(page).toContain('window.clearTimeout(timeout)');
+    expect(page).not.toContain('ReturnType<typeof window.setTimeout>');
+    expect(page).not.toContain('ReturnType<typeof setTimeout>');
   });
 });
