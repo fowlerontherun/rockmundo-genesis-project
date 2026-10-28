@@ -29,8 +29,8 @@ describe('City Scene Legacy historic community records',()=>{
     const html=renderToStaticMarkup(<SceneLegacy cityId={city} cityName="London" refresh={0}/>);
     expect(html).toContain('Scene Legacy');
     expect(html).toContain('Loading confirmed weekly scene history');
-    expect(html).toContain('Daily');
-    expect(html).toContain('Weekly');
+    expect(html).toContain('>daily</button>');
+    expect(html).toContain('>weekly</button>');
     expect(html).toContain('verified daily and weekly');
     expect(html).not.toContain('Goal reached');
     expect(html).not.toContain('100 SP');
