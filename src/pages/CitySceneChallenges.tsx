@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
+import { SceneActivityTimeline, isSceneActivityCredits } from '@/features/city-scene-challenges/SceneActivityTimeline';
+import type { SceneActivityCredit } from '@/features/city-scene-challenges/SceneActivityTimeline';
 import type { SceneCadence } from '@/features/city-scene-challenges/sceneRules';
 
 type SceneObjective = {
@@ -122,6 +124,7 @@ export default function CitySceneChallenges() {
   const [board, setBoard] = useState<SceneBoard | null>(null);
   const [personal, setPersonal] = useState<PersonalSceneProgress | null>(null);
   const [myRewards, setMyRewards] = useState<SceneReward[] | null>(null);
+  const [credits, setCredits] = useState<SceneActivityCredit[] | null>(null);
   const [active, setActive] = useState<SceneCadence>('daily');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +137,7 @@ export default function CitySceneChallenges() {
     setBoard(null);
     setPersonal(null);
     setMyRewards(null);
+    setCredits(null);
     if (!cityId || !/^[0-9a-fA-F-]{36}$/.test(cityId)) {
       setError('Choose a valid city to view its challenges.');
       setLoading(false);
@@ -158,6 +162,19 @@ export default function CitySceneChallenges() {
           }
         } catch {
           // Personal progress is unavailable, not silently reported as zero.
+        }
+        // Owner-only verified activity history. No raw source event IDs,
+        // actor IDs, band IDs or other players' activity is returned.
+        try {
+          const activity = await (supabase as any).rpc('get_my_city_scene_activity', {
+            p_city_id: cityId,
+            p_limit: 60,
+          });
+          if (!cancelled && !activity.error && isSceneActivityCredits(activity.data)) {
+            setCredits(activity.data);
+          }
+        } catch {
+          // Unavailable history is never represented as zero contributions.
         }
         // Separate owner-only reward query: never expose claim IDs, profile
         // identifiers or private XP ledger rows on the shared board.
@@ -362,6 +379,7 @@ export default function CitySceneChallenges() {
               </>
             )}
           </section>
+          <SceneActivityTimeline credits={credits} />
           {myRewards && myRewards.length > 0 && (
             <section aria-label="Your City Scene XP rewards" className="space-y-3">
               <div>
