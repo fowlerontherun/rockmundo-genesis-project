@@ -57,9 +57,9 @@ select private.scene_apply_confirmed_correction(
 );
 ```
 
-The operation rechecks the canonical event and blocks application when the source has been restored, the credit was already invalidated, or the seven-day cycle window has elapsed. **If any reward has already been paid for the cycle, application fails and requires separate finance reconciliation.** Do not delete actual XP receipts or ledger entries to circumvent this guard.
+The operation rechecks the canonical event and blocks application when the source has been restored, the credit was already invalidated, or the seven-day cycle window has elapsed. **If any reward has already been paid for any linked cycle, application fails and requires separate finance reconciliation.** Do not delete actual XP receipts or ledger entries to circumvent this guard.
 
-On successful application, the contribution is **soft-invalidated** (not deleted), the review is marked applied, and the city objective, cycle status and mural unlocks are reconciled in the **same database transaction**. Player wallets are never debited here.
+On successful application, **all linked credits for the confirmed invalid event are soft-invalidated together** (never deleted), including daily, weekly and monthly credits. For a cancelled/voided gig outcome, this covers **all affected performers**; if only one musician's lineup evidence is invalid, other legitimate performers keep their points. Each affected contribution/cycle is recorded separately in `private.scene_correction_affected`. The review is marked applied, and city objective/cycle status and mural unlocks are reconciled in the **same database transaction**. Player wallets are never debited here.
 
 ## 5. Verify afterward
 
@@ -75,7 +75,7 @@ from private.scene_correction_reviews
 order by requested_at desc limit 50;
 ```
 
-Keep source activity and review history intact. Restoration of incorrectly invalidated history requires separate reviewed remediation; do **not** simply delete an audit row or edit XP balances.
+The review's linked credits are auditable with `select * from private.scene_correction_affected where review_id='<review-uuid>';`. Keep source activity and review history intact. Restoration of incorrectly invalidated history requires separate reviewed remediation; do **not** simply delete an audit row or edit XP balances.
 
 ## Security
 
