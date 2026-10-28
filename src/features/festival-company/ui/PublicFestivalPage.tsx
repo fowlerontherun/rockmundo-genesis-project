@@ -102,6 +102,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
   const [now, setNow] = useState(() => Date.now());
+  const [activeFestivalTab, setActiveFestivalTab] = useState("overview");
+  useEffect(() => { setActiveFestivalTab("overview"); }, [festivalCompanyIdentifier, publicSlug]);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10_000); return () => window.clearInterval(timer); }, []);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
@@ -146,6 +148,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   // Only the authoritative confirmed lineup may be advertised publicly.
   const confirmedLineup = f.lineup ?? [];
   const publishedPerformances = confirmedLineup.filter(isPublishedFestivalPerformance);
+  const upcomingPerformances = publishedPerformances
+    .filter((entry) => entry.startsAt && Date.parse(entry.startsAt) >= now)
+    .sort((left, right) => Date.parse(left.startsAt!) - Date.parse(right.startsAt!))
+    .slice(0, 3);
   const dayLabel = (festivalDate: string | null) => festivalDate
     ? new Date(`${festivalDate}T12:00:00Z`).toLocaleDateString("en-GB", {
         weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
@@ -303,7 +309,47 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </Card>
         )}
 
-        <Tabs defaultValue="overview">
+        <section aria-label="Festival experience hub" className="mb-6 space-y-4 rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/10 via-background to-fuchsia-950/10 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Explore the festival</p>
+              <h2 className="mt-1 text-2xl font-bold">{f.name} experience</h2>
+              <p className="text-sm text-muted-foreground">One place to explore performances, plan your visit and find your tickets.</p>
+            </div>
+            <Badge variant="secondary">{eventPhaseLabel}</Badge>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button type="button" onClick={() => setActiveFestivalTab("lineup")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <span className="block text-2xl font-bold">{confirmedLineup.length}</span>
+              <span className="font-semibold">Confirmed artists</span>
+              <span className="block text-xs text-muted-foreground">Explore the line-up</span>
+            </button>
+            <button type="button" onClick={() => setActiveFestivalTab("timetable")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <span className="block text-2xl font-bold">{f.stages.length}</span>
+              <span className="font-semibold">Festival stages</span>
+              <span className="block text-xs text-muted-foreground">See published set times</span>
+            </button>
+            <button type="button" onClick={() => setActiveFestivalTab("tickets")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <span className="block text-2xl font-bold">{walletError ? "—" : myFestivalTickets.length}</span>
+              <span className="font-semibold">My tickets</span>
+              <span className="block text-xs text-muted-foreground">{walletError ? "Verification unavailable" : "Open festival wallet"}</span>
+            </button>
+          </div>
+          <div aria-label="Upcoming performances" className="space-y-2">
+            <h3 className="font-semibold">Coming up on stage</h3>
+            {upcomingPerformances.length ? (
+              <div className="grid gap-2 md:grid-cols-3">{upcomingPerformances.map((entry) => (
+                <div key={entry.id} className="rounded-lg border bg-card/80 p-3">
+                  <p className="font-semibold">{entry.artistName}</p>
+                  <p className="text-sm text-muted-foreground">{entry.stageName ?? "Stage to be announced"}</p>
+                  <p className="text-xs">{formatFestivalEditionDate(entry.startsAt!, f.timezone)} · {formatFestivalEditionTime(entry.startsAt!, f.timezone)}</p>
+                </div>
+              ))}</div>
+            ) : <p className="text-sm text-muted-foreground">No upcoming performance times are published. Check the line-up for announcements.</p>}
+          </div>
+        </section>
+
+        <Tabs value={activeFestivalTab} onValueChange={setActiveFestivalTab}>
           <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="lineup">Line-up</TabsTrigger>
