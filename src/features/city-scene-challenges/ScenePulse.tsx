@@ -141,7 +141,7 @@ export function ScenePulse({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold">
                         {milestone
-                          ? `City poster reached ${entry.milestone_percent}%`
+                          ? (cadence === 'monthly' ? `City poster reached ${entry.milestone_percent}%` : `City scene reached ${entry.milestone_percent}% of its ${cadence} goal`)
                           : `${entry.actions} verified ${source?.label ?? 'music activity'} contributions`}
                       </p>
                       <p className="text-xs text-muted-foreground">
