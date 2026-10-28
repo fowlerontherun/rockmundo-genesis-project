@@ -23,6 +23,22 @@ export function formatSceneTimeRemaining(endsAt: string, nowMs: number): string 
 }
 
 /**
+ * Find the earliest still-unhandled server cycle deadline. Consumers must
+ * remember handled IDs to avoid a re-fetch loop while cron rotates cycles.
+ */
+export function findNextSceneCycleExpiry(
+  cycles: readonly { id: string; ends_at: string }[],
+  handled: ReadonlySet<string>,
+): { id: string; endsAtMs: number } | null {
+  const pending = cycles
+    .filter((cycle) => !handled.has(cycle.id))
+    .map((cycle) => ({ id: cycle.id, endsAtMs: Date.parse(cycle.ends_at) }))
+    .filter((cycle) => Number.isFinite(cycle.endsAtMs))
+    .sort((a, b) => a.endsAtMs - b.endsAtMs || a.id.localeCompare(b.id));
+  return pending[0] ?? null;
+}
+
+/**
  * Low-frequency visual countdown. Always pair with the server-authored UTC
  * deadline: client clocks can be inaccurate and never establish eligibility.
  */
