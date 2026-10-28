@@ -12,6 +12,10 @@ declare
   v_venue uuid:=gen_random_uuid();
   v_gig uuid:=gen_random_uuid();
   v_outcome uuid:=gen_random_uuid();
+  v_gig_performer_only uuid:=gen_random_uuid();
+  v_outcome_performer_only uuid:=gen_random_uuid();
+  v_miscredited uuid;
+  v_second_review uuid;
   v_cycle uuid;
   v_weekly_cycle uuid;
   v_template uuid;
@@ -182,9 +186,74 @@ begin
       where id=v_review and status='applied' and applied_by='db-operator')
   then raise exception 'CONFIRMED_SCENE_CORRECTION_NOT_ATOMIC: %',v_result;end if;
 
+
+  -- Separate regression: only ONE musician's lineup was incorrect;
+  -- the gig itself was completed and the other performer earned their XP.
+  insert into public.gigs(id,venue_id,band_id,status)
+    values(v_gig_performer_only,v_venue,v_band,'completed');
+  insert into public.gig_outcomes(id,gig_id,band_id,completed_at)
+    values(v_outcome_performer_only,v_gig_performer_only,v_band,v_event);
+  insert into public.gig_performers(
+    gig_id,band_id,profile_id,lineup_status,performed_at
+  ) values
+    (v_gig_performer_only,v_band,v_profile,'performed',v_event-interval '15 minutes'),
+    (v_gig_performer_only,v_band,v_profile_two,'performed',v_event-interval '12 minutes');
+  insert into public.scene_contributions(
+    objective_id,account_id,profile_id,band_id,city_id,
+    source_type,source_event_id,source_completed_at,points
+  ) values
+    (v_obj,v_user,v_profile,v_band,v_city,
+      'verified_gig_performance',v_outcome_performer_only::text,v_event,1),
+    (v_weekly_obj,v_user,v_profile,v_band,v_city,
+      'verified_gig_performance',v_outcome_performer_only::text,v_event,1),
+    (v_weekly_obj,v_user_two,v_profile_two,v_band,v_city,
+      'verified_gig_performance',v_outcome_performer_only::text,v_event,1);
+
+  insert into public.scene_contributions(
+    objective_id,account_id,profile_id,band_id,city_id,
+    source_type,source_event_id,source_completed_at,points
+  ) values(v_obj,v_user_two,v_profile_two,v_band,v_city,
+    'verified_gig_performance',v_outcome_performer_only::text,v_event,1)
+  returning id into v_miscredited;
+
+  -- Only performer two has incorrect historical lineup evidence.
+  update public.gig_performers
+    set lineup_status='did_not_perform'
+    where gig_id=v_gig_performer_only and profile_id=v_profile_two;
+  if private.scene_contribution_source_valid(v_miscredited) then
+    raise exception 'INCORRECT_LINEUP_STILL_TREATED_AS_PERFORMED';
+  end if;
+  v_second_review:=private.scene_request_correction(
+    v_miscredited,'lineup-review-operator',
+    'Confirmed erroneous lineup attribution for one musician',
+    'scene-integrity-ci-case-two'
+  );
+  perform private.scene_decide_correction(v_second_review,'independent-lineup-reviewer',true);
+  v_result:=private.scene_apply_confirmed_correction(v_second_review,'db-operator');
+  if (v_result->>'credits_invalidated')::int<>2
+    or (v_result->>'cycles_affected')::int<>2
+    or (select count(*) from public.scene_contributions
+      where source_event_id=v_outcome_performer_only::text
+        and account_id=v_user_two and invalidated_at is not null)<>2
+    or (select count(*) from public.scene_contributions
+      where source_event_id=v_outcome_performer_only::text
+        and account_id=v_user and invalidated_at is null)<>2
+    or (select count(*) from private.scene_correction_affected
+      where review_id=v_second_review)<>2
+  then raise exception 'LINEUP_CORRECTION_AFFECTED_INNOCENT_PERFORMER: %',v_result;end if;
+
+  if private.scene_contribution_source_valid((
+    select id from public.scene_contributions
+    where source_event_id=v_outcome_performer_only::text
+      and account_id=v_user and invalidated_at is null
+    order by id limit 1
+  )) is not true then
+    raise exception 'LEGITIMATE_PERFORMER_NOT_VALID_AFTER_REVIEW';
+  end if;
+
   if exists(select 1 from public.scene_reward_grant_receipts)
   then raise exception 'CORRECTION_CREATED_XP_RECEIPT';end if;
-  raise notice 'Scene dual review, two performers across two cadences, paid-claim block and atomic mural invalidation passed';
+  raise notice 'Scene correction tests passed: full cancellation and one-performer-only invalidation across cadences';
 end;
 $$;
 rollback;
