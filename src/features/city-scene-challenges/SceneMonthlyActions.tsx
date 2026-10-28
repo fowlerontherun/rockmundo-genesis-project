@@ -22,7 +22,7 @@ const communityActivities = [
   },
   {
     title: 'Rehearse together',
-    description: 'Finish a verified band rehearsal to support your city's music scene.',
+    description: "Finish a verified band rehearsal to support your city's music scene.",
     route: '/rehearsals',
     button: 'Book rehearsal',
     Icon: Music2,
