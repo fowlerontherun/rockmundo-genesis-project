@@ -1,6 +1,6 @@
 # City Scene source correction operator runbook
 
-**Status:** Code and rollback-only CI verification. Do not use the manual application procedure on live player contributions until this migration and the integration suite have passed.
+**Status — 28 October 2026:** The operator-only migration `20261028113000_scene_operator_correction_workflow.sql` is installed on main Supabase, and its migration history is reconciled to the canonical GitHub filename. The baseline two-performer/two-cadence rollback-only PostgreSQL integration passed. All correction functions remain DBA-only; **no production review or contribution corrections have been performed**. An extra single-performer-preservation regression is tracked in PR #4656. Never perform a live correction without independently corroborated source evidence and the separate named reviewer required below.
 
 ## Why the review gate exists
 
