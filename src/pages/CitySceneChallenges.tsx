@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
+import { SceneLegacy } from '@/features/city-scene-challenges/SceneLegacy';
 import { SceneMonthlyActions } from '@/features/city-scene-challenges/SceneMonthlyActions';
 import { SceneCycleCountdown, findNextSceneCycleExpiry } from '@/features/city-scene-challenges/SceneCycleCountdown';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
@@ -345,6 +346,7 @@ export default function CitySceneChallenges() {
           )}
 
           <ScenePosterArchive cityId={board.city_id} cityName={board.city_name} refresh={refresh} />
+          <SceneLegacy cityId={board.city_id} cityName={board.city_name} refresh={refresh} />
 
           {monthly && (
             <section aria-label="City scene poster milestones" className="grid grid-cols-4 gap-2">
