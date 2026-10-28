@@ -104,6 +104,21 @@ begin
   -- Leadership transfer immediately revokes prior leader control.
   update public.bands set leader_id='30000000-0000-0000-0000-000000000033'
   where id='60000000-0000-0000-0000-000000000031';
+  -- Revocation is automatic: no separate request from the old or new leader
+  -- is required to hide the formerly consenting band from public rankings.
+  v:=public.get_city_scene_band_supporters('20000000-0000-0000-0000-000000000031','weekly',10);
+  if jsonb_array_length(v->'entries')<>1
+    or (v->'entries'->0->>'band_name')<>'The Quiet Ones'
+    or v::text like '%The Starlights%' then
+    raise exception 'Former leader consent survived transfer: %',v;
+  end if;
+  if exists(
+    select 1 from public.scene_band_leaderboard_opt_ins
+    where band_id='60000000-0000-0000-0000-000000000031' and enabled is true
+  ) then
+    raise exception 'Band consent not revoked transactionally';
+  end if;
+
   perform set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000031',true);
   v_denied:=false;
   begin
