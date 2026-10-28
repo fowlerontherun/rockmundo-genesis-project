@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sql = readFileSync(resolve(process.cwd(),
-  'supabase/migrations/20261028115500_scene_monthly_poster_archive.sql'), 'utf8');
+  'supabase/migrations/20261028113103_scene_monthly_poster_archive.sql'), 'utf8');
 const board = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
 
 describe('City Scene historic mural archive SQL contract', () => {
