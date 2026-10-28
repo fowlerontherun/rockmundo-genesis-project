@@ -26,6 +26,24 @@ alter table private.scene_correction_reviews enable row level security;
 revoke all on private.scene_correction_reviews
   from public,anon,authenticated,service_role;
 
+-- Preserve the complete set of affected credits; a verified gig can count
+-- for both daily and weekly cycles and multiple band performers.
+create table private.scene_correction_affected (
+  review_id uuid not null references private.scene_correction_reviews(id)
+    on delete restrict,
+  contribution_id uuid not null references public.scene_contributions(id)
+    on delete restrict,
+  cycle_id uuid not null references public.scene_challenge_cycles(id)
+    on delete restrict,
+  invalidated_at timestamptz not null default now(),
+  primary key(review_id,contribution_id)
+);
+create index scene_correction_affected_credit
+  on private.scene_correction_affected(contribution_id);
+alter table private.scene_correction_affected enable row level security;
+revoke all on private.scene_correction_affected
+  from public,anon,authenticated,service_role;
+
 -- Reassess CURRENT canonical evidence, not the player's present city/band.
 -- Do not mark ordinary travel or post-gig band departure as a false credit.
 create or replace function private.scene_contribution_source_valid(
@@ -196,6 +214,9 @@ declare
   v_sc public.scene_contributions%rowtype;
   v_cycle uuid;
   v_city uuid;
+  v_linked_cycles uuid[];
+  v_all_performers boolean:=false;
+  v_affected integer:=0;
   v_reconciled integer;
 begin
   if length(btrim(coalesce(p_applied_by,'')))<3 then
@@ -221,22 +242,102 @@ begin
     raise exception 'SCENE_CYCLE_OUTSIDE_CORRECTION_GRACE';
   end if;
 
-  -- Never silently claw back XP or invalidate a campaign with paid claims.
-  -- Finance must reconcile those cases separately before any correction.
-  if exists(
-    select 1 from public.scene_reward_grant_receipts receipt
-      join public.scene_reward_claims claim on claim.id=receipt.claim_id
-    where claim.cycle_id=v_cycle
-  ) then
-    raise exception 'SCENE_PAID_REWARDS_REQUIRE_FINANCE_RECONCILIATION';
-  end if;
   if private.scene_contribution_source_valid(v_sc.id) then
     raise exception 'SCENE_SOURCE_RESTORED_NO_INVALIDATION';
   end if;
 
-  update public.scene_contributions
-  set invalidated_at=now() where id=v_sc.id and invalidated_at is null;
-  if not found then raise exception 'SCENE_CREDIT_CONCURRENTLY_CHANGED'; end if;
+  -- A truly cancelled/voided gig invalidates all band performers for the
+  -- same gig outcome. A correction to ONE lineup member must not penalise
+  -- other legitimate performers.
+  if v_sc.source_type='verified_gig_performance' then
+    select not exists(
+      select 1 from public.gig_outcomes o
+        join public.gigs g on g.id=o.gig_id
+        join public.venues venue on venue.id=g.venue_id
+      where o.id=v_sc.source_event_id::uuid
+        and o.completed_at=v_sc.source_completed_at
+        and o.band_id=v_sc.band_id and g.band_id=v_sc.band_id
+        and venue.city_id=v_sc.city_id
+        and g.status='completed' and g.cancelled_at is null
+    ) into v_all_performers;
+  end if;
+
+  -- Lock all sibling credits and their reward claims in a deterministic
+  -- order. The same event can appear in multiple cadence cycles.
+  perform 1 from public.scene_contributions linked
+    where linked.invalidated_at is null
+      and linked.source_type=v_sc.source_type
+      and linked.source_event_id=v_sc.source_event_id
+      and linked.city_id=v_sc.city_id
+      and linked.band_id is not distinct from v_sc.band_id
+      and (v_all_performers or (
+        linked.account_id=v_sc.account_id
+        and linked.profile_id=v_sc.profile_id
+      ))
+    order by linked.id for update;
+
+  select array_agg(distinct cyc.id) into v_linked_cycles
+  from public.scene_contributions linked
+    join public.scene_challenge_objectives obj on obj.id=linked.objective_id
+    join public.scene_challenge_cycles cyc on cyc.id=obj.cycle_id
+  where linked.invalidated_at is null
+    and linked.source_type=v_sc.source_type
+    and linked.source_event_id=v_sc.source_event_id
+    and linked.city_id=v_sc.city_id
+    and linked.band_id is not distinct from v_sc.band_id
+    and (v_all_performers or (
+      linked.account_id=v_sc.account_id
+      and linked.profile_id=v_sc.profile_id
+    ));
+  if v_linked_cycles is null then
+    raise exception 'SCENE_CORRECTION_NO_ACTIVE_LINKED_CREDITS';
+  end if;
+  if exists(
+    select 1 from public.scene_challenge_cycles c
+    where c.id=any(v_linked_cycles)
+      and c.ends_at<=now()-interval '7 days'
+  ) then
+    raise exception 'SCENE_LINKED_CYCLE_OUTSIDE_GRACE_REQUIRES_ESCALATION';
+  end if;
+
+  -- Serialise against the XP payout worker, which also locks claims before
+  -- writing the wallet. No historical XP is ever debited here.
+  perform 1 from public.scene_reward_claims c
+    where c.cycle_id=any(v_linked_cycles)
+    order by c.entitled_at,c.id
+    for update;
+  if exists(
+    select 1 from public.scene_reward_grant_receipts receipt
+      join public.scene_reward_claims claim on claim.id=receipt.claim_id
+    where claim.cycle_id=any(v_linked_cycles)
+  ) then
+    raise exception 'SCENE_PAID_REWARDS_REQUIRE_FINANCE_RECONCILIATION';
+  end if;
+
+  with invalidated as (
+    update public.scene_contributions sc
+    set invalidated_at=now()
+    where sc.invalidated_at is null
+      and sc.source_type=v_sc.source_type
+      and sc.source_event_id=v_sc.source_event_id
+      and sc.city_id=v_sc.city_id
+      and sc.band_id is not distinct from v_sc.band_id
+      and (v_all_performers or (
+        sc.account_id=v_sc.account_id
+        and sc.profile_id=v_sc.profile_id
+      ))
+    returning sc.id,sc.objective_id
+  )
+  insert into private.scene_correction_affected(
+    review_id,contribution_id,cycle_id
+  )
+  select v_review.id,changed.id,obj.cycle_id
+  from invalidated changed
+  join public.scene_challenge_objectives obj on obj.id=changed.objective_id;
+  get diagnostics v_affected=row_count;
+  if v_affected<1 then
+    raise exception 'SCENE_CREDIT_CONCURRENTLY_CHANGED';
+  end if;
 
   -- Recompute objective, cycle and player-visible mural in this transaction.
   v_reconciled:=private.reconcile_scene_milestones(v_city);
@@ -245,7 +346,9 @@ begin
     where id=v_review.id;
   return jsonb_build_object(
     'review_id',v_review.id,'contribution_id',v_sc.id,'cycle_id',v_cycle,
-    'status','applied','mural_rows_changed',v_reconciled
+    'status','applied','credits_invalidated',v_affected,
+    'cycles_affected',array_length(v_linked_cycles,1),
+    'mural_rows_changed',v_reconciled
   );
 end;
 $$;
