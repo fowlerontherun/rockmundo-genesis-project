@@ -16,14 +16,14 @@ It returns one row with `launch_gate`, `launch_phase`, `checked_utc` and an `evi
 - **READY / ACTIVATION_WINDOW:** The monthly start date has arrived, but the first verified worker tick may not yet have produced eligible-city cycles. Check evidence rather than assuming a failure or inventing a monthly board.
 - **READY / POST_START_REVIEW:** At least one November cycle exists and baseline checks pass. Confirm per-city eligibility and created-objective counts separately; READY does **not** certify every city.
 - **WATCH:** Latest worker result is stale/unsuccessful, recent cron failures, jam scoring unexpectedly enabled, or no November monthly cycles by **2 November UTC**. Investigate before changing controls.
-- **BLOCKED:** Source or template misconfiguration, missing/incorrect cron schedule, duplicate November cycles, or an XP authorization/payout/receipt unexpectedly active. Do not bypass these controls to force launch.
+- **BLOCKED:** Source or template misconfiguration, missing/incorrect cron schedule, duplicate November cycles, a monthly cycle without exactly one objective, or an XP authorization/payout/receipt unexpectedly active. Do not bypass these controls to force launch.
 
 If the city has no recently active eligible account, the worker may correctly skip monthly generation. If monthly cycles are still missing on 2 November, inspect eligibility and cron history before changing any configuration.
 
 ## Check cadence
 
 1. **28–31 October:** Save a PRE_LAUNCH output as evidence. Expect 0 monthly cycles, a successful worker tick in the last 45 minutes, zero reward receipts, payouts OFF and no active reward approval.
-2. **1 November after first expected worker tick:** Re-run. Inspect `november_monthly_cycles` and `duplicate_monthly_groups`, verify the monthly template is enabled, and check live Scene boards. The worker runs every 15 minutes, not necessarily at midnight.
+2. **1 November after first expected worker tick:** Re-run. Inspect `november_monthly_cycles`, `duplicate_monthly_groups` and `monthly_cycles_with_wrong_objective_count`, verify the monthly template is enabled, and check live Scene boards. The worker runs every 15 minutes, not necessarily at midnight.
 3. **2 November:** Re-run. Investigate WATCH if no eligible monthly campaign was created; reconcile recently active characters, source health and actual cron results.
 4. **1 December:** Verify November cycles ended, historical Poster Wall reflects only persisted non-revoked stages, and reward policies remain unchanged until separately approved.
 
