@@ -119,6 +119,12 @@ The new operator-only, read-only `private.scene_replay_health_snapshot(30)` func
 
 The operator procedure and kill switch are in [SOURCE_REPLAY_RUNBOOK.md](SOURCE_REPLAY_RUNBOOK.md). This is a point-in-time health report, not an automatic alerting service. Operators should periodically check cron history and the private health snapshot rather than interpreting a due-but-not-yet-stale cursor as an outage.
 
+## UTC deadline refresh TypeScript regression — 28 October 2026
+
+City Scene frontend verification uncovered `TS2322` in `src/pages/CitySceneChallenges.tsx`: mixed Node/DOM types made both `ReturnType<typeof setTimeout>` and `ReturnType<typeof window.setTimeout>` resolve to the Node `Timeout` type, but the actual `window.setTimeout` call returns a numeric browser timer ID. The state variable now explicitly uses `number | undefined`, and the effect still clears the timer on unmount.
+
+The fix was committed directly on GitHub `main`. [PR #4671](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4671) merged the dedicated regression test after **City Scene Vitest and full TypeScript verification passed**. No scoring, database, economy or payout settings were changed. The latest production verification at 14:11 UTC found the 14:00 cron succeeded, replay healthy, 3 valid contributions, 2 mural milestones, 0 source mismatches and 0 XP grants.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
