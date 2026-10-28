@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
-import { usePublicFestivalLiveStatus } from "../application/useFestivalRuntime";
+import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 
 interface FestivalGroundsProps {
@@ -24,8 +24,18 @@ interface FestivalGroundsProps {
  */
 export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const live = usePublicFestivalLiveStatus(slug);
+  const experience = usePublicFestivalLiveExperience(slug);
   const verifiedLive = live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const raw = experience.data;
+  const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+  const verified = record?.festivalLaunchId === festivalLaunchId ? record : null;
+  const value = verified?.weather;
+  const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
+  const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
+  const weatherState = typeof weather?.state === "string" && Object.hasOwn(weatherNames, weather.state) ? weather.state : null;
+  const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
+    const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
@@ -69,7 +79,18 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
           Select a stage to discover its announced artists. This is a stage guide, not a walking map.
         </p>
       </div>
-      {stages.length === 0 ? (
+      <div className="rounded-xl border bg-card p-4" aria-label="Festival site weather">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "🌤️"}</span>
+          <div>
+            <h3 className="font-semibold">Festival site conditions</h3>
+            <p className="text-sm">{weatherState ? weatherNames[weatherState] : "Weather information unavailable"}</p>
+            {groundCondition && <p className="text-xs text-muted-foreground">Ground: {groundCondition.replaceAll("_", " ")}</p>}
+            <p className="text-xs text-muted-foreground">Festival runtime conditions, not a live forecast.</p>
+          </div>
+        </div>
+      </div>
+            {stages.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
