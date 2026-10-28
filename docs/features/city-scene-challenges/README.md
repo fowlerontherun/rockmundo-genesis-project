@@ -12,6 +12,8 @@ A community progression feature using daily, weekly and monthly verified city ob
 - [Live four-city pilot, scoring and scheduler — 27 Oct 2026](LIVE_PILOT_20261027.md)
 - [XP economy audit and rollout constraints — 27 Oct 2026](XP_ECONOMY_AUDIT_20261027.md)
 
+- [Verified late-event replay operations and safety controls](SOURCE_REPLAY_RUNBOOK.md)
+
 ## Implementation status — live daily/weekly pilot
 
 **27 October 2026:** The City Scene schema and follow-on verification/rollout migrations are deployed directly to RockMundo main Supabase. The current pilot includes **4 recently active cities**, **8 active cycles** (4 daily, 4 weekly), **24 objectives**, and verified gig, studio recording and band rehearsal scoring. The monthly mural campaign starts on **1 November 2026**, when a full calendar month is available.
