@@ -136,14 +136,13 @@ export default function CitySceneChallenges() {
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const handledCycleIds = useRef(new Set<string>());
-  const lastLoadedCity = useRef<string | undefined>(undefined);
+  const lastLoadedCity = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const initialCityLoad = lastLoadedCity.current !== cityId;
-    lastLoadedCity.current = cityId;
     // Refresh in place: do not remove the community board when a rollover or
     // scheduled refresh fetches new data. Owner details fail closed instead.
     if (initialCityLoad) {
@@ -170,7 +169,10 @@ export default function CitySceneChallenges() {
         const { data, error: rpcError } = await (supabase as any).rpc('get_city_scene_board', { p_city_id: cityId });
         if (rpcError) throw rpcError;
         if (!validBoard(data)) throw new Error('The city challenge board is not yet available.');
-        if (!cancelled) setBoard(data);
+        if (!cancelled) {
+          setBoard(data);
+          lastLoadedCity.current = cityId;
+        }
 
         // Optional owner-only totals. A failing personal RPC must not
         // prevent an otherwise healthy community board from rendering.
