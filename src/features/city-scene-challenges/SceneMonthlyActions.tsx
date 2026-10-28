@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Disc3, Guitar, Music2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { citySceneGigBookingHref } from './sceneCityGigLink';
 
 const communityActivities = [
   {
@@ -31,7 +32,7 @@ const communityActivities = [
 ] as const;
 
 /** The monthly objective combines server-verified activity types, not clicks or bookings. */
-export function SceneMonthlyActions() {
+export function SceneMonthlyActions({ cityId }: { cityId?: string }) {
   return (
     <section className="space-y-3" aria-label="Ways to support the monthly city mural">
       <div>
@@ -51,7 +52,7 @@ export function SceneMonthlyActions() {
               <p className="text-sm font-semibold">{title}</p>
               <p className="min-h-14 text-xs text-muted-foreground">{description}</p>
               <Button asChild variant="outline" size="sm" className="w-full">
-                <Link to={route}>{button}</Link>
+                <Link to={route === '/gig-booking' ? citySceneGigBookingHref(cityId) : route}>{button}</Link>
               </Button>
             </CardContent>
           </Card>
