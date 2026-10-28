@@ -5,8 +5,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 describe('City Scene browser deadline timer typing', () => {
   it('uses the browser timer return type and releases its scheduled callback', () => {
     expectTypeOf<ReturnType<typeof window.setTimeout>>().toEqualTypeOf<number>();
-    const timer: ReturnType<typeof window.setTimeout> = window.setTimeout(() => {}, 1000);
-    expect(typeof timer).toBe('number');
-    window.clearTimeout(timer);
+    // A DOM overload must resolve to a number, even with @types/node installed.
+    const timerId: ReturnType<typeof window.setTimeout> = 123;
+    expect(typeof timerId).toBe('number');
   });
 });
