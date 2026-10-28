@@ -69,6 +69,8 @@ export const useSaveFestivalTicketPlan = () => {
         [
           ["festival-company-setup"],
           ["public-festival"],
+          ["public-festival-tickets"],
+          ["festival-directory"],
           ["festival-ticket-products"],
           ["owned-festival-companies"],
           [
