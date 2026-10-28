@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sql = readFileSync(resolve(process.cwd(),
-  'supabase/migrations/20261028125200_scene_band_consent_leadership_revocation.sql'), 'utf8');
+  'supabase/migrations/20261028125640_scene_band_consent_leadership_revocation.sql'), 'utf8');
 const integration = readFileSync(resolve(process.cwd(),
   'supabase/tests/city_scene_band_supporters_integration.sql'), 'utf8');
 
