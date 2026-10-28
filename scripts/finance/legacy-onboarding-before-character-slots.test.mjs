@@ -8,12 +8,19 @@ const readMigration = name =>
 
 const onboarding = readMigration('20250925211737_handle_new_user_username_retry.sql');
 const characterSlots = readMigration('20261001090000_add_profile_character_slots.sql');
+const profileScopedSkills = readMigration('20260315090000_add_character_slots.sql');
 
-test('September signup runs against profiles before October character slots exist', async () => {
+test('September signup uses only the user-scoped skill and feed columns that exist before character slots', async () => {
   assert.doesNotMatch(onboarding, /\bslot_number\s*,|\bunlock_cost\s*,/);
   assert.match(characterSlots, /ADD COLUMN IF NOT EXISTS slot_number integer/);
   assert.match(characterSlots, /ADD COLUMN IF NOT EXISTS unlock_cost integer/);
   assert.match(characterSlots, /CREATE OR REPLACE FUNCTION public\.handle_new_user\(\)/);
+  assert.match(profileScopedSkills, /ADD COLUMN IF NOT EXISTS profile_id uuid/);
+  assert.match(profileScopedSkills, /ALTER TABLE public\.activity_feed ADD COLUMN IF NOT EXISTS profile_id uuid/);
+  assert.doesNotMatch(onboarding, /INSERT INTO public\.player_skills \(\s*user_id,\s*profile_id/);
+  assert.doesNotMatch(onboarding, /INSERT INTO public\.activity_feed \(user_id, profile_id/);
+  assert.match(onboarding, /ON CONFLICT \(user_id\) DO NOTHING/);
+  assert.match(onboarding, /ON CONFLICT \(profile_id\) DO UPDATE SET/);
 
   const db = new PGlite();
   try {
@@ -38,12 +45,12 @@ test('September signup runs against profiles before October character slots exis
         health integer, gender text, city_of_birth text, age integer
       );
       CREATE TABLE public.user_roles (user_id uuid, role text, PRIMARY KEY(user_id,role));
-      CREATE TABLE public.player_skills (user_id uuid, profile_id uuid UNIQUE, ${skillColumns});
+      CREATE TABLE public.player_skills (user_id uuid UNIQUE, ${skillColumns});
       CREATE TABLE public.fan_demographics (user_id uuid PRIMARY KEY);
-      CREATE TABLE public.activity_feed (user_id uuid, profile_id uuid, activity_type text, message text);
+      CREATE TABLE public.activity_feed (user_id uuid, activity_type text, message text);
       CREATE TABLE public.player_attributes (
-        user_id uuid CONSTRAINT player_attributes_user_id_key UNIQUE,
-        profile_id uuid, ${attributeColumns}
+        user_id uuid,
+        profile_id uuid UNIQUE, ${attributeColumns}
       );
       CREATE TABLE public.achievements (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, name text);
       CREATE TABLE public.player_achievements (
@@ -64,6 +71,10 @@ test('September signup runs against profiles before October character slots exis
     const { rows: skills } = await db.query(`SELECT guitar, vocals
       FROM public.player_skills`);
     assert.deepEqual(skills, [{ guitar: 5, vocals: 5 }]);
+    const { rows: activity } = await db.query(`SELECT activity_type, message
+      FROM public.activity_feed`);
+    assert.equal(activity.length, 1);
+    assert.equal(activity[0].activity_type, 'join');
     const { rows: roles } = await db.query(`SELECT role FROM public.user_roles`);
     assert.deepEqual(roles, [{ role: 'user' }]);
     const { rows: attributes } = await db.query(`SELECT physical_endurance, attribute_points
