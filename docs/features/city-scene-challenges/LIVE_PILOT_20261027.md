@@ -111,6 +111,14 @@ The **first live replay** at **12:17 UTC on 28 October** checked **11 authoritat
 
 For monitoring and the independent kill switch, see [SOURCE_REPLAY_RUNBOOK.md](SOURCE_REPLAY_RUNBOOK.md). Disabling `scene_source_replay_controls.enabled` stops the bounded lookback without suspending normal verified-action scoring.
 
+## Independent scheduled replay and health monitor — 28 October 2026
+
+The new operator-only, read-only `private.scene_replay_health_snapshot(30)` function was installed on the main Supabase database from `20261028133000_scene_replay_health_snapshot.sql`; its migration-history version was reconciled with GitHub `main`. It reports per-source `next_scan_at`, sweep totals, recovered contributions and overdue-scan warnings, without exposing player identifiers. The database access is service-role only. A rollback-only production test simulated an overdue gig replay cursor and returned `status='stalled'`, `sources_stale=1`, and `needs_attention=true` without persisting changes. [PR #4669](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4669) adds dedicated isolated PostgreSQL coverage of healthy/late/disabled states.
+
+**Observed automatic 13:30 UTC worker run:** `rockmundo-city-scene-verified-v1` job #157 succeeded in **393 ms** and performed the first independent scheduled replay after initial activation. Cumulative source counts became **6 gig events, 7 studio recordings and 10 rehearsals** checked (**23 total**; an increase of 12 over the first sweep). Cumulative **recovered contributions remained 0**. All three cursors advanced to `next_scan_at=14:30 UTC`; monitor status was `healthy` with no stale/pending sources. Player state remained **3 valid contributions**, **2 mural milestones**, **0 suspected source mismatches**. Reward policies, payout switch and XP receipts remained **OFF/0**.
+
+The operator procedure and kill switch are in [SOURCE_REPLAY_RUNBOOK.md](SOURCE_REPLAY_RUNBOOK.md). This is a point-in-time health report, not an automatic alerting service. Operators should periodically check cron history and the private health snapshot rather than interpreting a due-but-not-yet-stale cursor as an outage.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
