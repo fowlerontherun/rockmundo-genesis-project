@@ -140,6 +140,21 @@ export default function CitySceneChallenges() {
   const lastLoadedCity = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
+
+  // A failed rollover refresh must not leave yesterday's objectives looking
+  // earnable. Keep this clock independent of the network and worker cadence.
+  useEffect(() => {
+    const tick = () => setClockNow(Date.now());
+    const timer = window.setInterval(tick, 30_000);
+    window.addEventListener('focus', tick);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', tick);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,6 +293,7 @@ export default function CitySceneChallenges() {
   const current = board?.cycles.find((cycle) => cycle.cadence === active);
   const monthly = board?.cycles.find((cycle) => cycle.cadence === 'monthly');
   const myCurrent = personal?.cycles.find((cycle) => cycle.cycle_id === current?.id);
+  const currentExpired = current ? Number.isFinite(Date.parse(current.ends_at)) && clockNow >= Date.parse(current.ends_at) : false;
 
   return (
     <FMPageScaffold
@@ -407,6 +423,11 @@ export default function CitySceneChallenges() {
               </CardContent></Card>
             ) : (
               <>
+                {currentExpired && (
+                  <p role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                    This {active} challenge period has ended. These are the last confirmed results; new activities cannot earn points for it. The next period will appear after the server creates it.
+                  </p>
+                )}
                 <Card><CardContent className="space-y-3 py-5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-semibold"><Users className="h-5 w-5 text-primary" /> Shared city progress</div>
@@ -451,11 +472,11 @@ export default function CitySceneChallenges() {
                         <CardContent className="space-y-3">
                           <p className="min-h-10 text-sm text-muted-foreground">{objective.description}</p>
                           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-                            <span>{objective.status === 'completed' ? 'Completed' : 'Community progress'}</span>
+                            <span>{objective.status === 'completed' ? 'Completed' : currentExpired ? 'Period ended' : 'Community progress'}</span>
                             <span className="tabular-nums">{objective.earned_points} / {objective.target_points}</span>
                           </div>
                           <Progress value={percent(objective.earned_points, objective.target_points)} />
-                          {action && (
+                          {action && !currentExpired && (
                             <Button asChild variant="outline" size="sm" className="w-full">
                               <Link to={action.destination}>{action.buttonText}</Link>
                             </Button>
