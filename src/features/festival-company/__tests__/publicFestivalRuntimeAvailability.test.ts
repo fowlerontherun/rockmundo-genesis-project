@@ -5,6 +5,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import { mapFestivalRuntimeError } from "../data/festivalRuntimeRepository";
+import { publicRuntimePolling } from "../application/useFestivalRuntime";
 
 describe("public festival runtime availability", () => {
   it("marks undeployed live-status RPC as unavailable without hiding the reason", () => {
@@ -30,7 +31,19 @@ describe("public festival runtime availability", () => {
     expect(err.message).not.toBe("festival_public_runtime_not_deployed");
   });
 
-  it("preserves existing stale and forbidden error mapping", () => {
+  it("stops repeated missing-RPC polling and retries, but retains transient recovery", () => {
+    const missing = new Error("festival_public_runtime_not_deployed");
+    const transient = new Error("network unavailable");
+    expect(publicRuntimePolling.retry(0, missing)).toBe(false);
+    expect(publicRuntimePolling.retry(0, transient)).toBe(true);
+    expect(publicRuntimePolling.retry(2, transient)).toBe(false);
+    expect(publicRuntimePolling.refetchInterval({ state: { error: missing } })).toBe(false);
+    expect(publicRuntimePolling.refetchInterval({ state: { error: transient } })).toBe(15_000);
+    expect(publicRuntimePolling.refetchOnWindowFocus({ state: { error: missing } })).toBe(false);
+    expect(publicRuntimePolling.refetchOnWindowFocus({ state: { error: transient } })).toBe(true);
+  });
+
+    it("preserves existing stale and forbidden error mapping", () => {
     expect(mapFestivalRuntimeError("festival_runtime_stale").message).toBe("festival_runtime_stale");
     expect(mapFestivalRuntimeError("festival_runtime_forbidden").message).toBe("festival_runtime_forbidden");
   });
