@@ -23,6 +23,11 @@ describe('City Scene background refresh contract', () => {
     expect(page).toContain("window.removeEventListener('focus', refreshIfStale)");
     expect(page).toContain('window.clearInterval(timer)');
     expect(page).toContain('handledCycleIds.current.add(next.id)');
+    // Browser window.setTimeout returns a numeric ID even when Node types are
+    // present in the shared TypeScript project. The timer must be clearable.
+    expect(page).toContain('let timeout: ReturnType<typeof window.setTimeout> | undefined;');
+    expect(page).toContain('timeout = window.setTimeout(checkDeadline,');
+    expect(page).toContain('window.clearTimeout(timeout)');
   });
 
   it('does not award points or override the server response when a deadline arrives', () => {
