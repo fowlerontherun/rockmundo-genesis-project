@@ -261,7 +261,7 @@ export default function CitySceneChallenges() {
     if (!board || board.city_id !== cityId) return;
     const next = findNextSceneCycleExpiry(board.cycles, handledCycleIds.current);
     if (!next) return;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let timeout: ReturnType<typeof window.setTimeout> | undefined;
     const checkDeadline = () => {
       const wait = next.endsAtMs - Date.now() + 1_500;
       if (wait > 0) {
