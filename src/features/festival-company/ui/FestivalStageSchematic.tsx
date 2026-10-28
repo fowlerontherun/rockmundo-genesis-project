@@ -1,8 +1,10 @@
 import type { FestivalPublicStage } from "../domain/festivalLaunch";
+import type { AttendanceBand } from "../domain/festivalRuntime";
 
 interface FestivalStageSchematicProps {
   stages: FestivalPublicStage[];
   selectedStageId: string | undefined;
+  attendanceBand?: AttendanceBand | null;
   onSelectStage: (id: string) => void;
 }
 
@@ -10,7 +12,17 @@ interface FestivalStageSchematicProps {
  * A visual *directory*, not an actual site map. Coordinates are deliberately
  * derived from list order and may never be used for wayfinding or travel times.
  */
-export function FestivalStageSchematic({ stages, selectedStageId, onSelectStage }: FestivalStageSchematicProps) {
+const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number }> = {
+  quiet: { label: "Quiet", intensity: 1 },
+  building: { label: "Crowds building", intensity: 2 },
+  busy: { label: "Busy", intensity: 3 },
+  very_busy: { label: "Very busy", intensity: 4 },
+  near_capacity: { label: "Near capacity", intensity: 5 },
+  full: { label: "At capacity", intensity: 5 },
+};
+
+export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, onSelectStage }: FestivalStageSchematicProps) {
+  const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 via-green-900/10 to-violet-950/30 p-4 sm:p-6">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50" style={{
@@ -22,6 +34,20 @@ export function FestivalStageSchematic({ stages, selectedStageId, onSelectStage 
           <p className="text-xs text-muted-foreground">Illustrative arrangement only — not a walking map</p>
         </div>
         <span className="rounded-full border bg-background/80 px-3 py-1 text-xs">{stages.length} stages</span>
+      </div>
+      <div className="relative mb-5 rounded-xl border bg-background/75 p-3" role="status">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold">Festival-wide crowd atmosphere</span>
+          <span className="text-sm">{atmosphere ? atmosphere.label : "Attendance not available"}</span>
+        </div>
+        {atmosphere ? (
+          <div className="mt-2 flex gap-1" role="img" aria-label={`Reported festival attendance: ${atmosphere.label}`}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} aria-hidden="true" className={`h-3 flex-1 rounded-sm ${index < atmosphere.intensity ? "bg-emerald-500/80" : "bg-muted"}`} />
+            ))}
+          </div>
+        ) : null}
+        <p className="mt-2 text-xs text-muted-foreground">Festival-wide reported attendance band. This does not show individual stage crowd sizes.</p>
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Select a festival stage">
         {stages.map((stage, index) => (
