@@ -83,6 +83,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_late_event_reconciliation_integration.sql
       - name: Confirm corrected gig, recording and rehearsal evidence is flagged without score mutation
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_source_integrity_integration.sql
+      - name: Verify dual-review source correction, finance safety and mural invalidation
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_correction_review_integration.sql
       - name: Exercise real XP grant and replay transaction
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
       - name: Verify opt-in City Scene leaderboard in PostgreSQL
