@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sql = readFileSync(
-  resolve(process.cwd(), 'supabase/migrations/20261028073800_scene_opt_in_leaderboard.sql'), 'utf8',
+  resolve(process.cwd(), 'supabase/migrations/20261028074234_scene_opt_in_leaderboard.sql'), 'utf8',
 );
 const page = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
 
