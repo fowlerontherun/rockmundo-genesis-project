@@ -87,7 +87,7 @@ select
                        and expected_command from worker), false)
       or (select duplicate_groups from duplicates) > 0
       or (select payouts_enabled or enabled_policies > 0
-                       or live_reward_approval or active_xp_schedules > 0 from rewards)
+                       or grant_receipts > 0 or live_reward_approval or active_xp_schedules > 0 from rewards)
       then 'BLOCKED'
     when not coalesce((select status = 'succeeded'
                        and start_time >= now() - interval '45 minutes'
