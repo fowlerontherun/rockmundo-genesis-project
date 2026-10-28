@@ -1,6 +1,10 @@
 -- Ensure onboarding can gracefully handle username collisions during signup.
 -- Character slot columns do not exist until the October 1 migration; that
 -- migration replaces this function after adding slot metadata.
+-- The September skill and activity tables are user-scoped; their profile_id
+-- columns are added by the March 2026 migration, so keep this historical
+-- registration function on user_id and the then-existing attributes profile
+-- index. Current per-character registration is defined by later migrations.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -80,7 +84,6 @@ BEGIN
 
   INSERT INTO public.player_skills (
     user_id,
-    profile_id,
     guitar,
     vocals,
     drums,
@@ -95,7 +98,6 @@ BEGIN
   )
   VALUES (
     NEW.id,
-    new_profile.id,
     5,
     5,
     5,
@@ -108,16 +110,15 @@ BEGIN
     5,
     5
   )
-  ON CONFLICT (profile_id) DO NOTHING;
+  ON CONFLICT (user_id) DO NOTHING;
 
   INSERT INTO public.fan_demographics (user_id)
   VALUES (NEW.id)
   ON CONFLICT (user_id) DO NOTHING;
 
-  INSERT INTO public.activity_feed (user_id, profile_id, activity_type, message)
+  INSERT INTO public.activity_feed (user_id, activity_type, message)
   VALUES (
     NEW.id,
-    new_profile.id,
     'join',
     'Welcome to Rockmundo! Your musical journey begins now.'
   );
@@ -181,7 +182,7 @@ BEGIN
       0,
       0
     )
-    ON CONFLICT ON CONSTRAINT player_attributes_user_id_key DO UPDATE SET
+    ON CONFLICT (profile_id) DO UPDATE SET
       profile_id = EXCLUDED.profile_id,
       physical_endurance = EXCLUDED.physical_endurance,
       mental_focus = EXCLUDED.mental_focus,
