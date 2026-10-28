@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const sql = readFileSync(
-  resolve(process.cwd(), 'supabase/migrations/20261028062600_scene_owner_activity_timeline.sql'),
+  resolve(process.cwd(), 'supabase/migrations/20261028063102_scene_owner_activity_timeline.sql'),
   'utf8',
 );
 const page = readFileSync(
