@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
+import { usePublicFestivalLiveStatus } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 
 interface FestivalGroundsProps {
+  slug: string;
+  festivalLaunchId: string;
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
@@ -19,7 +22,9 @@ interface FestivalGroundsProps {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+  const live = usePublicFestivalLiveStatus(slug);
+  const verifiedLive = live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   useEffect(() => {
@@ -36,6 +41,15 @@ export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, 
   const scheduledNow = publishedActs.find((act) => Date.parse(act.startsAt!) <= currentTime && currentTime < Date.parse(act.endsAt!));
   const scheduledNext = publishedActs.find((act) => Date.parse(act.startsAt!) > currentTime);
   const scheduleLabel = scheduledNow ? "Scheduled now" : scheduledNext ? "Next scheduled set" : "No further published sets";
+
+  const livePerformances = verifiedLive && selectedStage
+    ? verifiedLive.performances.filter((entry) => entry.stageName === selectedStage.name)
+    : [];
+  const livePerformance = livePerformances.find((entry) => entry.status === "live" || entry.status === "starting");
+  const delayedPerformance = livePerformances.find((entry) => entry.status === "delayed");
+  const cancelledPerformances = livePerformances.filter((entry) => entry.status === "cancelled");
+  const liveStatus = livePerformance ?? delayedPerformance;
+  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed" : "No confirmed live performance";
 
   const facilities = [
     { label: "Travel & arrival", icon: "🚌", details: visitorInformation.travel },
@@ -71,6 +85,19 @@ export function FestivalGrounds({ stages, lineup, timezone, visitorInformation, 
                   <p className="mt-1 text-xs text-muted-foreground">Based on published timetable, not live stage confirmation.</p>
                 </>
               ) : <p className="mt-1 text-sm text-muted-foreground">Check back for programme updates.</p>}
+            </div>
+            <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
+              <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
+              {live.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : live.isError ? (
+                <p className="mt-1 text-sm">Official live updates are unavailable. The schedule below may have changed.</p>
+              ) : !verifiedLive ? <p className="mt-1 text-sm">No verified live status for this edition.</p> : (
+                <>
+                  <p className="mt-1 font-semibold">{liveStatusLabel}</p>
+                  {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
+                  {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
+                </>
+              )}
             </div>
             <h4 className="mt-5 font-semibold">Announced artists</h4>
             {acts.length ? (
