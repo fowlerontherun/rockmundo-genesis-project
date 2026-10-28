@@ -8,6 +8,7 @@ export interface ScenePosterProps {
   earnedPoints: number;
   targetPoints: number;
   unlockedMilestones?: readonly number[];
+  archived?: boolean;
 }
 
 /**
@@ -21,6 +22,7 @@ export function ScenePoster({
   earnedPoints,
   targetPoints,
   unlockedMilestones,
+  archived = false,
 }: ScenePosterProps) {
   const stage = getConfirmedScenePosterStage(unlockedMilestones, earnedPoints, targetPoints);
   const progress = targetPoints > 0
@@ -63,7 +65,7 @@ export function ScenePoster({
             {campaignTitle}
           </h2>
           <p className="mt-3 text-sm text-purple-100">
-            {stage === 100 ? 'Scene complete — this poster belongs to your city!' : 'Make music. Support artists. Reveal your city poster.'}
+            {stage === 100 ? 'Scene complete — this poster belongs to your city!' : archived ? 'A lasting record of the music your city created together.' : 'Make music. Support artists. Reveal your city poster.'}
           </p>
         </div>
 
