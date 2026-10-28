@@ -60,6 +60,17 @@ with
       group by city_id, cadence, starts_at having count(*) > 1
     ) duplicates
   ),
+  bad_monthly_objectives as (
+    select count(*) as cycle_count from (
+      select cc.id
+      from public.scene_challenge_cycles cc
+      left join public.scene_challenge_objectives ob on ob.cycle_id = cc.id
+      where cc.cadence = 'monthly'
+        and cc.starts_at >= timestamptz '2026-11-01 00:00:00+00'
+        and cc.starts_at < timestamptz '2026-12-01 00:00:00+00'
+      group by cc.id having count(ob.id) <> 1
+    ) invalid_objective_count
+  ),
   existing as (
     select
       count(*) filter (where cadence = 'daily') as daily,
@@ -86,6 +97,7 @@ select
       or not coalesce((select active and schedule = '*/15 * * * *'
                        and expected_command from worker), false)
       or (select duplicate_groups from duplicates) > 0
+      or (select cycle_count from bad_monthly_objectives) > 0
       or (select payouts_enabled or enabled_policies > 0
                        or grant_receipts > 0 or live_reward_approval or active_xp_schedules > 0 from rewards)
       then 'BLOCKED'
@@ -121,6 +133,7 @@ select
     'weekly_active_cycles', (select weekly from existing),
     'november_monthly_cycles', (select cycle_count from monthly),
     'duplicate_monthly_groups', (select duplicate_groups from duplicates),
+    'monthly_cycles_with_wrong_objective_count', (select cycle_count from bad_monthly_objectives),
     'payouts_enabled', (select payouts_enabled from rewards),
     'enabled_reward_policies', (select enabled_policies from rewards),
     'xp_grant_receipts', (select grant_receipts from rewards),
