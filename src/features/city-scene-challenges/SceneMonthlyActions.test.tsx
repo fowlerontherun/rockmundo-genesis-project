@@ -18,7 +18,10 @@ describe('Monthly City Scene launch pathways', () => {
 
   it('uses real monthly objective and non-user-controlled, server-verified sources', () => {
     const page = readFileSync(resolve(process.cwd(), 'src/pages/CitySceneChallenges.tsx'), 'utf8');
-    expect(page).toContain("active === 'monthly' && <SceneMonthlyActions />");
+    expect(page).toContain("active === 'monthly' && !currentExpired && <SceneMonthlyActions />");
+    expect(page).toContain('action && !currentExpired');
+    expect(page).toContain("? 'at close · ended' : 'complete'");
+    expect(page).toContain('clockNow >= Date.parse(current.ends_at)');
     expect(page).toContain('<SceneCycleCountdown endsAt={current.ends_at} />');
     expect(page).toContain('handledCycleIds.current.add(next.id)');
     expect(page).toContain('findNextSceneCycleExpiry(board.cycles, handledCycleIds.current)');
