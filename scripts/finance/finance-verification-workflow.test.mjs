@@ -35,6 +35,24 @@ test('finance workflow retains every A4 release check in dependency order', () =
   assert.match(workflow, /if: always\(\)[\s\S]*supabase stop --no-backup/);
 });
 
+test('finance stack startup retries only registry throttling without skipping SQL gates', () => {
+  const workflow = read('.github/workflows/finance-verification.yml');
+  const start = workflow.slice(
+    workflow.indexOf('      - name: Start local Supabase stack'),
+    workflow.indexOf('      - name: Export local database URL'),
+  );
+  assert.ok(start.startsWith('      - name: Start local Supabase stack'));
+  assert.match(start, /for registry in public\.ecr\.aws ghcr\.io docker\.io; do/);
+  assert.match(start, /SUPABASE_INTERNAL_IMAGE_REGISTRY="\$registry" supabase start --debug/);
+  assert.match(start, /if ! grep -Eqi 'toomanyrequests/);
+  assert.match(start, /supabase stop --no-backup \|\| true/);
+  assert.match(start, /SUPABASE_STARTED=true/);
+  assert.match(start, /exit 1/);
+  assert.doesNotMatch(start, /continue-on-error|\|\| true\s*\|\s*tee/);
+  assert.ok(workflow.indexOf('      - name: Reset migrated test database') >
+    workflow.indexOf('      - name: Start local Supabase stack'));
+});
+
 test('database gate executes the A1 through A4 harnesses and rejects false assertions', () => {
   const runner = read('scripts/finance/run-db-gate.sh');
   const harnesses = [
