@@ -99,6 +99,18 @@ Two additive migrations are deployed directly to main Supabase and registered wi
 
 The isolated PostgreSQL late-event test passed in GitHub CI. Focused assertion follow-up is tracked in PR #4605. Separate provenance diagnostics/replay integration is tracked in PR #4606. No reward policies or XP payouts were enabled by these updates.
 
+## Bounded late-event recovery — live 28 October 2026
+
+[PR #4659](https://github.com/fowlerontherun/rockmundo-genesis-project/pull/4659) has merged and both dedicated City Scene verification workflows passed, including PostgreSQL migrations/integration, scoped feature tests and TypeScript checks. General repository CI separately remains a broader gate.
+
+The guarded `20261028121000_scene_late_source_replay.sql` migration was applied directly to main Supabase, and migration history aligned with the exact filename. It created per-source bounded lookback cursors, secure replay controls and three completion-time indexes. Only the existing 15-minute verified-action worker calls the replay function. No new cron or XP grant route was installed.
+
+After verifying that controls were initially OFF, source permission gates were service-only, recent candidate volume was bounded (3 gigs, 3 recordings, 5 rehearsals), the provenance audit was clean and all XP reward switches remained OFF, the replay feature was deliberately enabled in production.
+
+The **first live replay** at **12:17 UTC on 28 October** checked **11 authoritative music events**, recovered **0 additional contributions**, and did not change the existing 3 credited contributions or 2 mural milestones. A second immediate worker tick rechecked **0 events**, demonstrating that the replay cooldown was active. Next per-source scan was scheduled for **13:17 UTC** via the existing 15-minute worker (first eligible cron tick at or after that time). XP claims, payout receipts and granted XP remain zero.
+
+For monitoring and the independent kill switch, see [SOURCE_REPLAY_RUNBOOK.md](SOURCE_REPLAY_RUNBOOK.md). Disabling `scene_source_replay_controls.enabled` stops the bounded lookback without suspending normal verified-action scoring.
+
 ## Follow-up gates
 
 1. Keep monitoring `cron.job_run_details` for worker failures and review the real activity scoring rate by city.
