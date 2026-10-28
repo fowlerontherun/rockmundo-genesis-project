@@ -11,6 +11,7 @@ import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
 import { SceneLegacy } from '@/features/city-scene-challenges/SceneLegacy';
 import { SceneMonthlyActions } from '@/features/city-scene-challenges/SceneMonthlyActions';
+import { SceneDiscovery } from '@/features/city-scene-challenges/SceneDiscovery';
 import { SceneCycleCountdown, findNextSceneCycleExpiry } from '@/features/city-scene-challenges/SceneCycleCountdown';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
 import { SceneLeaderboard } from '@/features/city-scene-challenges/SceneLeaderboard';
@@ -361,6 +362,7 @@ export default function CitySceneChallenges() {
             </Card>
           )}
 
+          <SceneDiscovery cityId={board.city_id} cityName={board.city_name} />
           <ScenePosterArchive cityId={board.city_id} cityName={board.city_name} refresh={refresh} />
           <SceneLegacy cityId={board.city_id} cityName={board.city_name} refresh={refresh} />
 
