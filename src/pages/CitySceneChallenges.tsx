@@ -136,12 +136,24 @@ export default function CitySceneChallenges() {
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const handledCycleIds = useRef(new Set<string>());
+  const lastLoadedCity = useRef<string | undefined>(undefined);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const initialCityLoad = lastLoadedCity.current !== cityId;
+    lastLoadedCity.current = cityId;
+    // Refresh in place: do not remove the community board when a rollover or
+    // scheduled refresh fetches new data. Owner details fail closed instead.
+    if (initialCityLoad) {
+      setLoading(true);
+      setBoard(null);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
-    setBoard(null);
+    setRefreshError(false);
     setPersonal(null);
     setMyRewards(null);
     setCredits(null);
@@ -197,14 +209,46 @@ export default function CitySceneChallenges() {
           // Reward display is optional during gradual database rollout.
         }
       } catch {
-        if (!cancelled) setError('City Scene Challenges are not available yet. Please try again later.');
+        if (!cancelled) {
+          if (initialCityLoad) {
+            setError('City Scene Challenges are not available yet. Please try again later.');
+          } else {
+            setRefreshError(true);
+          }
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     })();
 
     return () => { cancelled = true; };
   }, [cityId, refresh]);
+
+  // A quiet, low-frequency refetch lets a new monthly cycle appear after the
+  // 15-minute verified-worker tick even when the board stayed open at midnight.
+  // Hidden tabs do not poll; returning to a long-idle tab refreshes once.
+  useEffect(() => {
+    if (!cityId) return;
+    let lastRefreshAt = Date.now();
+    const refreshIfStale = () => {
+      if (document.visibilityState === 'hidden') return;
+      const now = Date.now();
+      if (now - lastRefreshAt < 15 * 60_000) return;
+      lastRefreshAt = now;
+      setRefresh((n) => n + 1);
+    };
+    const timer = window.setInterval(refreshIfStale, 60_000);
+    window.addEventListener('focus', refreshIfStale);
+    document.addEventListener('visibilitychange', refreshIfStale);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshIfStale);
+      document.removeEventListener('visibilitychange', refreshIfStale);
+    };
+  }, [cityId]);
 
   // UTC cycle boundaries are authoritative on the server. When the earliest
   // displayed cycle expires, re-fetch once and let the periodic worker create
@@ -239,8 +283,8 @@ export default function CitySceneChallenges() {
       icon={Music2}
       backTo={cityId ? `/cities/${cityId}` : '/cities'}
       headerActions={
-        <Button variant="outline" size="sm" disabled={loading} onClick={() => setRefresh((n) => n + 1)}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        <Button variant="outline" size="sm" disabled={loading || refreshing} onClick={() => setRefresh((n) => n + 1)}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       }
     >
@@ -255,6 +299,11 @@ export default function CitySceneChallenges() {
         </CardContent></Card>
       ) : board ? (
         <div className="space-y-5">
+          {refreshError && (
+            <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm text-muted-foreground">
+              We couldn't refresh the scene yet. Showing the last confirmed city progress; try Refresh again.
+            </p>
+          )}
           <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 px-5 py-6 text-white sm:px-8">
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/25" aria-hidden="true">
               <Music2 className="h-24 w-24 sm:h-32 sm:w-32" />
