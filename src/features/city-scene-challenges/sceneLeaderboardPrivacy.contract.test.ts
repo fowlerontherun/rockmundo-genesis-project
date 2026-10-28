@@ -37,7 +37,7 @@ describe('City Scene supporter leaderboard SQL safety', () => {
     expect(sql).toContain('viewer_profile.user_id=v_viewer');
     expect(sql).toContain('row_number() over');
     expect(sql).toContain('eligible.account_id asc');
-    expect(sql).toContain('r.rank <= p_limit');
+    expect(sql).toContain('where rank <= p_limit');
     expect(sql).toContain('p_limit > 20');
   });
 

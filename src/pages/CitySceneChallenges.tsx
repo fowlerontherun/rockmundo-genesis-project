@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
 import { SceneLeaderboard } from '@/features/city-scene-challenges/SceneLeaderboard';
+import { SceneBandSupporters } from '@/features/city-scene-challenges/SceneBandSupporters';
 import { SceneActivityTimeline, isSceneActivityCredits } from '@/features/city-scene-challenges/SceneActivityTimeline';
 import type { SceneActivityCredit } from '@/features/city-scene-challenges/SceneActivityTimeline';
 import type { SceneCadence } from '@/features/city-scene-challenges/sceneRules';
@@ -383,6 +384,7 @@ export default function CitySceneChallenges() {
           </section>
           <ScenePulse cityId={board.city_id} cadence={active} refresh={refresh} />
           <SceneLeaderboard cityId={board.city_id} cadence={active} refresh={refresh} />
+          <SceneBandSupporters cityId={board.city_id} cadence={active} refresh={refresh} />
           <SceneActivityTimeline credits={credits} />
           {myRewards && myRewards.length > 0 && (
             <section aria-label="Your City Scene XP rewards" className="space-y-3">

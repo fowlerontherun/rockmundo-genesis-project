@@ -87,6 +87,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_xp_grant_staging_harness.sql
       - name: Verify opt-in City Scene leaderboard in PostgreSQL
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_leaderboard_integration.sql
+      - name: Verify band scene consent and leader safety in PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_band_supporters_integration.sql
       - name: Verify transaction rollback preserved payout safety
         run: |
           psql -X -v ON_ERROR_STOP=1 <<'SQL'
