@@ -76,7 +76,9 @@ export function getFestivalPublicStageCrowds(
     if (!matches || matches.length !== 1 || counts.get(value.stageName) !== 1) continue;
     if (!isCrowdBand(value.crowdBand) || !isCrowdMood(value.mood)) continue;
 
-    results[matches[0]] = {
+    const stageId = matches[0];
+    if (!stageId) continue;
+    results[stageId] = {
       crowdBand: value.crowdBand,
       mood: value.mood,
     };
