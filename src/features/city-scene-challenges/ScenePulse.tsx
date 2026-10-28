@@ -46,7 +46,7 @@ export function isScenePulse(value: unknown, cityId: string, cadence: SceneCaden
     return entry.kind === 'activity' &&
       typeof entry.action_type === 'string' &&
       Object.prototype.hasOwnProperty.call(sourceLabels, entry.action_type) &&
-      Number.isInteger(entry.actions) && (entry.actions ?? 0) >= 3 &&
+      typeof entry.actions === 'number' && Number.isInteger(entry.actions) && entry.actions >= 3 &&
       entry.milestone_percent === null;
   });
 }
