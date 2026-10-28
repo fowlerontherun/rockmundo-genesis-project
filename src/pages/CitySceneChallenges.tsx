@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalendarDays, Clock3, Disc3, Music2, RefreshCw, Trophy, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
+import { SceneMonthlyActions } from '@/features/city-scene-challenges/SceneMonthlyActions';
+import { SceneCycleCountdown, findNextSceneCycleExpiry } from '@/features/city-scene-challenges/SceneCycleCountdown';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
 import { SceneLeaderboard } from '@/features/city-scene-challenges/SceneLeaderboard';
 import { SceneBandSupporters } from '@/features/city-scene-challenges/SceneBandSupporters';
@@ -133,6 +135,7 @@ export default function CitySceneChallenges() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const handledCycleIds = useRef(new Set<string>());
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +206,28 @@ export default function CitySceneChallenges() {
     return () => { cancelled = true; };
   }, [cityId, refresh]);
 
+  // UTC cycle boundaries are authoritative on the server. When the earliest
+  // displayed cycle expires, re-fetch once and let the periodic worker create
+  // the next cycle. Track handled IDs to prevent loops during cron delay or
+  // when the device clock differs from server time.
+  useEffect(() => {
+    if (!board || board.city_id !== cityId) return;
+    const next = findNextSceneCycleExpiry(board.cycles, handledCycleIds.current);
+    if (!next) return;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const checkDeadline = () => {
+      const wait = next.endsAtMs - Date.now() + 1_500;
+      if (wait > 0) {
+        timeout = window.setTimeout(checkDeadline, Math.min(wait, 60 * 60 * 1_000));
+      } else {
+        handledCycleIds.current.add(next.id);
+        setRefresh((n) => n + 1);
+      }
+    };
+    checkDeadline();
+    return () => { if (timeout !== undefined) window.clearTimeout(timeout); };
+  }, [board, cityId]);
+
   const current = board?.cycles.find((cycle) => cycle.cadence === active);
   const monthly = board?.cycles.find((cycle) => cycle.cadence === 'monthly');
   const myCurrent = personal?.cycles.find((cycle) => cycle.cycle_id === current?.id);
@@ -259,7 +284,9 @@ export default function CitySceneChallenges() {
                 <div>
                   <p className="font-semibold">The monthly scene mural is being prepared</p>
                   <p className="text-sm text-muted-foreground">
-                    It will unlock alongside verified community challenges. No points or rewards are available yet.
+                    {Date.now() < Date.parse('2026-11-01T00:00:00Z')
+                      ? 'The first full monthly mural is scheduled from 1 November 2026 UTC. Daily and weekly challenges are already live.'
+                      : 'The monthly mural starts when this city receives its verified monthly challenge. Daily and weekly contributions remain available.'}
                   </p>
                 </div>
               </CardContent>
@@ -309,9 +336,12 @@ export default function CitySceneChallenges() {
                 <h3 className="text-xl font-bold">{cadences.find((entry) => entry.key === active)?.title} scene challenges</h3>
                 <p className="text-sm text-muted-foreground">{cadences.find((entry) => entry.key === active)?.description}</p>
               </div>
-              {current && <Badge variant="outline" className="gap-1">
-                <Clock3 className="h-3 w-3" /> {formatEnd(current.ends_at)}
-              </Badge>}
+              {current && <div className="flex flex-wrap items-center gap-2">
+                <SceneCycleCountdown endsAt={current.ends_at} />
+                <Badge variant="outline" className="gap-1">
+                  <Clock3 className="h-3 w-3" /> {formatEnd(current.ends_at)}
+                </Badge>
+              </div>}
             </div>
 
             {!current ? (
@@ -382,6 +412,7 @@ export default function CitySceneChallenges() {
                     );
                   })}
                 </div>
+                {active === 'monthly' && <SceneMonthlyActions />}
               </>
             )}
           </section>
