@@ -1,10 +1,11 @@
 import type { FestivalPublicStage } from "../domain/festivalLaunch";
-import type { AttendanceBand } from "../domain/festivalRuntime";
+import type { AttendanceBand, FestivalPublicLiveStatus } from "../domain/festivalRuntime";
 
 interface FestivalStageSchematicProps {
   stages: FestivalPublicStage[];
   selectedStageId: string | undefined;
   attendanceBand?: AttendanceBand | null;
+  performances?: FestivalPublicLiveStatus["performances"];
   onSelectStage: (id: string) => void;
 }
 
@@ -21,7 +22,7 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, performances = [], onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   return (
     <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 via-green-900/10 to-violet-950/30 p-4 sm:p-6">
@@ -50,7 +51,10 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
         <p className="mt-2 text-xs text-muted-foreground">Festival-wide reported attendance band. This does not show individual stage crowd sizes.</p>
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Select a festival stage">
-        {stages.map((stage, index) => (
+        {stages.map((stage, index) => {
+          const current = performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
+          const delayed = performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
+          return (
           <button
             key={stage.id}
             type="button"
@@ -68,9 +72,15 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
               <div className="h-2 bg-slate-950" />
             </div>
             <span className="block text-base font-bold">{stage.name}</span>
+            {current ? (
+              <span className="mt-2 block rounded-full bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Live · {current.artistName}</span>
+            ) : delayed ? (
+              <span className="mt-2 block rounded-full bg-amber-600 px-2 py-1 text-xs font-semibold text-white">Delayed · {delayed.artistName}</span>
+            ) : null}
             <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>
           </button>
-        ))}
+          );
+        })}
       </div>
       <p className="relative mt-5 text-xs text-muted-foreground">Stage order is for discovery only. Routes, entrances and facilities require an organiser-published layout.</p>
     </div>
