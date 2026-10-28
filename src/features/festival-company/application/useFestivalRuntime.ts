@@ -9,10 +9,12 @@ export const useMyFestivalStaffRuntime=()=>useQuery({queryKey:["festival-runtime
 export const useMyFestivalSupplierRuntime=()=>useQuery({queryKey:["festival-runtime","supplier","me"],queryFn:festivalRuntimeRepository.mySupplier});
 const isUnavailablePublicRuntime = (error: Error | null) =>
   error?.message === "festival_public_runtime_not_deployed";
-const publicRuntimePolling = {
+export const publicRuntimePolling = {
   retry: (attempt: number, error: Error) => !isUnavailablePublicRuntime(error) && attempt < 2,
   refetchInterval: (query: { state: { error: Error | null } }) =>
     isUnavailablePublicRuntime(query.state.error) ? false : 15_000,
+  refetchOnWindowFocus: (query: { state: { error: Error | null } }) =>
+    !isUnavailablePublicRuntime(query.state.error),
 };
 export const usePublicFestivalLiveStatus=(slug:string)=>useQuery({
   queryKey:["festival-public-live",slug],
