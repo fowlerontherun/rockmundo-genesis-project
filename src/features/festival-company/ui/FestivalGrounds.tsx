@@ -4,6 +4,7 @@ import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "..
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
+import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -37,7 +38,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
   const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
-  const weatherState = typeof weather?.state === "string" && Object.hasOwn(weatherNames, weather.state) ? weather.state : null;
+  const weatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
   const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
     const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -105,7 +106,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} localHour={localHour} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
