@@ -26,7 +26,7 @@ const all = [tomorrow, otherStage, first, overlapping, past];
 
 describe("festival public timetable filters", () => {
   it("sorts stages and festival dates, keeping distinct public options", () => {
-    expect(festivalTimetableOptions([first, otherStage, tomorrow])).toEqual({
+    expect(festivalTimetableOptions([first, { ...first, id: "variation", stageName: " main stage " }, otherStage, tomorrow])).toEqual({
       stages: ["Acoustic", "Main Stage"],
       days: ["2026-10-29", "2026-10-30"],
     });
