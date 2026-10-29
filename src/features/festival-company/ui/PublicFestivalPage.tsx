@@ -95,10 +95,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const { data: f, isLoading, isError, refetch: retryPublicFestival } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
-  const { data: attendance = [], isError: attendanceError, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
-  const { data: checkInEligibility = [], isError: eligibilityError, refetch: retryEligibility } = useMyFestivalCheckInEligibility(Boolean(user));
-  const { data: festivalMemorabilia = [], isError: memorabiliaError, refetch: retryMemorabilia } = useMyFestivalMemorabilia(Boolean(user));
-  const { data: ticketWallet = [], isError: walletError, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
+  const { data: attendance = [], isError: attendanceError, isPending: attendancePending, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
+  const { data: checkInEligibility = [], isError: eligibilityError, isPending: eligibilityPending, refetch: retryEligibility } = useMyFestivalCheckInEligibility(Boolean(user));
+  const { data: festivalMemorabilia = [], isError: memorabiliaError, isPending: memorabiliaPending, refetch: retryMemorabilia } = useMyFestivalMemorabilia(Boolean(user));
+  const { data: ticketWallet = [], isError: walletError, isPending: walletPending, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
@@ -139,11 +139,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
   const festivalDataError = walletError || eligibilityError || attendanceError || memorabiliaError;
-  const canCheckIn = !attendanceError && canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
+  const walletWaiting = Boolean(user && profileId && walletPending);
+  const canCheckIn = !attendanceError && !attendancePending && !eligibilityPending && !walletWaiting && canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
   const hasPurchasingCharacter = canStartFestivalTicketPurchase(Boolean(user), profileId);
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = memorabiliaError ? undefined : festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
-  const hasAdmissionTicket = !walletError && hasIssuedFestivalAdmission(myFestivalTickets);
+  const hasAdmissionTicket = !walletError && !walletWaiting && hasIssuedFestivalAdmission(myFestivalTickets);
 
   // The simplified timetable contains automatically generated provisional slots.
   // Only the authoritative confirmed lineup may be advertised publicly.
@@ -331,9 +332,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <span className="block text-xs text-muted-foreground">See published set times</span>
             </button>
             <button type="button" onClick={() => setActiveFestivalTab("tickets")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-              <span className="block text-2xl font-bold">{walletError ? "—" : myFestivalTickets.length}</span>
+              <span className="block text-2xl font-bold">{walletError || walletWaiting ? "—" : myFestivalTickets.length}</span>
               <span className="font-semibold">My tickets</span>
-              <span className="block text-xs text-muted-foreground">{walletError ? "Verification unavailable" : "Open festival wallet"}</span>
+              <span className="block text-xs text-muted-foreground">{walletError ? "Verification unavailable" : walletWaiting ? "Verifying tickets" : "Open festival wallet"}</span>
             </button>
           </div>
           <div aria-label="Upcoming performances" className="space-y-2">
@@ -479,6 +480,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <p>We could not verify your festival tickets. Your wallet is temporarily unavailable; this does not mean you have no tickets.</p>
                       <Button type="button" variant="outline" onClick={() => void retryWallet()}>Retry ticket wallet</Button>
                     </div>
+                  ) : walletWaiting ? (
+                    <p className="text-sm text-muted-foreground" role="status">Verifying your tickets for this character…</p>
+                  ) : !profileId ? (
+                    <p className="text-sm text-muted-foreground" role="status">Select an active character to view their festival tickets.</p>
                   ) : (<>
                   {myFestivalTickets.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -506,6 +511,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <p>Festival keepsakes could not be verified. The status of your wristband is unknown.</p>
                       <Button type="button" variant="outline" onClick={() => void retryMemorabilia()}>Retry festival keepsakes</Button>
                     </div>
+                  ) : memorabiliaPending ? (
+                    <p className="text-sm text-muted-foreground" role="status">Verifying your festival keepsakes…</p>
                   ) : myWristband ? (
                     <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3">
                       <div className="flex flex-wrap items-center gap-2">
