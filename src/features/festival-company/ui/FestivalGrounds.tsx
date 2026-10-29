@@ -30,7 +30,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId && experience.data && typeof experience.data === "object" && !Array.isArray(experience.data) && (experience.data as Record<string, unknown>).editionId === festivalEditionId && festivalEditionId !== null ? live.data : null;
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
-  const verified = festivalEditionId !== null && record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
+  const verified = !live.isError && festivalEditionId !== null && record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const stageCrowds = readPublicFestivalStageCrowds(verified, festivalLaunchId);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
