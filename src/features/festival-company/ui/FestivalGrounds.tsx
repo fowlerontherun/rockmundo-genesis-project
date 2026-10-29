@@ -4,6 +4,7 @@ import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "..
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
+import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -28,10 +29,14 @@ interface FestivalGroundsProps {
 export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const live = usePublicFestivalLiveStatus(slug);
   const experience = usePublicFestivalLiveExperience(slug);
-  const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId && experience.data && typeof experience.data === "object" && !Array.isArray(experience.data) && (experience.data as Record<string, unknown>).editionId === festivalEditionId && festivalEditionId !== null ? live.data : null;
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
-  const verified = !live.isError && festivalEditionId !== null && record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
+  const freshness = festivalLiveSnapshotFreshness(record, Date.now());
+  const staleLive = freshness === "stale";
+  const verified = !live.isError && !staleLive && festivalEditionId !== null &&
+    record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
+  const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
+  const showRefreshAction = staleLive || live.isError || experience.isError;
   const stageCrowds = readPublicFestivalStageCrowds(verified, festivalLaunchId);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -39,7 +44,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
   const weatherState = typeof weather?.state === "string" && Object.hasOwn(weatherNames, weather.state) ? weather.state : null;
   const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
-    const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
@@ -48,7 +53,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   // Clock-based visual styling only; not astronomical sunrise/sunset or weather.
   const hourPart = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: timezone }).formatToParts(new Date(currentTime)).find((part) => part.type === "hour");
   const localHour = hourPart ? Number(hourPart.value) : undefined;
-    const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
+  const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const selectedCrowd = selectedStage
     ? stageCrowds.find((item) => item.stageName.toLocaleLowerCase("en-GB") === selectedStage.name.trim().toLocaleLowerCase("en-GB"))
     : undefined;
@@ -92,7 +97,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
       </div>
       <div className="rounded-xl border bg-card p-4" aria-label="Festival site weather">
         <div className="flex items-center gap-3">
-          <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "🌤️"}</span>
+          <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "❔"}</span>
           <div>
             <h3 className="font-semibold">Festival site conditions</h3>
             <p className="text-sm">{weatherState ? weatherNames[weatherState] : "Weather information unavailable"}</p>
@@ -101,7 +106,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
           </div>
         </div>
       </div>
-            {stages.length === 0 ? (
+      {stages.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
@@ -131,7 +136,9 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
             </div>
             <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
-              {live.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : live.isError ? (
+              {live.isPending || experience.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
+                <p className="mt-1 text-sm">The last festival runtime update is too old to confirm current stage activity. Published timetable information remains available.</p>
+              ) : live.isError || experience.isError ? (
                 <p className="mt-1 text-sm">Official live updates are unavailable. The schedule below may have changed.</p>
               ) : !verifiedLive ? <p className="mt-1 text-sm">No verified live status for this edition.</p> : (
                 <>
@@ -141,6 +148,11 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
                   {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(lastRuntimeUpdate))} (festival time)</p>}
                 </>
+              )}
+              {showRefreshAction && (
+                <button type="button" className="mt-2 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => { void experience.refetch(); }}>
+                  Retry live festival updates
+                </button>
               )}
             </div>
             <div className="mt-4 rounded-lg border bg-muted/30 p-3">
