@@ -7,6 +7,7 @@ import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalSta
 interface FestivalGroundsProps {
   slug: string;
   festivalLaunchId: string;
+  festivalEditionId: string | null;
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
@@ -23,14 +24,14 @@ interface FestivalGroundsProps {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const live = usePublicFestivalLiveStatus(slug);
   const experience = usePublicFestivalLiveExperience(slug);
-  const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
+  const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId && experience.data && typeof experience.data === "object" && !Array.isArray(experience.data) && (experience.data as Record<string, unknown>).editionId === festivalEditionId && festivalEditionId !== null ? live.data : null;
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
-  const verified = record?.festivalLaunchId === festivalLaunchId ? record : null;
-  const stageCrowds = readPublicFestivalStageCrowds(experience.isError ? null : experience.data, festivalLaunchId);
+  const verified = !live.isError && festivalEditionId !== null && record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
+  const stageCrowds = readPublicFestivalStageCrowds(verified, festivalLaunchId);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };

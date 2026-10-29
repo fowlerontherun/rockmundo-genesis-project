@@ -7,7 +7,7 @@ export const mapFestivalRuntimeError = (message = "festival_runtime_failed", cod
   // the canonical annual-edition runtime is already live. Do not spam missing
   // RPC calls every 15 seconds or disguise this as an empty crowd.
   if ((code === "PGRST202" || message.includes("Could not find the function")) &&
-      /get_public_festival_live_(?:status|experience)/.test(message)) {
+      /get_public_festival_(?:live_(?:status|experience)|edition_live_status)/.test(message)) {
     return new Error("festival_public_runtime_not_deployed");
   }
   return new Error(message.includes("stale") ? "festival_runtime_stale"
@@ -17,14 +17,14 @@ export const mapFestivalRuntimeError = (message = "festival_runtime_failed", cod
 export const festivalRuntimeRepository={
  get:async(id:string)=>rpc("get_festival_runtime",{p_runtime_session_id:id}), ownerDashboard:async(id:string)=>rpc("get_festival_runtime_owner_dashboard",{p_runtime_session_id:id}), stageDashboard:async(id:string)=>rpc("get_festival_runtime_stage_dashboard",{p_runtime_stage_id:id}),
  myArtist:async()=>rpc("get_my_festival_artist_runtime"),myStaff:async()=>rpc("get_my_festival_staff_runtime"),mySupplier:async()=>rpc("get_my_festival_supplier_runtime"),eventLog:async(id:string,after?:string)=>rpc("get_festival_runtime_event_log",{p_runtime_session_id:id,p_after:after??null}),
- publicLive:async(slug:string):Promise<FestivalPublicLiveStatus>=>parseFestivalPublicLiveStatus(await rpc("get_public_festival_live_status",{p_public_slug:slug})),
+ publicLive:async(slug:string):Promise<FestivalPublicLiveStatus>=>parseFestivalPublicLiveStatus(await rpc("get_public_festival_edition_live_status",{p_slug:slug})),
  crowds:async(id:string):Promise<{crowds:FestivalRuntimeCrowd[];stages:FestivalStageCrowd[];weather:FestivalRuntimeWeather[]}>=>{const value=await rpc("get_festival_crowd_runtime",{p_runtime_session_id:id});if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("malformed_festival_runtime");const x=value as Record<string,unknown>;return{crowds:parseFestivalRuntimeList(x.crowds,parseFestivalRuntimeCrowd),stages:parseFestivalRuntimeList(x.stages,parseFestivalStageCrowd),weather:parseFestivalRuntimeList(x.weather,parseFestivalRuntimeWeather)}},
  incidents:async(id:string):Promise<FestivalRuntimeIncident[]>=>{const value=await rpc("get_festival_incident_dashboard",{p_runtime_session_id:id});if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("malformed_festival_runtime");return parseFestivalRuntimeList((value as Record<string,unknown>).incidents,parseFestivalRuntimeIncident)},
  vendorSales:async(id:string):Promise<FestivalVendorSales[]>=>parseFestivalRuntimeList(await rpc("get_festival_vendor_sales",{p_runtime_session_id:id}),parseFestivalVendorSales),
  sponsorActivations:async(id:string)=>rpc("get_festival_sponsor_activation_runtime",{p_runtime_session_id:id}),
  operationalOutcomes:async(id:string)=>rpc("get_festival_operational_outcomes",{p_runtime_session_id:id}),
  simulationJobs:async(id:string):Promise<FestivalPerformanceSimulationJob[]>=>parseFestivalRuntimeList(await rpc("get_festival_performance_simulation_jobs",{p_runtime_session_id:id}),parseFestivalPerformanceSimulationJob),
- publicExperience:async(slug:string)=>rpc("get_public_festival_live_experience",{p_public_slug:slug}),
+ publicExperience:async(slug:string)=>rpc("get_public_festival_edition_live_status",{p_slug:slug}),
  prepare:async(launchId:string,version:number,key:string):Promise<FestivalRuntimeSession>=>parseFestivalRuntimeSession(await rpc("prepare_festival_runtime",{p_festival_launch_id:launchId,p_expected_launch_version:version,p_idempotency_key:key})),
  action:async(name:FestivalRuntimeAction,args:RpcArgs)=>rpc(name,args),
 };
