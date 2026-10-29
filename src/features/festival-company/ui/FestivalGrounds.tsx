@@ -33,10 +33,12 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const freshness = festivalLiveSnapshotFreshness(record, Date.now());
   const staleLive = freshness === "stale";
-  const verified = !live.isError && !staleLive && festivalEditionId !== null &&
+  const unverifiedLive = Boolean(record) && freshness === "unavailable";
+  const suppressObservations = staleLive || unverifiedLive;
+  const verified = !live.isError && !suppressObservations && festivalEditionId !== null &&
     record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const showRefreshAction = staleLive || live.isError || experience.isError;
+  const showRefreshAction = suppressObservations || live.isError || experience.isError;
   const stageCrowds = readPublicFestivalStageCrowds(verified, festivalLaunchId);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -138,6 +140,8 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
               {live.isPending || experience.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
                 <p className="mt-1 text-sm">The last festival runtime update is too old to confirm current stage activity. Published timetable information remains available.</p>
+              ) : unverifiedLive ? (
+                <p className="mt-1 text-sm">Official runtime freshness could not be verified. Live stage information is hidden until it can be checked.</p>
               ) : live.isError || experience.isError ? (
                 <p className="mt-1 text-sm">Official live updates are unavailable. The schedule below may have changed.</p>
               ) : !verifiedLive ? <p className="mt-1 text-sm">No verified live status for this edition.</p> : (
