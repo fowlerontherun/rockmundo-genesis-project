@@ -195,7 +195,18 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
           </div>
         </div>
       )}
-      <section aria-labelledby="festival-visitor-facilities-title" className="space-y-3">
+      <details className="rounded-xl border bg-card p-4 text-sm">
+        <summary className="cursor-pointer font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">About live festival updates and accessibility</summary>
+        <div className="mt-3 space-y-2 text-muted-foreground">
+          <p>The published timetable shows planned set times, not proof that an artist has taken the stage. Verified live indicators appear only when the festival runtime reports them.</p>
+          <p>If live updates are unavailable or outdated, the timetable and stage directory remain usable. Use “Retry live festival updates” above to reconnect. No estimated crowd sizes are shown as facts.</p>
+          <p>The stage pictures are illustrative. They are not a site map or walking directions. Please use the organiser’s published travel and accessibility information for your visit.</p>
+          <button type="button" onClick={onViewTimetable} className="rounded-md border px-3 py-2 font-medium text-foreground hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+            Open published timetable
+          </button>
+        </div>
+      </details>
+            <section aria-labelledby="festival-visitor-facilities-title" className="space-y-3">
         <h3 id="festival-visitor-facilities-title" className="text-xl font-bold">Plan your festival visit</h3>
         {facilities.length === 0 ? (
           <p className="rounded-xl border p-4 text-sm text-muted-foreground">Visitor facilities and travel information have not been published yet.</p>
