@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS private.festival_edition_stage_events (
   festival_date date NOT NULL,
   observed_at timestamptz NOT NULL,
   recorded_at timestamptz NOT NULL DEFAULT now(),
-  schema_version integer NOT NULL DEFAULT 1 CHECK (schema_version = 1)
+  schema_version integer NOT NULL DEFAULT 1 CHECK (schema_version = 1),
+  CONSTRAINT canonical_stage_event_natural_idempotency UNIQUE (runtime_id,schedule_item_id,event_status,observed_at)
 );
 CREATE INDEX IF NOT EXISTS festival_edition_stage_events_lookup
   ON private.festival_edition_stage_events (edition_id,stage_id,festival_date,observed_at DESC);
@@ -37,6 +38,8 @@ DECLARE
   v_observed_at timestamptz;
   v_timezone text;
   v_status text;
+  v_previous_status text;
+  v_previous_at timestamptz;
 BEGIN
   IF NEW.evidence_type NOT IN
     ('stage_ready','stage_starting','stage_live','stage_delayed','stage_completed','stage_cancelled')
@@ -90,6 +93,30 @@ BEGIN
      OR v_observed_at < NEW.created_at - interval '15 minutes'
      OR v_observed_at > NEW.created_at + interval '1 minute' THEN
     RAISE EXCEPTION 'festival_stage_observation_out_of_day';
+  END IF;
+
+  -- Serialize transitions for this particular scheduled act; multiple
+  -- workers must never race each other into contradictory stage states.
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(NEW.runtime_id::text || ':' || v_item_id::text, 0)
+  );
+  SELECT e.event_status, e.observed_at INTO v_previous_status, v_previous_at
+  FROM private.festival_edition_stage_events e
+  WHERE e.runtime_id = NEW.runtime_id AND e.schedule_item_id = v_item_id
+  ORDER BY e.observed_at DESC, e.recorded_at DESC LIMIT 1;
+
+  IF v_previous_status IS NULL AND v_status NOT IN ('ready','delayed','cancelled') THEN
+    RAISE EXCEPTION 'festival_stage_missing_initial_state';
+  ELSIF v_previous_status IS NOT NULL AND (
+    v_observed_at <= v_previous_at
+    OR NOT (
+      (v_previous_status='ready' AND v_status IN ('starting','delayed','cancelled'))
+      OR (v_previous_status='starting' AND v_status IN ('live','delayed','cancelled'))
+      OR (v_previous_status='live' AND v_status IN ('delayed','completed','cancelled'))
+      OR (v_previous_status='delayed' AND v_status IN ('starting','live','cancelled'))
+    )
+  ) THEN
+    RAISE EXCEPTION 'festival_stage_invalid_event_transition';
   END IF;
 
   INSERT INTO private.festival_edition_stage_events(
