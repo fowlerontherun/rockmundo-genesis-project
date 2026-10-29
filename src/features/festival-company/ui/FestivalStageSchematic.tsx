@@ -1,9 +1,13 @@
-import type { FestivalPublicStage } from "../domain/festivalLaunch";
+import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
+import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import type { AttendanceBand, FestivalPublicLiveStatus } from "../domain/festivalRuntime";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalStageSchematicProps {
   stages: FestivalPublicStage[];
+  lineup: FestivalPublicConfirmedAct[];
+  now: number;
+  timezone: string;
   selectedStageId: string | undefined;
   attendanceBand?: AttendanceBand | null;
   performances?: FestivalPublicLiveStatus["performances"];
@@ -25,7 +29,7 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, performances = [], stageCrowds = [], localHour, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ stages, lineup, now, timezone, selectedStageId, attendanceBand, performances = [], stageCrowds = [], localHour, onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
@@ -61,6 +65,7 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
           const current = performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
           const delayed = performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
           const activeLighting = Boolean(current) && afterDark;
+          const schedule = stageTimetableProgress(stage.name, lineup, now);
           const crowd = stageCrowds.find(
             (item) => item.stageName.toLocaleLowerCase("en-GB") === stage.name.trim().toLocaleLowerCase("en-GB"),
           );
@@ -88,6 +93,28 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
             ) : delayed ? (
               <span className="mt-2 block rounded-full bg-amber-600 px-2 py-1 text-xs font-semibold text-white">Delayed · {delayed.artistName}</span>
             ) : null}
+            {!current && !delayed && schedule.act && (
+              <span className="mt-2 block rounded-lg border border-violet-400/30 bg-violet-500/10 p-2 text-left">
+                <span className="block text-xs font-semibold">{schedule.kind === "scheduled_now" ? "Scheduled set (not confirmed live)" : "Next scheduled set"}</span>
+                <span className="mt-1 block text-sm font-medium">{schedule.act.artistName}</span>
+                {schedule.kind === "next" && schedule.act.startsAt && (
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: timezone }).format(new Date(schedule.act.startsAt))} · festival time
+                  </span>
+                )}
+                {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
+                  <span className="mt-2 block">
+                    <span className="mb-1 block text-xs text-muted-foreground">Published set time elapsed · {schedule.progressPercent}%</span>
+                    <span className="block h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`Scheduled set time elapsed: ${schedule.progressPercent} percent, not confirmed performance progress`}>
+                      <span className="block h-full rounded-full bg-violet-500" style={{ width: `${schedule.progressPercent}%` }} />
+                    </span>
+                  </span>
+                )}
+              </span>
+            )}
+            {!current && !delayed && schedule.kind === "finished" && (
+              <span className="mt-2 block text-xs text-muted-foreground">All published sets have passed</span>
+            )}
             <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>
             {crowd && band ? (
               <span className="mt-3 block rounded-lg border bg-background/80 px-2 py-2 text-left">

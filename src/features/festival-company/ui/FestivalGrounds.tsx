@@ -3,6 +3,7 @@ import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
+import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -56,10 +57,10 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
     : [];
 
-  const publishedActs = acts.filter((act) => act.startsAt && act.endsAt && Number.isFinite(Date.parse(act.startsAt)) && Number.isFinite(Date.parse(act.endsAt)));
-  const scheduledNow = publishedActs.find((act) => Date.parse(act.startsAt!) <= currentTime && currentTime < Date.parse(act.endsAt!));
-  const scheduledNext = publishedActs.find((act) => Date.parse(act.startsAt!) > currentTime);
-  const scheduleLabel = scheduledNow ? "Scheduled now" : scheduledNext ? "Next scheduled set" : "No further published sets";
+  const schedule = stageTimetableProgress(selectedStage?.name ?? "", lineup, currentTime);
+  const scheduleLabel = schedule.kind === "scheduled_now" ? "Scheduled now (not live confirmed)"
+    : schedule.kind === "next" ? "Next scheduled set"
+    : schedule.kind === "finished" ? "Published sets finished" : "No published stage times";
 
   const livePerformances = verifiedLive && selectedStage
     ? verifiedLive.performances.filter((entry) => entry.stageName === selectedStage.name)
@@ -68,7 +69,11 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
   const delayedPerformance = livePerformances.find((entry) => entry.status === "delayed");
   const cancelledPerformances = livePerformances.filter((entry) => entry.status === "cancelled");
   const liveStatus = livePerformance ?? delayedPerformance;
-  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed" : "No confirmed live performance";
+  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed"
+    : verifiedLive?.runtimeStatus === "runtime_complete" ? "Festival completed"
+    : verifiedLive?.currentDay === null ? "No active festival day" : "No confirmed live performance";
+
+  const lastRuntimeUpdate = verified && typeof verified.updatedAt === "string" && Number.isFinite(Date.parse(verified.updatedAt)) ? verified.updatedAt : null;
 
   const facilities = [
     { label: "Travel & arrival", icon: "🚌", details: visitorInformation.travel },
@@ -100,21 +105,29 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} localHour={localHour} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} localHour={localHour} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
             <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{scheduleLabel}</p>
-              {scheduledNow || scheduledNext ? (
+              {schedule.act ? (
                 <>
-                  <p className="mt-1 font-bold">{(scheduledNow ?? scheduledNext)!.artistName}</p>
+                  <p className="mt-1 font-bold">{schedule.act.artistName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date((scheduledNow ?? scheduledNext)!.startsAt!))}
+                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(schedule.act.startsAt!))}
                   </p>
+                  {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">Published set time elapsed: {schedule.progressPercent}%</p>
+                      <div role="img" aria-label={`Published set time elapsed: ${schedule.progressPercent} percent, not a confirmed live performance`} className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-violet-500" style={{ width: `${schedule.progressPercent}%` }} />
+                      </div>
+                    </div>
+                  )}
                   <p className="mt-1 text-xs text-muted-foreground">Based on published timetable, not live stage confirmation.</p>
                 </>
-              ) : <p className="mt-1 text-sm text-muted-foreground">Check back for programme updates.</p>}
+              ) : <p className="mt-1 text-sm text-muted-foreground">{schedule.kind === "finished" ? "All published stage sets have passed." : "Check back for programme updates."}</p>}
             </div>
             <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
@@ -126,6 +139,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                   {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
+                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(lastRuntimeUpdate))} (festival time)</p>}
                 </>
               )}
             </div>
