@@ -3,7 +3,7 @@
  * ticket products and active artist opportunities must not keep older cache
  * entries after a successful server-authoritative mutation.
  */
-export const festivalLaunchInvalidations = (festivalCompanyId?: string): readonly (readonly string[])[] => [
+export const festivalLaunchInvalidations: readonly (readonly string[])[] = [
   ["festival-launch"],
   ["festival-sales-summary"],
   ["festival-player-sales-breakdown"],
@@ -15,7 +15,7 @@ export const festivalLaunchInvalidations = (festivalCompanyId?: string): readonl
   ["festival-artist-opportunities"],
   ["festival-owner-npc-lineup"],
   ["festival-company-setup"],
-  ["festival-company-editions", festivalCompanyId ?? ""],
+  ["festival-company-editions"],
   ["notifications"],
   ["mail"],
 ];
