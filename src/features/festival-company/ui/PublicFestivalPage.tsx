@@ -24,6 +24,7 @@ import {
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { FestivalGrounds } from "./FestivalGrounds";
+import { FestivalPublishedTimetable } from "./FestivalPublishedTimetable";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
@@ -440,32 +441,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="timetable">
-            <section aria-label="Published festival performance timetable" className="space-y-3">
-              <h2 className="text-xl font-bold">Published timetable</h2>
-              {publishedPerformances.length === 0 ? (
-                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                  Performance times and stages have not been published yet. See the confirmed line-up for announced acts.
-                </p>
-              ) : (
-                publishedPerformances
-                  .slice()
-                  .sort((left, right) => Date.parse(left.startsAt!) - Date.parse(right.startsAt!))
-                  .map((entry) => (
-                    <article key={entry.id} className="grid grid-cols-[7rem_1fr] rounded-lg border p-3">
-                      <time className="text-sm">
-                        {dayLabel(entry.festivalDate)}
-                        <span className="block font-bold">
-                          {formatFestivalEditionTime(entry.startsAt!, f.timezone)}
-                        </span>
-                      </time>
-                      <div>
-                        <strong>{entry.artistName}</strong>
-                        <p className="text-sm text-muted-foreground">{entry.stageName}</p>
-                      </div>
-                    </article>
-                  ))
-              )}
-            </section>
+            <FestivalPublishedTimetable key={f.id} performances={publishedPerformances} timezone={f.timezone} now={now} />
           </TabsContent>
 
           <TabsContent value="tickets">
