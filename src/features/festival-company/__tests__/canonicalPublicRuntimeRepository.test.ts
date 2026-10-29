@@ -7,6 +7,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { festivalRuntimeRepository, mapFestivalRuntimeError } from "../data/festivalRuntimeRepository";
 import { parseFestivalPublicLiveStatus } from "../domain/festivalRuntime";
+import { parseOptionalFestivalPublicLiveStatus } from "../application/useFestivalRuntime";
 
 const launchId = "123e4567-e89b-42d3-a456-426614174000";
 const editionId = "123e4567-e89b-42d3-a456-426614174001";
@@ -50,7 +51,14 @@ describe("canonical public edition runtime", () => {
     expect(error.message).toBe("festival_public_runtime_not_deployed");
   });
 
-  it("does not expose unverified values when the canonical projection is absent", async () => {
+  it("treats a published edition with no runtime as genuinely unavailable", () => {
+    expect(parseOptionalFestivalPublicLiveStatus(null)).toBeNull();
+    expect(parseOptionalFestivalPublicLiveStatus(undefined)).toBeNull();
+    expect(parseOptionalFestivalPublicLiveStatus(result)?.festivalLaunchId).toBe(launchId);
+    expect(() => parseOptionalFestivalPublicLiveStatus({ festivalLaunchId: "bad" })).toThrow("malformed_festival_runtime");
+  });
+
+    it("does not expose unverified values when the canonical projection is absent", async () => {
     rpc.mockResolvedValue({ data: null, error: null });
     const response = await festivalRuntimeRepository.publicExperience("no-public-festival");
     expect(response).toBeNull();
