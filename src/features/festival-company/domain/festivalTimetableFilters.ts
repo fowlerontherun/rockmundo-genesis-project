@@ -14,8 +14,13 @@ const validInterval = (act: FestivalPublicConfirmedAct) => {
 };
 
 export function festivalTimetableOptions(acts: readonly FestivalPublicConfirmedAct[]) {
+  const stages = new Map<string, string>();
+  for (const act of acts) {
+    const name = act.stageName?.trim();
+    if (name && !stages.has(normalizeStage(name))) stages.set(normalizeStage(name), name);
+  }
   return {
-    stages: [...new Set(acts.map((act) => act.stageName?.trim()).filter((name): name is string => Boolean(name)))].sort(),
+    stages: [...stages.values()].sort((a, b) => a.localeCompare(b, "en-GB")),
     days: [...new Set(acts.map((act) => act.festivalDate).filter((day): day is string => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day)))].sort(),
   };
 }
