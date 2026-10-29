@@ -25,9 +25,12 @@ const publicCanonicalOptions = (slug: string) => ({
   enabled: Boolean(slug),
   ...publicRuntimePolling,
 });
+// A public launch can exist before its canonical edition runtime has been created.
+export const parseOptionalFestivalPublicLiveStatus = (value: unknown) =>
+  value == null ? null : parseFestivalPublicLiveStatus(value);
 export const usePublicFestivalLiveStatus=(slug:string)=>useQuery({
   ...publicCanonicalOptions(slug),
-  select: parseFestivalPublicLiveStatus,
+  select: parseOptionalFestivalPublicLiveStatus,
 });
 export const useFestivalRuntimeEventLog=(id:string)=>useQuery({queryKey:[...key(id),"events"],queryFn:()=>festivalRuntimeRepository.eventLog(id),enabled:Boolean(id)});
 export const useFestivalCrowdRuntime=(id:string)=>useQuery({queryKey:[...key(id),"crowds"],queryFn:()=>festivalRuntimeRepository.crowds(id),enabled:Boolean(id),refetchInterval:15_000});
