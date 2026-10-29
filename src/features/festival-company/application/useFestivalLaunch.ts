@@ -22,10 +22,7 @@ const useLaunchMutation=<T,>(fn:(i:T)=>Promise<unknown>)=>{
   const c=useQueryClient();
   return useMutation({
     mutationFn:fn,
-    onSuccess:(_,input)=>{
-      const id=(input as {festivalCompanyId?:string}).festivalCompanyId;
-      return Promise.all(festivalLaunchInvalidations(id).map(queryKey => c.invalidateQueries({queryKey})));
-    },
+    onSuccess:()=>Promise.all(festivalLaunchInvalidations.map(queryKey => c.invalidateQueries({queryKey}))),
   });
 };
 export const useSaveFestivalPublicProfile=()=>useLaunchMutation(repository.saveFestivalPublicProfile);export const useBeginFestivalLaunchReview=()=>useLaunchMutation(repository.beginFestivalLaunchReview);export const useLaunchFestival=()=>useLaunchMutation(repository.launchFestival);export const useOpenFestivalTicketSales=()=>useLaunchMutation(repository.openFestivalTicketSales);export const usePauseFestivalTicketSales=()=>useLaunchMutation(repository.pauseFestivalTicketSales);export const useResumeFestivalTicketSales=()=>useLaunchMutation(repository.resumeFestivalTicketSales);export const useCloseFestivalTicketSales=()=>useLaunchMutation(repository.closeFestivalTicketSales);export const useIssueFestivalComplimentaryTickets=()=>useLaunchMutation(repository.issueFestivalComplimentaryTickets);export const useCancelLaunchedFestival=()=>useLaunchMutation(repository.cancelLaunchedFestival);
