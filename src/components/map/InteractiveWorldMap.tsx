@@ -19,7 +19,7 @@ interface InteractiveWorldMapProps {
   routeCityIds?: string[];
   routeCities?: City[];
   cityValues?: Record<string, number>;
-  valueMode?: "default" | "fame";
+  valueMode?: "default" | "fame" | "scene";
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
@@ -247,39 +247,47 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         const coordinates = { lat: city.latitude, lng: city.longitude };
         const isCurrentCity = city.id === currentCityId;
         const fameValue = Math.max(0, cityValues[city.id] ?? 0);
-
+        const reportedScene = Object.prototype.hasOwnProperty.call(cityValues, city.id) &&
+          [0, 25, 50, 75, 100].includes(fameValue);
         const fameRatio = Math.min(1, fameValue / maxFame);
         const fameHue = 220 - Math.round(fameRatio * 220);
-        const markerColor = valueMode === "fame" ? `hsl(${fameHue} 85% 55%)` : 'hsl(var(--primary))';
-        const markerSize = valueMode === "fame" ? 10 + Math.round(fameRatio * 12) : 10;
+        const sceneHue = 280 - Math.round(fameValue * 2.25);
+        const markerColor = valueMode === "scene"
+          ? (reportedScene ? `hsl(${sceneHue} 88% 62%)` : '#64748b')
+          : valueMode === "fame" ? `hsl(${fameHue} 85% 55%)` : 'hsl(var(--primary))';
+        const markerSize = valueMode === "scene"
+          ? (reportedScene ? 12 + Math.round(fameValue / 10) : 8)
+          : valueMode === "fame" ? 10 + Math.round(fameRatio * 12) : 10;
+        const sceneGlow = valueMode === "scene" && reportedScene
+          ? `0 0 ${10 + Math.round(fameValue / 5)}px ${markerColor}` : '0 0 8px hsl(var(--primary) / 0.4)';
 
         // Create custom marker element
         const el = document.createElement('div');
         el.className = 'city-marker';
         el.style.cssText = `
-          width: ${isCurrentCity ? '14px' : `${markerSize}px`};
-          height: ${isCurrentCity ? '14px' : `${markerSize}px`};
-          background-color: ${isCurrentCity ? '#22c55e' : markerColor};
-          border: 2px solid ${isCurrentCity ? '#86efac' : 'hsl(var(--primary) / 0.4)'};
+          width: ${isCurrentCity && valueMode !== "scene" ? '14px' : `${markerSize}px`};
+          height: ${isCurrentCity && valueMode !== "scene" ? '14px' : `${markerSize}px`};
+          background-color: ${isCurrentCity && valueMode !== "scene" ? '#22c55e' : markerColor};
+          border: 2px solid ${isCurrentCity ? '#86efac' : valueMode === "scene" ? '#e9d5ff' : 'hsl(var(--primary) / 0.4)'};
           border-radius: 50%;
           cursor: pointer;
-          box-shadow: 0 0 ${isCurrentCity ? '12px' : '8px'} ${isCurrentCity ? 'rgba(34, 197, 94, 0.6)' : 'hsl(var(--primary) / 0.4)'};
+          box-shadow: ${valueMode === "scene" ? sceneGlow : isCurrentCity ? '0 0 12px rgba(34, 197, 94, 0.6)' : '0 0 8px hsl(var(--primary) / 0.4)'};
           transition: all 0.3s ease;
-          ${isCurrentCity ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : ''}
+          ${isCurrentCity && valueMode !== "scene" ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : ''}
         `;
 
         // Add hover effect
         el.addEventListener('mouseenter', () => {
           el.style.transform = 'scale(1.5)';
-          el.style.boxShadow = isCurrentCity 
-            ? '0 0 20px rgba(34, 197, 94, 0.8)' 
+          el.style.boxShadow = valueMode === "scene" ? sceneGlow : isCurrentCity
+            ? '0 0 20px rgba(34, 197, 94, 0.8)'
             : '0 0 16px hsl(var(--primary) / 0.6)';
         });
         
         el.addEventListener('mouseleave', () => {
           el.style.transform = 'scale(1)';
-          el.style.boxShadow = isCurrentCity 
-            ? '0 0 12px rgba(34, 197, 94, 0.6)' 
+          el.style.boxShadow = valueMode === "scene" ? sceneGlow : isCurrentCity
+            ? '0 0 12px rgba(34, 197, 94, 0.6)'
             : '0 0 8px hsl(var(--primary) / 0.4)';
         });
 
@@ -291,9 +299,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         heading.textContent = city.name + (city.country ? ', ' + city.country : '') + (isCurrentCity ? ' 📍' : '');
         const detail = document.createElement('div');
         detail.style.fontSize = '12px';
-        detail.textContent = valueMode === 'fame'
-          ? `Local fame: ${fameValue.toLocaleString()}`
-          : city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
+        detail.textContent = valueMode === 'scene'
+          ? reportedScene ? `City Scene: ${fameValue}% mural confirmed` : 'No active verified City Scene campaign'
+          : valueMode === 'fame'
+            ? `Local fame: ${fameValue.toLocaleString()}`
+            : city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
         const popup = new runtime.current!.Popup({
           offset: 15,
