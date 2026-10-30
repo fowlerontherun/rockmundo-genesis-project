@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { FestivalRuntimeProjection } from "./model";
+import { CanonicalStageControl } from "./CanonicalStageControl";
 import {
   getEditionRuntime,
   getFestivalRunReadiness,
@@ -220,7 +221,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5" /> Stages now</CardTitle>
-            <CardDescription>The bill as it is actually unfolding.</CardDescription>
+            <CardDescription>Published running order and provisional stage information. Only the official confirmations below establish live activity.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {runtime.stages.map((stage) => (
@@ -228,17 +229,17 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{stage.name}</p>
-                    <p className="text-xs capitalize text-muted-foreground">{stateLabel(stage.status)}</p>
+                    <p className="text-xs capitalize text-muted-foreground">Timetable only</p>
                   </div>
-                  {stage.delayMinutes > 0 ? <Badge variant="destructive">+{stage.delayMinutes} min</Badge> : <Badge variant="outline">On time</Badge>}
+                  <Badge variant="outline">Unverified</Badge>
                 </div>
                 <div className="mt-4 rounded-lg bg-muted/40 p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">On stage</p>
-                  <p className="mt-1 text-lg font-bold">{stage.currentArtist ?? "Changeover"}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Scheduled around now</p>
+                  <p className="mt-1 text-lg font-bold">{stage.currentArtist ?? "No announced act"}</p>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Next: {stage.nextArtist ?? "TBC"}</span>
-                  <Badge variant={stage.artistReady ? "default" : "secondary"}>{stage.artistReady ? "Artist ready" : "Preparing"}</Badge>
+                  <Badge variant={stage.artistReady ? "default" : "secondary"}>{stage.artistReady ? "Artist assigned" : "Awaiting artist"}</Badge>
                 </div>
               </div>
             ))}
@@ -265,6 +266,10 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
           </CardContent>
         </Card>
       </div>
+
+      {["live", "gates_open", "paused"].includes(runtime.state) && (
+        <CanonicalStageControl runtimeId={runtime.runtimeId} />
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
