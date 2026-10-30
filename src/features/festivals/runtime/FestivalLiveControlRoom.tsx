@@ -94,9 +94,9 @@ export function FestivalLiveControlRoom({
         <Card className="overflow-hidden border-primary/30">
           <div className="bg-gradient-to-r from-violet-950 via-slate-950 to-fuchsia-950 p-6 text-white">
             <Badge className="mb-3">Festival launch</Badge>
-            <h2 className="text-3xl font-black">The gates are almost ready</h2>
+            <h2 className="text-3xl font-black">The festival simulation is almost ready</h2>
             <p className="mt-2 max-w-2xl text-sm text-violet-100">
-              Finish the three big decisions, then launch the event. Staffing, suppliers,
+              Finish the three big decisions, then run and complete the simulated event. Staffing, suppliers,
               safety and running-order detail stay automated behind the scenes.
             </p>
           </div>
@@ -131,7 +131,7 @@ export function FestivalLiveControlRoom({
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       <div>
                         <p className="font-semibold">Ready for Festival Day</p>
-                        <p className="text-sm text-muted-foreground">One launch action runs the event and opens the live control view.</p>
+                        <p className="text-sm text-muted-foreground">One simulation action completes the festival and records results. This is not a real-time live show.</p>
                       </div>
                     </div>
                   </div>
@@ -141,7 +141,7 @@ export function FestivalLiveControlRoom({
 
                 <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
                   <Play className="mr-2 h-4 w-4" />
-                  {runMutation.isPending ? "Opening Festival…" : "Open Festival gates"}
+                  {runMutation.isPending ? "Simulating Festival…" : "Simulate Festival & results"}
                 </Button>
               </>
             ) : null}
@@ -151,7 +151,7 @@ export function FestivalLiveControlRoom({
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> What happens automatically</CardTitle></CardHeader>
           <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
-            <p>• Stage running order and spare NPC slots</p>
+            <p>• Stage running order and spare NPC slots (simulation)</p>
             <p>• Staff, supplier and safety readiness</p>
             <p>• Attendance, queues and crowd movement</p>
             <p>• Weather and operational incidents</p>
@@ -187,12 +187,12 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
               <Badge className="bg-red-600"><Radio className="mr-1 h-3 w-3" /> FESTIVAL DAY</Badge>
               <Badge variant="secondary" className="capitalize">{stateLabel(runtime.state)}</Badge>
             </div>
-            <h2 className="mt-3 text-3xl font-black">Live Festival control</h2>
-            <p className="mt-2 text-sm text-violet-100">Watch the crowd arrive, follow every stage and react to what the day throws at you.</p>
+            <h2 className="mt-3 text-3xl font-black">{runtime.state === "completed" ? "Festival results" : "Festival operations"}</h2>
+            <p className="mt-2 text-sm text-violet-100">Review the festival simulation and the separately verified stage events. A published timetable does not prove a live performance.</p>
           </div>
           <div className="text-right text-sm">
-            <p className="font-semibold">{new Date(runtime.simulatedTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</p>
-            <p className="text-violet-200">Festival local simulation</p>
+            <p className="font-semibold">{new Date(runtime.simulatedTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}</p>
+            <p className="text-violet-200">Recorded simulation time · UTC</p>
           </div>
         </div>
       </header>
@@ -220,7 +220,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
       <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5" /> Stages now</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5" /> Stage programme · unverified</CardTitle>
             <CardDescription>Published running order and provisional stage information. Only the official confirmations below establish live activity.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
