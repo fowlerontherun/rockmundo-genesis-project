@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const actionSql = readFileSync(new URL("../../../../supabase/reconciliation/festival/canonical_edition_stage_runtime_actions.sql", import.meta.url), "utf8");
-const crowdSql = readFileSync(new URL("../../../../supabase/reconciliation/festival/canonical_edition_stage_crowd_evidence_ledger.sql", import.meta.url), "utf8");
+const actionSql = readFileSync(resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_runtime_actions.sql"), "utf8");
+const crowdSql = readFileSync(resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_crowd_evidence_ledger.sql"), "utf8");
 
 describe("canonical Festival V2 evidence sources", () => {
   it("writes stage events only through a real operator-confirmed canonical runtime action", () => {
