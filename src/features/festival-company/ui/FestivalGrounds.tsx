@@ -6,6 +6,7 @@ import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalSta
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
 import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
+import { formatFestivalEditionDate, getFestivalLocalClockHour } from "./festivalPublicDisplay";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -54,8 +55,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
     return () => window.clearInterval(timer);
   }, []);
   // Clock-based visual styling only; not astronomical sunrise/sunset or weather.
-  const hourPart = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: timezone }).formatToParts(new Date(currentTime)).find((part) => part.type === "hour");
-  const localHour = hourPart ? Number(hourPart.value) : undefined;
+  const localHour = getFestivalLocalClockHour(currentTime, timezone);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const selectedCrowd = selectedStage
     ? stageCrowds.find((item) => item.stageName.toLocaleLowerCase("en-GB") === selectedStage.name.trim().toLocaleLowerCase("en-GB"))
@@ -123,7 +123,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                 <>
                   <p className="mt-1 font-bold">{schedule.act.artistName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(schedule.act.startsAt!))}
+                    {formatFestivalEditionDate(schedule.act.startsAt!, timezone, { dateStyle: "medium", timeStyle: "short" })}
                   </p>
                   {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
                     <div className="mt-2">
@@ -151,7 +151,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                   {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
-                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(lastRuntimeUpdate))} (festival time)</p>}
+                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {formatFestivalEditionDate(lastRuntimeUpdate, timezone, { dateStyle: "medium", timeStyle: "short" })} (festival time)</p>}
                 </>
               )}
               {showRefreshAction && (
@@ -172,7 +172,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                     ))}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Snapshot: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(selectedCrowd.lastCalculatedAt))} (festival time).
+                    Snapshot: {formatFestivalEditionDate(selectedCrowd.lastCalculatedAt, timezone, { dateStyle: "medium", timeStyle: "short" })} (festival time).
                     Not a live headcount or queue estimate.
                   </p>
                 </>
@@ -188,7 +188,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                     <span className="block font-medium">{act.artistName}</span>
                     <span className="text-xs text-muted-foreground">
                       {act.startsAt
-                        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(act.startsAt))
+                        ? formatFestivalEditionDate(act.startsAt, timezone, { dateStyle: "medium", timeStyle: "short" })
                         : "Time to be announced"}
                     </span>
                   </li>
