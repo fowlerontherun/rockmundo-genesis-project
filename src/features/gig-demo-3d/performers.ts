@@ -1,3 +1,4 @@
+import { reactionBlend, waveAmount, ease, type CrowdTransition } from './showMotion';
 import { detailedCrowdArea, isTvStudioAudienceBlocked } from './venueAudience';
 import { resolveTotpStudioStageGeometry } from './totpStudioGeometry';
 import * as T from 'three';
@@ -293,8 +294,8 @@ export class Musician {
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
-    update(seconds: number, energy: number, reduced: boolean) {
-        const t = reduced ? 0 : seconds, beat = t * Math.PI * 4;
+    update(seconds: number, energy: number, reduced: boolean, rhythm = seconds) {
+        const t = reduced ? 0 : rhythm, beat = t * Math.PI * 4;
         const performing = this.performing && !this.walking;
         const motionEnergy = reduced ? 0 : energy;
         const performanceScale = this.role === 'fan' ? 1 : this.role === 'drums' ? .7 : this.role === 'vocals' ? 1.5 : this.role === 'guitar' || this.role === 'bass' ? 1.2 : 1.1;
@@ -441,7 +442,7 @@ export class Musician {
         rig?.tools.forEach(tool => { tool.visible = this.root.visible && !this.walking; });
         if (rig && (!this.walking || !rig.stationary)) {
             const releaseHold = this.performanceSection === 'release' ? 1 - smoothMotion(this.sectionProgress) : 0;
-            rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy * (1 - releaseHold * .72) : 0, reduced || !performing);
+            rig.animate(t, performing ? energy * (1 - releaseHold * .72) : 0, reduced || !performing);
             // Only the opt-in DJ booth sends dj_* presentation actions. Reset
             // the grips each frame before applying the bounded visual pulse, so
             // a replay seek or a paused tab never leaves a hand stuck on a knob.
@@ -896,9 +897,9 @@ export class DemoCrowd {
         }
         this.update(0, .8, .7, false);
     }
-    update(seconds: number, density: number, energy: number, reduced: boolean, tuning: Partial<CrowdTuningOptions> = {}, reaction = 'bounce', cueProgress?: number) {
+    update(seconds: number, density: number, energy: number, reduced: boolean, tuning: Partial<CrowdTuningOptions> = {}, reaction = 'bounce', cueProgress?: number, transition: CrowdTransition = {}) {
         const t = reduced ? 0 : seconds, target = Math.round(CROWD_LIMIT * T.MathUtils.clamp(density, 0, 1));
-        this.time.value = t;
+        this.time.value = reduced ? 0 : transition.rhythmSeconds ?? t;
         let phoneCount = 0;
         const area = detailedCrowdArea(this.venue), width = area.width / 13, depth = area.depth / 13;
         const eventArea = { ...area, width: area.width * Math.min(1.1, tuning.lateralSpread ?? 1), depth: area.depth * Math.min(1.1, tuning.depthSpread ?? 1) * (1 - (tuning.stagePull ?? 0) * .3) };
@@ -921,7 +922,15 @@ export class DemoCrowd {
                 if (fan.rank >= target)
                     continue;
                 let mode: number = crowdMotion(reaction, energy, fan.personality, t);
-                const phase = t * fan.pace + fan.phase, active = !reduced && mode !== 0;
+                const phase = (transition.rhythmSeconds ?? t) * fan.pace + fan.phase, active = !reduced && mode !== 0;
+                let blend = reduced ? 1 : reactionBlend(transition.reactionElapsed, fan.personality);
+                let previous = crowdMotion(transition.previousReaction ?? reaction, energy, fan.personality, t);
+                const previousAmount = transition.previousReaction === 'wave' ? waveAmount(t, fan.x, 13) : previous === 5 ? 1 : Math.max(.3, energy);
+                if (blend === 1 && !reduced && !/^(tv_|still|disperse|phone_lights|wave)|applause|clap|jump|mosh|sway|singalong|cheer|roar/.test(reaction)) {
+                    const boundary = (Math.floor(t / 7 + fan.personality * 13) - fan.personality * 13) * 7;
+                    previous = crowdMotion(reaction, energy, fan.personality, boundary - .001);
+                    blend = ease((t - boundary) / .65);
+                }
                 const bounce = active ? Math.max(0, Math.sin(phase * (mode === 6 ? 5.4 : 6.28))) * energy * (mode === 6 ? .15 : mode === 2 ? .035 : .012) : 0;
                 if (this.venue?.kind === 'tv_studio') {
                     const stage = resolveTotpStudioStageGeometry(this.televisionStage, this.venue);
@@ -959,7 +968,7 @@ export class DemoCrowd {
                 }
                 this.transform.rotation.set(active && mode === 7 ? Math.max(0, Math.sin(phase * 4)) * .1 : 0, fan.yaw + (active ? Math.sin(phase * 1.4) * .04 : 0), active ? Math.sin(phase * 1.7) * (mode === 1 ? .055 : .016) * energy : 0);
                 this.transform.scale.setScalar(fan.scale * Math.min(1.15, tuning.fanScale ?? 1));
-                let amount = Math.max(.3, energy);
+                let amount = reduced ? 0 : reaction === 'wave' ? waveAmount(t, fan.x, 13) : mode === 5 ? 1 : mode === 0 ? .4 : Math.max(.3, energy);
                 const pit = circlePitPosition(this.transform.position.x, this.transform.position.z, fan.personality, event, pitSlots?.get(fan.rank));
                 this.transform.position.x = pit.x;
                 this.transform.position.z = pit.z;
@@ -984,11 +993,18 @@ export class DemoCrowd {
                 }
                 this.transform.updateMatrix();
                 mesh.setMatrixAt(mesh.count, this.transform.matrix);
-                motion.setXYZW(mesh.count, mode, fan.phase, fan.pace, amount);
+                // Pack old/current pose and blend into the existing attribute: some
+                // mobile GPUs cannot link one more attribute beside the seven poses.
+                const oldMode = reduced || mode >= 8 ? mode : previous;
+                const poseBlend = reduced || mode >= 8 ? 1 : blend;
+                const oldAmount = reduced ? 0 : previousAmount;
+                motion.setXYZW(mesh.count, mode + oldMode * 16 + poseBlend * .5,
+                    (mode === 3 ? 0 : fan.phase) + 16 * Math.round(oldAmount * 255), mode === 3 ? 1 : fan.pace, amount);
                 mesh.count++;
-                if (mode === 5) {
+                if ((mode === 5 || previous === 5 && blend < 1) && !reduced) {
                     const screen = phone.clone().add(new T.Vector3(0, .045, .015)).applyMatrix4(this.transform.matrix);
                     this.transform.position.copy(screen);
+                    this.transform.scale.multiplyScalar(mode === 5 ? blend : 1 - blend);
                     this.transform.updateMatrix();
                     this.phones.setMatrixAt(phoneCount++, this.transform.matrix);
                 }

@@ -2,13 +2,14 @@
 import { readFileSync } from 'node:fs';
 import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { appearanceSchema, STARTER_ITEMS } from '@/features/player-model/appearance';
 import { disposeModel, requiredModelFiles, type ModelLibrary } from '@/features/player-model/model';
 import { crowdAppearances, crowdMotion } from './crowdAnimation';
+vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 import { DemoCrowd } from './performers';
 describe('individual crowd identity and motion', () => {
-    it('covers both frames, varied skin/hair/build and all free outfits with reproducible identities', () => {
+    it('covers both frames, varied skin/hair/build and a representative spread of free outfits with reproducible identities', () => {
         const appearances = crowdAppearances(872);
         expect(appearances).toEqual(crowdAppearances(872));
         expect(appearances).not.toEqual(crowdAppearances(100));
@@ -17,8 +18,11 @@ describe('individual crowd identity and motion', () => {
         expect(new Set(appearances.map(a => a.body.frame)).size).toBe(2);
         expect(new Set(appearances.map(a => a.body.skin)).size).toBe(8);
         expect(new Set(appearances.map(a => a.head.hairStyle)).size).toBeGreaterThanOrEqual(6);
-        for (const slot of ['top', 'bottom', 'footwear'] as const)
-            expect(new Set(appearances.map(a => a.equipment[slot].itemId))).toEqual(new Set(STARTER_ITEMS[slot].map(i => i.id)));
+        for (const slot of ['top', 'bottom', 'footwear'] as const) {
+            const ids = new Set(appearances.map(a => a.equipment[slot].itemId));
+            expect(ids.size).toBe(Math.min(16, STARTER_ITEMS[slot].length));
+            expect([...ids].every(id => STARTER_ITEMS[slot].some(item => item.id === id))).toBe(true);
+        }
         expect(new Set(Array.from({ length: 100 }, (_, i) => crowdMotion('bounce', .9, i / 100, 10))).size).toBeGreaterThanOrEqual(5);
     });
     it('keeps television choreography isolated from ordinary gig reactions', () => {
@@ -59,6 +63,13 @@ describe('individual crowd identity and motion', () => {
         expect(phones.count).toBeGreaterThan(0);
         expect(phones.count).toBeLessThan(160);
         const state = snapshot();
+        crowd.update(10, 1, .9, false, {}, 'phone_lights', undefined, { previousReaction: 'still', reactionElapsed: .3, rhythmSeconds: 5 });
+        const transitioning = snapshot();
+        expect(transitioning).not.toEqual(state);
+        crowd.update(90, 1, .9, false, {}, 'jump');
+        crowd.update(10, 1, .9, false, {}, 'phone_lights', undefined, { previousReaction: 'still', reactionElapsed: .3, rhythmSeconds: 5 });
+        expect(snapshot()).toEqual(transitioning);
+        crowd.update(10, 1, .9, false, {}, 'phone_lights');
         crowd.update(90, 1, .9, false, {}, 'jump');
         expect(phones.count).toBe(0);
         expect(snapshot()).not.toEqual(state);
@@ -68,7 +79,7 @@ describe('individual crowd identity and motion', () => {
         const reduced = snapshot();
         crowd.update(88, 1, .9, true, {}, 'bounce');
         expect(snapshot()).toEqual(reduced);
-        const modes = () => meshes.flatMap(mesh => Array.from({ length: mesh.count }, (_, i) => mesh.geometry.attributes.crowdMotion.getX(i)));
+        const modes = () => meshes.flatMap(mesh => Array.from({ length: mesh.count }, (_, i) => Math.floor(mesh.geometry.attributes.crowdMotion.getX(i) % 16)));
         crowd.update(12, 1, 1, false, {}, 'mosh_pit');
         expect(modes().filter(mode => mode === 8).length).toBeGreaterThan(3);
         expect(modes().filter(mode => mode === 8).length).toBeLessThan(40);

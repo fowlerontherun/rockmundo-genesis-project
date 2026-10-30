@@ -1,3 +1,5 @@
+import { sectionLight } from './showMotion';
+import type { PerformanceSection } from './liveTypes';
 import type { DemoQuality } from './config';
 import type { VenueProfile } from './venueProfile';
 
@@ -62,15 +64,19 @@ export function venueBeamCue(
   playbackSeconds: number,
   lightLevel: number,
   reducedMotion: boolean,
+  section?: PerformanceSection,
+  sectionProgress = 0,
+  focus?: LightPosition,
 ): VenueBeamCue {
   const t = !reducedMotion && Number.isFinite(playbackSeconds) ? Math.max(0, playbackSeconds) : 0;
   const energy = Number.isFinite(lightLevel) ? Math.max(0, Math.min(1.5, lightLevel)) : 1;
   const phase = t * (.22 + ordinal % 3 * .055) + ordinal * 1.37 + p.seed * .017;
-  const swing = Math.sin(phase) * Math.min(3.2, p.stageWidth * .115) * Math.min(1, energy);
+  const shape = section ? sectionLight(section, sectionProgress) : { intensity: 1, spread: 1 };
+  const swing = shape.spread * Math.sin(phase) * Math.min(3.2, p.stageWidth * .115) * Math.min(1, energy);
   const targetX = Math.max(-p.stageWidth * .41, Math.min(p.stageWidth * .41, source[0] * .55 + swing));
   const targetZ = .65 - p.stageDepth * (.27 + .06 * Math.cos(phase * .7));
   return {
-    target: [targetX, p.stageHeight + .24, targetZ],
-    opacity: .018 + .034 * Math.min(1, energy),
+    target: section === 'solo' && focus && ordinal < 2 ? [focus[0], focus[1] + .9, focus[2]] : [targetX, p.stageHeight + .24, targetZ],
+    opacity: (.018 + .034 * Math.min(1, energy)) * shape.intensity,
   };
 }

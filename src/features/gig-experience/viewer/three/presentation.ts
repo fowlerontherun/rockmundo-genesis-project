@@ -1,3 +1,5 @@
+import { crowdPresentation } from './crowdPresentation';
+import { rhythmSeconds } from '@/features/gig-demo-3d/showMotion';
 import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { GigViewerReplay } from '../../events/types';
 import type { GigExperienceDTO } from '../../types';
@@ -439,8 +441,14 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
   const phaseText = String(playback.activePhase ?? '').toLowerCase();
   const recentSong = [...past].reverse().find(e => e.visualPayload.type === 'song_start');
   const releaseDurationMs = 2400;
-  const recentSongEndMs = recentSong ? recentSong.scheduledOffsetMs + Math.max(1, recentSong.durationMs) : -Infinity;
-  const releaseActive = !songPlaying && !!recentSong && positionMs >= recentSongEndMs && positionMs <= recentSongEndMs + releaseDurationMs;
+  // song_start spans the intro, not the whole performance. Include the saved
+  // performance/highlight events up to the next song so applause never cuts in mid-song.
+  const nextSong = recentSong && replay.events.find(e => e.visualPayload.type === 'song_start' && e.scheduledOffsetMs > recentSong.scheduledOffsetMs);
+  const songEvents = recentSong ? replay.events.filter(e => e.scheduledOffsetMs >= recentSong.scheduledOffsetMs
+    && e.scheduledOffsetMs < (nextSong?.scheduledOffsetMs ?? Infinity)
+    && /^(song_intro|song_performance|highlight_moment)$/.test(e.phase)) : [];
+  const recentSongEndMs = songEvents.length ? Math.max(...songEvents.map(e => e.scheduledOffsetMs + Math.max(1, e.durationMs))) : -Infinity;
+  const releaseActive = playback.activePhase !== 'song_intro' && !!recentSong && positionMs >= recentSongEndMs && positionMs <= recentSongEndMs + releaseDurationMs;
 
   let section: PerformanceSection = 'idle';
   let sectionProgress = 0;
@@ -482,7 +490,8 @@ export function concertFrame(plan: PerformerPlan, replay: GigViewerReplay, exper
     sectionProgress,
     occupancy: attendance.state === 'valid' ? clamp(attendance.value / profile.capacity) * filling * dispersed : 0,
     energy: clamp((playback.crowdEnergy ?? 30) / 100),
-    crowdReaction: releaseActive ? 'applause' : itemPayload?.action === 'phone_lights' ? 'phone_lights' : itemPayload?.action === 'mosh_pit' ? 'mosh_pit' : itemPayload?.action === 'crowd_surf' ? 'crowd_surf' : itemPayload?.action === 'crowd_wave' ? 'wave' : reaction?.visualPayload.type === 'crowd_reaction' ? reaction.visualPayload.reaction : 'still',
+    ...crowdPresentation(past, positionMs, positionMs >= recentSongEndMs ? recentSongEndMs : undefined),
+    rhythmSeconds: rhythmSeconds(positionMs / 1000, (recentSong?.scheduledOffsetMs ?? 0) / 1000, recentSong?.messageParams?.bpm),
     performing: songPlaying || releaseActive,
     crowdCueProgress: item && /mosh_pit|crowd_surf/.test(itemPayload?.action ?? '') ? progress(item) : undefined,
     crowd: clamp(count / 160 * filling * dispersed * tuning.densityMultiplier / 2),
