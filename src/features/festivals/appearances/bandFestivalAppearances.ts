@@ -169,7 +169,8 @@ export function festivalAppearanceAsActivity(
     : new Date(`${appearance.festivalDate}T23:59:59.999`);
 
   const localToday = festivalLocalDateKey(today, appearance.venueTimezone);
-  // A premature annual result cannot mark a still-running Festival as played.
+  // Festival date completion is a calendar fact, not proof the band performed.
+  // Only an authoritative completed session may mark this appearance played.
   const datesFinished = appearance.festivalEndsOn < localToday;
   const status: ScheduledActivity["status"] =
     appearance.sessionStatus === "completed" ? "completed"
@@ -198,6 +199,8 @@ export function festivalAppearanceAsActivity(
       festival_company_id: appearance.festivalCompanyId,
       festival_slug: appearance.festivalSlug,
       festival_date: appearance.festivalDate,
+      festival_dates_finished: datesFinished,
+      performance_outcome_verified: appearance.sessionStatus === "completed",
       band_id: appearance.bandId,
       billing_position: appearance.billingPosition,
       stage_name: appearance.stageName,
