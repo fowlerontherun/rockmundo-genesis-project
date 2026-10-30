@@ -6,7 +6,7 @@ import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalSta
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
 import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
-import { formatFestivalEditionDate, getFestivalLocalClockHour } from "./festivalPublicDisplay";
+import { formatFestivalEditionDate, getFestivalLocalClockHour, festivalTimeZoneLabel } from "./festivalPublicDisplay";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -151,7 +151,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                   {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
-                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {formatFestivalEditionDate(lastRuntimeUpdate, timezone, { dateStyle: "medium", timeStyle: "short" })} (festival time)</p>}
+                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {formatFestivalEditionDate(lastRuntimeUpdate, timezone, { dateStyle: "medium", timeStyle: "short" })} ({festivalTimeZoneLabel(timezone)})</p>}
                 </>
               )}
               {showRefreshAction && (
@@ -172,7 +172,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                     ))}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Snapshot: {formatFestivalEditionDate(selectedCrowd.lastCalculatedAt, timezone, { dateStyle: "medium", timeStyle: "short" })} (festival time).
+                    Snapshot: {formatFestivalEditionDate(selectedCrowd.lastCalculatedAt, timezone, { dateStyle: "medium", timeStyle: "short" })} ({festivalTimeZoneLabel(timezone)}).
                     Not a live headcount or queue estimate.
                   </p>
                 </>
