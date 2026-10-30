@@ -38,6 +38,12 @@ describe("public festival stage crowd snapshots", () => {
     expect(festivalCrowdMoodLabels.excited).toBe("Excited");
   });
 
+  it("retains a measured stage density when crowd mood is not measured", () => {
+    expect(readPublicFestivalStageCrowds(payload([{ ...crowd, mood: null }]), launchId)).toEqual([
+      expect.objectContaining({ crowdBand: "busy", mood: null }),
+    ]);
+  });
+
   it("rejects previous-day, future-day and legacy unversioned crowd snapshots", () => {
     const legacy = Object.fromEntries(Object.entries(crowd).filter(([key]) => key !== "festivalDate"));
     expect(readPublicFestivalStageCrowds(payload([legacy]), launchId)).toEqual([]);
