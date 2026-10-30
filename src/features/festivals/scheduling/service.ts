@@ -10,7 +10,32 @@ export async function fetchFestivalScheduleWorkspace(editionId: string): Promise
   return workspaceSchema.parse(await rpc("festival_edition_schedule_workspace", { p_edition_id: editionId }));
 }
 export const configureStageHours = (input: { editionId: string; stageId: string; date: string; openingTime: string; curfew: string; shutdownBufferMinutes?: number; changeoverMinutes?: number }) => rpc("festival_schedule_configure_stage_hours", { p_edition_id: input.editionId, p_stage_id: input.stageId, p_festival_date: input.date, p_opening_time: input.openingTime, p_curfew: input.curfew, p_shutdown_buffer_minutes: input.shutdownBufferMinutes ?? 0, p_changeover_minutes: input.changeoverMinutes ?? 30, p_idempotency_key: `hours:${input.stageId}:${input.date}` });
-export const upsertScheduleItem = (input: { editionId: string; revisionId: string; item: Record<string, unknown>; expectedVersion?: number; idempotencyKey?: string }) => rpc("festival_schedule_upsert_item", { p_edition_id: input.editionId, p_revision_id: input.revisionId, p_item: input.item, p_expected_version: input.expectedVersion ?? null, p_idempotency_key: input.idempotencyKey ?? `item:${input.revisionId}:${Date.now()}` });
+/**
+ * Live RPC festival_schedule_upsert_item reads snake_case JSON keys. The owner
+ * workspace works with camelCase mutation inputs; map at this trust boundary.
+ */
+export const upsertScheduleItem = (input: { editionId: string; revisionId: string; item: Record<string, unknown>; expectedVersion?: number; idempotencyKey?: string }) => {
+  const value = (camel: string, snake: string) =>
+    Object.prototype.hasOwnProperty.call(input.item, camel) ? input.item[camel] : input.item[snake];
+  const item = {
+    stage_id: value("stageId", "stage_id"),
+    stage_slot_id: value("stageSlotId", "stage_slot_id") ?? input.item.id,
+    festival_date: value("festivalDate", "festival_date"),
+    starts_at: value("startsAt", "starts_at"),
+    ends_at: value("endsAt", "ends_at"),
+    duration_minutes: value("durationMinutes", "duration_minutes"),
+    item_type: value("itemType", "item_type"),
+    changeover_minutes: value("changeoverMinutes", "changeover_minutes"),
+    band_id: value("bandId", "band_id"),
+  };
+  return rpc("festival_schedule_upsert_item", {
+    p_edition_id: input.editionId,
+    p_revision_id: input.revisionId,
+    p_item: item,
+    p_expected_version: input.expectedVersion ?? null,
+    p_idempotency_key: input.idempotencyKey ?? `item:${input.revisionId}:${Date.now()}`,
+  });
+};
 export const previewScheduleTemplate = (input: { editionId: string; stageId: string; date: string; template: string; openingTime: string; curfew: string }) => rpc<any>("festival_schedule_preview_template", { p_edition_id: input.editionId, p_stage_id: input.stageId, p_festival_date: input.date, p_template: input.template, p_opening_time: input.openingTime, p_curfew: input.curfew });
 export const applyScheduleTemplate = (input: { editionId: string; revisionId: string; stageId: string; date: string; template: string; openingTime: string; curfew: string; confirmOverwrite?: boolean }) => rpc("festival_schedule_apply_template", { p_edition_id: input.editionId, p_revision_id: input.revisionId, p_stage_id: input.stageId, p_festival_date: input.date, p_template: input.template, p_opening_time: input.openingTime, p_curfew: input.curfew, p_confirm_overwrite: input.confirmOverwrite ?? false, p_idempotency_key: `template:${input.revisionId}:${input.stageId}:${input.date}:${input.template}` });
 export const publishSchedule = (input: { editionId: string; revisionId: string; acknowledgeWarnings?: boolean }) => rpc("festival_schedule_publish", { p_edition_id: input.editionId, p_revision_id: input.revisionId, p_acknowledge_warnings: input.acknowledgeWarnings ?? false, p_idempotency_key: `publish:${input.revisionId}` });
