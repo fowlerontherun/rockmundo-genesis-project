@@ -28,6 +28,9 @@ export function directGigCamera(
 ): Exclude<CameraShot, 'director'> {
   if (reducedMotion) return 'front';
   if (section === 'release') return (sectionProgress ?? 0) < .5 ? 'front' : 'stage';
+  if (section === 'chorus' && (sectionProgress ?? 1) < .12) return largeVenue ? 'side_pit' : 'band_medium';
+  if (section === 'breakdown') return 'drums';
+  if (section === 'outro' && (sectionProgress ?? 0) > .8) return 'band_medium';
   if (section === 'solo') return 'guitar';
 
   const sequence = largeVenue ? LARGE_VENUE_SHOTS : STANDARD_SHOTS;

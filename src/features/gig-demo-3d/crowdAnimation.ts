@@ -6,7 +6,7 @@ export const CROWD_LIMIT = 160;
 const CROWD_HAIR_STYLES = ['original', 'original', 'buzz', 'quiff', 'bob', 'ponytail', 'bun', 'curls', 'long', 'bald'] as const;
 const CROWD_FEMININE_HAIR_STYLES = ['original', 'bob', 'shoulder', 'layered_long', 'long_waves', 'ponytail', 'high_ponytail', 'side_braid', 'twin_ponytails', 'bun', 'curls', 'long', 'buzz'] as const;
 const CROWD_HAIR_COLORS = HAIR_COLORS.slice(0, 7);
-/** Reproducible identities; both body frames and all six starter designs appear in every full crowd. */
+/** Reproducible identities; both body frames and a spread across the starter wardrobe appear in every full crowd. */
 export function crowdAppearances(seed: number): PlayerAppearance[] {
     const random = seededRandom(seed), skins = ['#edc7a5', '#d4a373', '#ba8258', '#a96f46', '#8d5524', '#754832', '#593a2d', '#3e2c26'];
     return Array.from({ length: CROWD_VARIANTS }, (_, i) => {
@@ -20,7 +20,7 @@ export function crowdAppearances(seed: number): PlayerAppearance[] {
         a.head.hair = CROWD_HAIR_COLORS[(i + Math.floor(random() * 4)) % CROWD_HAIR_COLORS.length][1];
         a.head.facialHair = i % 2 ? 'none' : (['none', 'none', 'stubble', 'moustache', 'goatee', 'short_beard', 'full_beard', 'sideburns'] as const)[Math.floor(random() * 8)];
         for (const [index, slot] of (['top', 'bottom', 'footwear'] as const).entries()) {
-            a.equipment[slot].itemId = STARTER_ITEMS[slot][(i + index * 2) % 6].id;
+            a.equipment[slot].itemId = STARTER_ITEMS[slot][(Math.floor(i * STARTER_ITEMS[slot].length / CROWD_VARIANTS) + index * 2) % STARTER_ITEMS[slot].length].id;
             a.equipment[slot].color = CLOTHING_COLORS[(i * 5 + index * 3) % CLOTHING_COLORS.length][1];
         }
         return a;
@@ -70,13 +70,13 @@ export function crowdMotion(reaction: string, energy: number, personality: numbe
         return personality < .65 ? 0 : 1;
     return ([1, 1, 3, 2, 7, 1, 6] as const)[energy > .6 ? activity : activity % 3];
 }
-/** Five baked arm keyframes interpolate on the GPU. Flat shading computes the
+/** Seven baked pose keyframes interpolate on the GPU. Flat shading computes the
  * moved face normals, so lighting follows articulation without extra attributes. */
 export function crowdMaterial(time: {
     value: number;
 }) {
     const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: .88, flatShading: true });
-    material.customProgramCacheKey = () => 'crowd-articulation-v2';
+    material.customProgramCacheKey = () => 'crowd-articulation-v3';
     material.onBeforeCompile = shader => {
         shader.uniforms.crowdTime = time;
         shader.vertexShader = `attribute vec3 poseRaised;
@@ -89,20 +89,34 @@ attribute vec3 poseRunRight;
 attribute vec4 crowdMotion;
 uniform float crowdTime;
 ${shader.vertexShader}`;
+        shader.vertexShader = shader.vertexShader.replace('void main() {', `
+vec3 crowdPose(float mode, float phase, float amount) {
+  vec3 pose = position;
+  if (mode < .5) {
+    float upper = smoothstep(.8, 1.6, position.y);
+    pose.x += sin(phase*.65)*.007*upper*amount;
+    pose.z += sin(phase*.43)*.009*upper*amount;
+  }
+  if (mode > .5 && mode < 1.5) pose = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*1.7)), amount);
+  if (mode > 1.5 && mode < 2.5) pose = mix(position, poseRaised, (.86+.14*sin(phase*2.1))*amount);
+  if (mode > 2.5 && mode < 3.5) pose = mix(position, mix(poseClapOpen, poseClapClosed, .5+.5*cos(phase*12.5663706)), amount);
+  if (mode > 3.5 && mode < 4.5) pose = mix(position, poseRaised, amount);
+  if (mode > 4.5 && mode < 5.5) pose = mix(position, poseRaised, amount);
+  if (mode > 5.5 && mode < 6.5) pose = mix(position, mix(poseDanceRight, poseRaised, .75+.25*sin(phase*5.4)), amount);
+  if (mode > 6.5 && mode < 7.5) pose = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*4.0)), amount);
+  if (mode > 7.5 && mode < 8.5) pose = mix(position, mix(poseRunLeft, poseRunRight, .5+.5*sin(phase*7.2)), amount);
+  if (mode > 8.5) pose = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*1.6)), .35*amount);
+  return pose;
+}
+void main() {`);
         shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
-vec3 transformed = position;
-float mode = crowdMotion.x;
-float phase = crowdTime * crowdMotion.z + crowdMotion.y;
-float amount = crowdMotion.w;
-if (mode > 0.5 && mode < 1.5) transformed = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*1.7)), amount);
-if (mode > 1.5 && mode < 2.5) transformed = mix(position, poseRaised, .86+.14*sin(phase*2.1));
-if (mode > 2.5 && mode < 3.5) transformed = mix(poseClapOpen, poseClapClosed, .5+.5*sin(phase*7.0));
-if (mode > 3.5 && mode < 4.5) transformed = mix(poseDanceLeft, poseRaised, .7+.3*sin(phase*2.3));
-if (mode > 4.5 && mode < 5.5) transformed = poseRaised;
-if (mode > 5.5 && mode < 6.5) transformed = mix(poseDanceRight, poseRaised, .75+.25*sin(phase*5.4));
-if (mode > 6.5 && mode < 7.5) transformed = mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*4.0));
-if (mode > 7.5 && mode < 8.5) transformed = mix(position, mix(poseRunLeft, poseRunRight, .5+.5*sin(phase*7.2)), amount);
-if (mode > 8.5) transformed = mix(position, mix(poseDanceLeft, poseDanceRight, .5+.5*sin(phase*1.6)), .35*amount);
+float mode = floor(mod(crowdMotion.x, 16.0));
+float previousMode = floor(crowdMotion.x / 16.0);
+float blend = fract(crowdMotion.x) * 2.0;
+float previousAmount = floor(crowdMotion.y / 16.0) / 255.0;
+float phase = crowdTime * crowdMotion.z + mod(crowdMotion.y, 16.0);
+vec3 transformed = mix(crowdPose(previousMode, phase, previousAmount),
+  crowdPose(mode, phase, crowdMotion.w), blend);
 `);
     };
     return material;

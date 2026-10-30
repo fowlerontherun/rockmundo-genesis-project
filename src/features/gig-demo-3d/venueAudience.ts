@@ -1,4 +1,6 @@
 import * as T from 'three';
+import type { CrowdTransition } from './showMotion';
+import { reactionBlend } from './showMotion';
 import { fanWearsBandMerch } from '@/features/player-model/merchWearables';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { seededRandom } from './config';
@@ -49,7 +51,7 @@ export function isTvStudioAudienceBlocked(x: number, z: number, p: VenueProfile)
 }
 
 /** Complete low-poly anatomy and separate skin, hair and clothing colours. */
-export function audienceHumanGeometry(kind: number, seated = false, shirtOverride?: T.Color | null) {
+export function audienceHumanGeometry(kind: number, seated = false, shirtOverride?: T.Color | null, pose: 'idle' | 'raised' | 'clapOpen' | 'clapClosed' = 'idle') {
     const parts: T.BufferGeometry[] = [], skin = new T.Color(['#d7a67e', '#915d3e', '#b88360', '#593b2c'][kind % 4]), shirt = shirtOverride?.clone() ?? new T.Color(['#335369', '#873f47', '#3d6652', '#786080'][kind % 4]), trousers = new T.Color(['#283340', '#393237', '#283131', '#3b3549'][kind % 4]), hair = new T.Color(['#342923', '#272229', '#98734d', '#432d25'][kind % 4]), shoe = new T.Color('#20232a');
     const add = (g: T.BufferGeometry, colour: T.Color) => { const geometry = g.index ? g.toNonIndexed() : g; const n = geometry.attributes.position.count, colors = new Float32Array(n * 3); for (let i = 0; i < n; i++) colors.set(colour.toArray(), i * 3); geometry.setAttribute('color', new T.BufferAttribute(colors, 3)); geometry.deleteAttribute('uv'); parts.push(geometry); if (g !== geometry) g.dispose(); };
     const limb = (a: number[], b: number[], radius: number, colour: T.Color) => { const av = new T.Vector3(...a), bv = new T.Vector3(...b), g = new T.CylinderGeometry(radius, radius * .9, av.distanceTo(bv), 5, 1, true); g.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), bv.clone().sub(av).normalize())); g.translate(...av.add(bv).multiplyScalar(.5).toArray()); add(g, colour); };
@@ -62,8 +64,16 @@ export function audienceHumanGeometry(kind: number, seated = false, shirtOverrid
         const x = side * .105, knee = seated ? [side * .13, .42, .3] : [x, .45, .015], foot = seated ? [side * .13, .04, .35] : [x, .06, 0];
         limb([x, hips, 0], knee, .082, trousers); limb(knee, foot, .065, trousers);
         const boot = new T.BoxGeometry(.13, .09, .23); boot.translate(foot[0], .045, foot[2] + .035); add(boot, shoe);
-        const raised = !seated && kind % 3 === 1 && side === 1, elbow = raised ? [side * .31, shoulder + .12, .03] : [side * .29, shoulder - .22, .05], hand = raised ? [side * .28, shoulder + .48, .12] : [side * .3, shoulder - .42, .13];
+        const raised = pose === 'raised' || (!seated && pose === 'idle' && kind % 3 === 1 && side === 1), elbow = raised ? [side * .31, shoulder + .12, .03] : [side * .29, shoulder - .22, .05], hand = raised ? [side * .28, shoulder + .48, .12] : [side * .3, shoulder - .42, .13];
+        if (pose === 'clapOpen' || pose === 'clapClosed') {
+            elbow.splice(0, 3, side * .29, shoulder - .14, .17);
+            hand.splice(0, 3, side * (pose === 'clapClosed' ? .045 : .24), shoulder - .06, .36);
+        }
         limb([side * .19, shoulder - .04, 0], elbow, .062, shirt); limb(elbow, hand, .044, skin);
+        if (kind % 4 === 2 && side === 1) {
+            const phone = new T.BoxGeometry(.065, .12, .012); phone.translate(hand[0], hand[1] + .045, hand[2]); add(phone, new T.Color('#151923'));
+            const screen = new T.BoxGeometry(.052, .096, .014); screen.translate(hand[0], hand[1] + .045, hand[2] + .002); add(screen, new T.Color('#cce9ff'));
+        }
         const palm = new T.SphereGeometry(.05, 5, 3); palm.translate(...hand as [number, number, number]); add(palm, skin);
     }
     const geometry = mergeGeometries(parts, false)!; parts.forEach(g => g.dispose()); geometry.computeBoundingBox(); return geometry;
@@ -96,17 +106,35 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
         const wearsMerch = validMerch && fanWearsBandMerch(String(seed), i, merchChance);
         buckets[kind + (wearsMerch ? 8 : 0)].push({ point: entry.point, rank: i });
     }
+    const reaction = { value: 0 }, previousReaction = { value: 0 }, blend = { value: 1 };
     const clock = { value: 0 }, strength = { value: 0 }, televisionMix = { value: television ? 1 : 0 };
+    root.userData.reaction = reaction; root.userData.previousReaction = previousReaction; root.userData.blend = blend;
     root.userData.clock = clock; root.userData.strength = strength; root.userData.televisionAudience = television; root.userData.maxCount = maximum; root.userData.capacity = p.capacity;
     if (merchColor && /^#[0-9a-f]{6}$/i.test(merchColor)) root.userData.merchColor = merchColor;
     const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: .92, flatShading: true });
-    material.customProgramCacheKey = () => television ? 'anatomical-audience-tv-v2' : 'anatomical-audience-v2';
+    material.customProgramCacheKey = () => television ? 'anatomical-audience-tv-v3' : 'anatomical-audience-v3';
     material.onBeforeCompile = shader => {
         shader.uniforms.audienceTime = clock;
+        shader.uniforms.audienceWidth = { value: p.crowdWidth };
+        shader.uniforms.audienceReaction = reaction; shader.uniforms.audiencePreviousReaction = previousReaction; shader.uniforms.audienceBlend = blend;
         shader.uniforms.audienceMotion = strength;
         shader.uniforms.audienceTelevision = televisionMix;
-        shader.vertexShader = 'uniform float audienceTime;\nuniform float audienceMotion;\nuniform float audienceTelevision;\n' + shader.vertexShader;
-        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion*weight;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
+        shader.vertexShader = 'uniform float audienceWidth;\nattribute vec3 audienceRaised;\nattribute vec3 audienceClapOpen;\nattribute vec3 audienceClapClosed;\nuniform float audienceReaction;\nuniform float audiencePreviousReaction;\nuniform float audienceBlend;\nuniform float audienceTime;\nuniform float audienceMotion;\nuniform float audienceTelevision;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace('void main() {', `
+vec3 audiencePose(float reaction, float phase) {
+  vec3 pose = position;
+  float pocket = sin(phase*.37)*.5+.5;
+  if (reaction > .5 && reaction < 1.5) pose = mix(position, audienceRaised, smoothstep(.45,.8,pocket));
+  if (reaction > 1.5 && reaction < 2.5) pose = mix(position, mix(audienceClapOpen, audienceClapClosed, .5+.5*cos(audienceTime*12.5663706)), .9);
+  if (reaction > 2.5 && reaction < 3.5) {
+    float travel = mod(audienceTime - (instanceMatrix[3].x/max(1.,audienceWidth)+.5)*3.0, 6.0);
+    pose = mix(position, audienceRaised, smoothstep(0.,.4,travel)*(1.-smoothstep(.85,1.45,travel)));
+  }
+  if (reaction > 3.5) pose = mix(position, audienceRaised, smoothstep(.5,.8,pocket));
+  return pose;
+}
+void main() {`);
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `float phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nvec3 transformed=mix(audiencePose(audiencePreviousReaction,phase),audiencePose(audienceReaction,phase),audienceBlend);\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion*weight;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
     };
     for (let bucket = 0; bucket < 16; bucket++) {
         const rows = buckets[bucket]; if (!rows.length) continue;
@@ -122,15 +150,23 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
             transform.scale.set(seated ? 1 : .9 + random() * .17, height, seated ? 1 : .9 + random() * .1);
             transform.updateMatrix(); mesh.setMatrixAt(i, transform.matrix);
         });
+        for (const [pose, attribute] of [['raised', 'audienceRaised'], ['clapOpen', 'audienceClapOpen'], ['clapClosed', 'audienceClapClosed']] as const) {
+            const posed = audienceHumanGeometry(kind % 4, kind >= 4, merch, pose);
+            mesh.geometry.setAttribute(attribute, posed.attributes.position.clone()); posed.dispose();
+        }
         mesh.count = 0; root.add(mesh);
     }
     return root;
 }
 
-export function updateVenueAudience(root: T.Group, occupancy: number, seconds: number, reduced: boolean, energy: number, frontCount = 0) {
+export function updateVenueAudience(root: T.Group, occupancy: number, seconds: number, reduced: boolean, energy: number, frontCount = 0, reaction = 'still', transition: CrowdTransition = {}) {
     const safe = Number.isFinite(occupancy) ? T.MathUtils.clamp(occupancy, 0, 1) : 0, limit = Math.min(Math.round(root.userData.maxCount * safe), Math.max(0, Math.floor(root.userData.capacity * safe) - frontCount));
     const televisionBoost = root.userData.televisionAudience ? 1.35 : 1;
-    root.userData.clock.value = reduced ? 0 : seconds;
+    const mode = (cue: string) => /applause|clap/.test(cue) ? 2 : cue === 'wave' ? 3 : cue === 'phone_lights' ? 4 : /cheer|jump|bounce|roar|mosh/.test(cue) ? 1 : 0;
+    root.userData.reaction.value = reduced ? 0 : mode(reaction);
+    root.userData.previousReaction.value = reduced ? 0 : mode(transition.previousReaction ?? reaction);
+    root.userData.blend.value = reduced ? 1 : reactionBlend(transition.reactionElapsed, .5);
+    root.userData.clock.value = reduced ? 0 : transition.rhythmSeconds ?? seconds;
     root.userData.strength.value = reduced ? 0 : T.MathUtils.clamp(energy * televisionBoost, 0, 1.35);
     root.children.forEach(child => { if (!(child instanceof T.InstancedMesh)) return; const ranks = child.userData.ranks as number[]; let count = 0; while (count < ranks.length && ranks[count] < limit) count++; child.count = count; });
 }

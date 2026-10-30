@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><title>Gig motion render fixture</title></head>
+<body style="margin:0;background:#000"><canvas style="width:100vw;height:100vh"></canvas>
+<script type="module">
+import { ConcertScene } from '/src/features/gig-demo-3d/ConcertScene.ts';
+import { DEFAULT_SETTINGS } from '/src/features/gig-demo-3d/config.ts';
+import { venuePreviewOptions } from '/src/features/gig-demo-3d/venuePreview.ts';
+// Render on demand so software WebGL can test real shaders without a busy loop.
+let render;
+window.requestAnimationFrame = callback => { render = callback; return 1; };
+const options = { ...venuePreviewOptions('rock_club', 600), externalClock: true };
+const settings = { ...DEFAULT_SETTINGS, quality: 'low', playing: false, camera: 'band_medium', crowd: 1 };
+const scene = new ConcertScene(document.querySelector('canvas'), settings, () => {}, (state, message) => {
+  window.gigMotionState = { state, message };
+}, options);
+window.renderGigMotion = (seconds, reaction = 'wave', reducedMotion = false) => {
+  scene.setSettings({ ...settings, reducedMotion });
+  scene.setFrame({ positionMs: seconds * 1000, section: 'chorus', sectionProgress: .4, energy: .8,
+    crowd: 1, occupancy: 1, crowdReaction: reaction, crowdPreviousReaction: 'still', crowdReactionElapsed: .4,
+    rhythmSeconds: seconds, performing: true, look: 'electric', lightLevel: 1, focusId: 'preview-1', effect: null,
+    performers: options.performers.map(p => ({ id: p.id, position: p.position, visible: true, walking: false, action: null, actionProgress: 0 })) });
+  render(performance.now() + 1000);
+  const crowd = scene.scene.children.filter(mesh => mesh.name.startsWith('crowd-variant-'));
+  return { camera: scene.camera.position.toArray(),
+    crowd: crowd.map(mesh => ({ count: mesh.count, matrices: Array.from(mesh.instanceMatrix.array), motion: Array.from(mesh.geometry.attributes.crowdMotion.array) })),
+    distant: ['clock', 'strength', 'reaction', 'previousReaction', 'blend'].map(key => scene.distantAudience.userData[key].value) };
+};
+</script></body></html>

@@ -23,7 +23,7 @@ describe('dense anatomical audiences', () => {
                     }
                     if (Math.abs(p.getX(i)) < .075 && p.getY(i) > (seated ? 1 : 1.32) && p.getY(i) < (seated ? 1.2 : 1.48)) neck = true;
                 }
-                expect(colours.size).toBe(5);
+                expect(colours.size).toBe(kind === 2 ? 7 : 5);
                 expect(leftFoot && rightFoot && neck).toBe(true);
                 g.dispose();
             }
@@ -105,7 +105,18 @@ describe('dense anatomical audiences', () => {
         updateVenueAudience(audience, .1, 90, false, .8, 160);
         updateVenueAudience(audience, .5, 10, false, .8, 160);
         expect(count()).toBe(half);
-        updateVenueAudience(audience, .5, 10, true, .8, 160);
+        const matrices = audience.children.map(child => Array.from((child as T.InstancedMesh).instanceMatrix.array));
+        updateVenueAudience(audience, .5, 12, false, .8, 160, 'applause', { previousReaction: 'still', reactionElapsed: .2, rhythmSeconds: 6 });
+        expect(audience.userData.reaction.value).toBe(2);
+        expect(audience.userData.blend.value).toBeGreaterThan(0);
+        expect(audience.userData.blend.value).toBeLessThan(1);
+        expect(audience.children.map(child => Array.from((child as T.InstancedMesh).instanceMatrix.array))).toEqual(matrices);
+        for (const child of audience.children as T.InstancedMesh[]) {
+            expect(child.geometry.attributes.audienceRaised.count).toBe(child.geometry.attributes.position.count);
+            expect(Array.from(child.geometry.attributes.audienceClapClosed.array)).not.toEqual(Array.from(child.geometry.attributes.audienceClapOpen.array));
+        }
+        updateVenueAudience(audience, .5, 10, true, .8, 160, 'applause');
+        expect(audience.userData.reaction.value).toBe(0);
         expect(audience.userData.strength.value).toBe(0);
         expect(audience.userData.clock.value).toBe(0);
         disposeModel(root);

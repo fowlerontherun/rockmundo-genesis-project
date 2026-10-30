@@ -130,3 +130,29 @@ crowds, test all labels and capacity tiers, compare preview controls and verify
 that fixed instruments match replay positions. Camera checks project the full
 performance area into portrait and landscape viewports for every capacity tier. The browser GPU/visual pass is
 still needed before release; mocked component tests do not certify appearance.
+
+
+### Gig motion and crowd direction
+
+Ordinary gigs use replay-derived presentation cues for these visual improvements:
+
+- Crowd arm poses ease between reactions, with individual response delays and smooth changes in the automatic seven-second activity cycle. Transition state is packed into the existing instance attribute to stay within mobile GPU limits.
+- Quiet fans retain restrained upper-body movement. Reduced motion freezes articulation and hides phone screens.
+- Waves travel across fan positions. The distant instanced audience now has raised-arm and clap poses, travelling waves and a subset of hand-held phones, without adding audience draw calls or changing attendance.
+- The sixteen detailed crowd identities sample the full starter wardrobe rather than the first six catalogue entries.
+- Director cameras react to chorus entrances, breakdowns, solos and endings while retaining recurring close shots in large venues.
+- Lighting opens up for choruses, narrows for verses/breakdowns, and aims the first two solo lights at the featured performer.
+- Performer rigs and crowd claps share a presentation rhythm clock. Saved numeric `song_start.messageParams.bpm` values from 40–240 are accepted; legacy replays use 120 BPM. Existing replay generation normally has no BPM, so this fallback is visual timing, not audio beat detection.
+- The post-song release window uses the full intro/performance/highlight span rather than the intro duration. It never inserts applause inside the saved song performance.
+
+These cues do not change gameplay outcomes or require database migrations. TV camera choreography remains separate. Section cues may be inferred from the replay; they are not an analysis of the audio waveform.
+
+Validation:
+
+```sh
+npx vitest run src/features/gig-demo-3d/showMotion.test.ts src/features/gig-demo-3d/crowdAnimation.test.ts src/features/gig-demo-3d/venueAudience.test.ts src/features/gig-demo-3d/gigCameraSequence.test.ts src/features/gig-demo-3d/venueLightShow.test.ts src/features/gig-experience/viewer/three/presentation.test.ts src/features/gig-experience/viewer/three/crowdPresentation.test.ts src/features/gig-experience/viewer/three/GigStage3D.test.tsx --maxWorkers=1
+npx playwright install chromium
+npm run test:gig-motion:webgl
+```
+
+The WebGL smoke test starts a local Vite fixture, loads the production scene, renders on demand with software WebGL, checks shader errors, and verifies crowd/camera reconstruction after seeks and crowd freezing under reduced motion. It needs no account or live database. It is a correctness smoke test, not a hardware FPS benchmark.

@@ -20,6 +20,7 @@ import { djClubCameraPose, type DjClubCameraShot } from './djClubCamera';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
+import { sectionLight } from './showMotion';
 import { directGigCamera } from './gigCameraSequence';
 import { frameVenueBand, frameVenuePerformer } from './venueCameraAngles';
 import { frameTvPerformance, studioPerformerMotion, TV_PERFORMANCE_SHOTS } from './tvPerformanceDirection';
@@ -541,6 +542,7 @@ export class ConcertScene {
     const dt = this.last ? Math.min((now - this.last) / 1000, 0.05) : 0; this.last = now;
     if (!this.options?.externalClock && this.settings.playing && this.loaded) this.seconds += dt;
     const t = this.settings.reducedMotion ? 0 : this.seconds;
+    const rhythm = this.settings.reducedMotion ? 0 : (this.options?.television ? t : this.playback?.rhythmSeconds ?? t);
     const energy = this.playback?.energy ?? this.settings.energy;
     const section = this.playback?.section ?? 'idle';
     const sectionScale = section === 'intro' ? .72
@@ -651,7 +653,7 @@ export class ConcertScene {
         actor.root.position.z += move.dz;
         actor.root.rotation.y += move.yaw;
       }
-      actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, actorEnergy, this.settings.reducedMotion);
+      actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, actorEnergy, this.settings.reducedMotion, this.playback && !this.playback.performing && !actor.walking ? 0 : rhythm);
     });
     if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);
     const releaseProgress = section === 'release' ? (this.playback?.sectionProgress ?? 0) : 0;
@@ -661,23 +663,30 @@ export class ConcertScene {
     const crowdReaction = section === 'release'
       ? 'applause'
       : this.playback?.crowdReaction ?? (this.previewCrowdReaction === 'auto' ? 'bounce' : this.previewCrowdReaction);
-    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, crowdEnergy, this.settings.reducedMotion, this.crowdTuning, crowdReaction, this.playback?.crowdCueProgress);
+    this.crowd?.update(t, this.playback?.crowd ?? this.settings.crowd, crowdEnergy, this.settings.reducedMotion, this.crowdTuning, crowdReaction, this.playback?.crowdCueProgress, {
+      rhythmSeconds: rhythm, previousReaction: this.options?.television ? crowdReaction : this.playback?.crowdPreviousReaction, reactionElapsed: this.options?.television ? undefined : this.playback?.crowdReactionElapsed,
+    });
     if (this.distantAudience) {
       const occupancy = this.playback?.occupancy ?? this.settings.crowd;
-      updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, crowdEnergy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)));
+      updateVenueAudience(this.distantAudience, occupancy, t, this.settings.reducedMotion, crowdEnergy, Math.round(160 * (this.playback?.crowd ?? this.settings.crowd)), crowdReaction, {
+        rhythmSeconds: rhythm, previousReaction: this.options?.television ? crowdReaction : this.playback?.crowdPreviousReaction, reactionElapsed: this.options?.television ? undefined : this.playback?.crowdReactionElapsed,
+      });
     }
     this.updateTelevisionPresenter(t);
     this.updateTelevisionCrew(t);
     this.updateEffects();
     const playbackLight = this.playback?.lightLevel ?? 1;
     const baseBeamCount = Math.min(4, this.lights.length);
+    const lightingSection = this.options?.television ? undefined : section;
+    const lightingShape = lightingSection ? sectionLight(lightingSection, this.playback?.sectionProgress) : { intensity: 1 };
+    const focus = visibleActors.find(actor => actor.id === this.playback?.focusId)?.root.position.toArray() as [number, number, number] | undefined;
     this.lights.forEach((light, i) => {
       const releaseLight = section === 'release' ? T.MathUtils.lerp(1, .72, smoothMotion(releaseProgress)) : 1;
-      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight - this.venueProfile.stageHeight) / 5.3, 1.3) : 1) * playbackLight * releaseLight;
+      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight - this.venueProfile.stageHeight) / 5.3, 1.3) : 1) * playbackLight * releaseLight * lightingShape.intensity;
       if (i >= baseBeamCount) return;
       const beam = this.beams[i];
       if (this.venueProfile) {
-        const cue = venueBeamCue(this.venueProfile, light.position.toArray() as [number, number, number], i, t, playbackLight * releaseLight, this.settings.reducedMotion);
+        const cue = venueBeamCue(this.venueProfile, light.position.toArray() as [number, number, number], i, t, playbackLight * releaseLight, this.settings.reducedMotion, lightingSection, this.playback?.sectionProgress, focus);
         light.target.position.set(...cue.target);
         const movingHead = this.motorizedHeads[i];
         if (movingHead) aimMotorizedHead(movingHead, light.position, light.target.position);
@@ -693,14 +702,14 @@ export class ConcertScene {
     });
     if (this.venueProfile) this.beams.slice(baseBeamCount).forEach((beam, i) => {
       const p = this.venueProfile!;
-      const cue = venueBeamCue(p, beam.position.toArray() as [number, number, number], baseBeamCount + i, t, playbackLight, this.settings.reducedMotion);
+      const cue = venueBeamCue(p, beam.position.toArray() as [number, number, number], baseBeamCount + i, t, playbackLight, this.settings.reducedMotion, lightingSection, this.playback?.sectionProgress, focus);
       const target = new T.Vector3(...cue.target);
       const reach = beam.position.distanceTo(target) / 5.6;
       beam.scale.set(Math.max(1, reach * .52), reach, Math.max(1, reach * .52));
       beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), target.sub(beam.position).normalize());
       (beam.material as T.ShaderMaterial).uniforms.opacity.value = cue.opacity;
     });
-    this.cymbals.forEach((object, i) => { object.rotation.z = this.settings.reducedMotion ? 0 : Math.sin(t * 12.56 + i) * 0.012 * this.settings.energy; });
+    this.cymbals.forEach((object, i) => { object.rotation.z = this.settings.reducedMotion ? 0 : Math.sin(rhythm * 12.56 + i) * 0.012 * this.settings.energy; });
     this.particles.rotation.y = t * 0.008; this.moveCamera(dt);
     this.renderer.info.reset(); this.composer.render();
     this.frames++;

@@ -86,9 +86,11 @@ describe('canonical replay to 3D stage', () => {
   it('adds a deterministic post-song release window before returning to idle', async () => {
     const replay = await makeStageReplay(), plan = buildStagePlan(replay, null);
     const song = replay.events.find(e => e.visualPayload.type === 'song_start')!;
-    const songEnd = song.scheduledOffsetMs + song.durationMs;
+    const songEnd = Math.max(...replay.events.filter(e => /^(song_intro|song_performance|highlight_moment)$/.test(e.phase)).map(e => e.scheduledOffsetMs + e.durationMs));
+
     const frame = (time: number) => concertFrame(plan, replay, null, derivePlaybackState(replay, time), false, DEFAULT_CROWD_TUNING);
 
+    expect(frame(song.scheduledOffsetMs + song.durationMs + 100).section).not.toBe('release');
     const releaseStart = frame(songEnd + 100);
     const releaseMiddle = frame(songEnd + 1200);
     const idle = frame(songEnd + 2600);
