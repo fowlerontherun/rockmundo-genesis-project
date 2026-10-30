@@ -126,7 +126,7 @@ export default function Awards() {
         .in("award_show_id", completedShowIds)
         .order("category_name", { ascending: true });
       if (error) throw error;
-      return (data || []) as AwardWin[];
+      return (data || []) as Pick<AwardWin, "id" | "award_show_id" | "category_name" | "winner_name" | "band_id" | "fame_boost" | "prize_money" | "won_at">[];
     },
   });
 
@@ -627,6 +627,8 @@ export default function Awards() {
             <AwardCeremonyExperience
               key={selectedShow.id}
               show={selectedShow}
+              confirmedPerformances={bookedPerformances}
+              performancesLoadingFailed={performancesError}
               redCarpetAttended={hasRedCarpetAttendance}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
               onAttendRedCarpet={(outfit) =>
