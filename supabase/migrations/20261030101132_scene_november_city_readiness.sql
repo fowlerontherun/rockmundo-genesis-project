@@ -49,7 +49,7 @@ AS $function$
   left join eligible e on e.id = c.id
   left join created cr on cr.id = c.id
   order by c.name, c.id;
-$function$
+$function$;
 
 revoke all on function private.scene_november_city_readiness() from public, anon, authenticated;
 grant execute on function private.scene_november_city_readiness() to service_role;
