@@ -537,20 +537,13 @@ export default function RadioStations() {
           if (fameEventError) throw fameEventError;
 
           if (radioRevenue > 0) {
-            const { error: bandEarningsError } = await supabase
-              .from("band_earnings")
-              .insert({
-                band_id: songData.band_id,
-                amount: radioRevenue,
-                source: "radio_play",
-                description: `Radio play on ${stationData.name}`,
-                metadata: {
-                  station_id: submission.station_id,
-                  station_name: stationData.name,
-                  song_id: songData.id,
-                  play_id: playRecord?.id,
-                },
-              });
+            if (!playRecord?.id) throw new Error("Radio play receipt missing");
+            // Admin-only settlement derives the receiving band and credit
+            // from the saved radio play. Retry cannot pay the same play twice.
+            const { error: bandEarningsError } = await (supabase as any).rpc(
+              "admin_post_radio_play_earning",
+              { p_play_id: playRecord.id },
+            );
             if (bandEarningsError) throw bandEarningsError;
           }
         }
