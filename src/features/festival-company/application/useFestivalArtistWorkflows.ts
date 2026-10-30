@@ -1,6 +1,7 @@
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as repository from "../data/festivalCompanyRepository";
+import { festivalBookingInvalidations } from "./festivalCacheInvalidations";
 import {
   createFestivalEditionArtistOffer,
   searchFestivalEditionArtistCandidates,
@@ -60,20 +61,7 @@ const factories = {
 
 const invalidateArtistState = async (
   client: ReturnType<typeof useQueryClient>,
-) => {
-  await Promise.all([
-    client.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
-    client.invalidateQueries({ queryKey: ["festival-artist-candidates"] }),
-    client.invalidateQueries({ queryKey: festivalArtistOpportunitiesKey }),
-    client.invalidateQueries({ queryKey: ["festival-company-setup"] }),
-    client.invalidateQueries({ queryKey: ["festival-company-editions"] }),
-    client.invalidateQueries({ queryKey: ["public-festival"] }),
-    client.invalidateQueries({ queryKey: ["public-festival-timetable"] }),
-    client.invalidateQueries({ queryKey: ["festival-directory"] }),
-    client.invalidateQueries({ queryKey: ["notifications"] }),
-    client.invalidateQueries({ queryKey: ["mail"] }),
-  ]);
-};
+) => Promise.all(festivalBookingInvalidations.map(queryKey => client.invalidateQueries({ queryKey })));
 
 export const useFestivalArtistAction = (action: keyof typeof factories) => {
   const client = useQueryClient();
