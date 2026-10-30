@@ -8,6 +8,7 @@ import {
   formatFestivalEditionDate,
   formatFestivalEditionTime,
   getFestivalLocalClockHour,
+  festivalTimeZoneLabel,
   hasIssuedFestivalAdmission,
   isPublishedFestivalPerformance,
 } from "../festivalPublicDisplay";
@@ -80,7 +81,13 @@ describe("public festival visitor facts", () => {
     expect(formatFestivalEditionTime("invalid", "Europe/London")).toBe("Time to be announced");
   });
 
-  it("uses festival-local stage lighting hours across British DST boundaries", () => {
+  it("clearly distinguishes published local time from UTC fallback", () => {
+    expect(festivalTimeZoneLabel("Europe/London")).toBe("festival time");
+    expect(festivalTimeZoneLabel("America/Los_Angeles")).toBe("festival time");
+    expect(festivalTimeZoneLabel("Invalid/Zone")).toBe("UTC fallback — festival timezone unavailable");
+  });
+
+    it("uses festival-local stage lighting hours across British DST boundaries", () => {
     const beforeFallBack = Date.parse("2026-10-25T00:30:00Z");
     const afterFallBack = Date.parse("2026-10-25T02:30:00Z");
     expect(getFestivalLocalClockHour(beforeFallBack, "Europe/London")).toBe(1);
