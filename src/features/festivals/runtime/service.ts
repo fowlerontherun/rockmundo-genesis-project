@@ -105,3 +105,51 @@ export async function transitionEditionRuntime(
     p_idempotency_key: crypto.randomUUID(),
   });
 }
+
+
+/** Only confirmation evidence from the canonical annual-edition runtime. */
+const canonicalStageStatusSchema = z.enum([
+  "ready", "starting", "live", "delayed", "completed", "cancelled",
+]);
+export const canonicalStageControlSchema = z.object({
+  runtimeId: z.string().uuid(),
+  editionId: z.string().uuid(),
+  runtimeVersion: z.number().int(),
+  runtimeState: z.string(),
+  festivalDate: z.string(),
+  items: z.array(z.object({
+    stageId: z.string().uuid(),
+    stageName: z.string(),
+    scheduleItemId: z.string().uuid(),
+    artistName: z.string(),
+    festivalDate: z.string(),
+    status: canonicalStageStatusSchema.nullable(),
+    observedAt: z.string().nullable(),
+  })),
+});
+export type CanonicalStageControl = z.infer<typeof canonicalStageControlSchema>;
+export type CanonicalStageStatus = z.infer<typeof canonicalStageStatusSchema>;
+
+export function getCanonicalStageControl(runtimeId: string): Promise<CanonicalStageControl> {
+  return rpc<unknown>("get_canonical_festival_stage_control", {
+    p_runtime_id: runtimeId,
+  }).then(value => canonicalStageControlSchema.parse(value));
+}
+
+export async function confirmCanonicalStageAction(input: {
+  runtimeId: string;
+  stageId: string;
+  scheduleItemId: string;
+  status: CanonicalStageStatus;
+  expectedRuntimeVersion: number;
+  idempotencyKey: string;
+}): Promise<void> {
+  await rpc<unknown>("record_canonical_festival_stage_action", {
+    p_runtime_id: input.runtimeId,
+    p_stage_id: input.stageId,
+    p_schedule_item_id: input.scheduleItemId,
+    p_status: input.status,
+    p_idempotency_key: input.idempotencyKey,
+    p_expected_runtime_version: input.expectedRuntimeVersion,
+  });
+}
