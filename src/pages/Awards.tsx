@@ -57,7 +57,7 @@ export default function Awards() {
   const {
     shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,
-    submitNomination, castVote, bookPerformance, attendRedCarpet, respondToInvite,
+    submitNomination, castVote, bookPerformanceAsync, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
     isSubmitting, isVoting, isBooking, isAttending, isRespondingInvite,
   } = useAwards(profileId ?? undefined, userBand?.id);
 
@@ -85,6 +85,24 @@ export default function Awards() {
     queryKey: ["award-show-vote-count", selectedShow?.id, profileId],
     queryFn: () => fetchVoteCountForShow(selectedShow!.id),
     enabled: !!selectedShow?.id && !!profileId && showVotingDialog,
+  });
+
+  // The red carpet grants fame once per character and show. Check the
+  // receipt so a returning attendee can continue the ceremony without
+  // attempting a duplicate reward.
+  const { data: hasRedCarpetAttendance = false, isLoading: redCarpetLoading } = useQuery({
+    queryKey: ["award-red-carpet", selectedShow?.id, profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("award_red_carpet_events")
+        .select("id")
+        .eq("award_show_id", selectedShow!.id)
+        .eq("participant_id", profileId!)
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data);
+    },
+    enabled: Boolean(selectedShow?.id && profileId && showCeremonyDialog),
   });
 
   const activeShows = shows.filter(s => s.status !== 'completed');
@@ -531,21 +549,25 @@ export default function Awards() {
               {selectedShow?.show_name} — Ceremony
             </DialogTitle>
           </DialogHeader>
-          {selectedShow && (
+          {selectedShow && (redCarpetLoading ? (
+            <Skeleton className="h-40 w-full" />
+          ) : (
             <AwardCeremonyExperience
+              key={selectedShow.id}
               show={selectedShow}
+              redCarpetAttended={hasRedCarpetAttendance}
               bandId={userBand?.id}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
-              onAttendRedCarpet={(outfit) => {
-                attendRedCarpet({
+              onAttendRedCarpet={(outfit) =>
+                attendRedCarpetAsync({
                   award_show_id: selectedShow.id,
                   outfit_choice: outfit,
                   participant_type: "user",
-                });
-              }}
+                })
+              }
               onBookPerformance={(slotLabel, stage) => {
-                if (!userBand) return;
-                bookPerformance({
+                if (!userBand) return Promise.reject(new Error("An active band is required"));
+                return bookPerformanceAsync({
                   award_show_id: selectedShow.id,
                   band_id: userBand.id,
                   slot_label: slotLabel,
@@ -554,10 +576,11 @@ export default function Awards() {
                 });
               }}
               isAttending={isAttending}
+              redCarpetLoading={redCarpetLoading}
               isBooking={isBooking}
               currentGameYear={currentGameYear}
             />
-          )}
+          ))}
         </DialogContent>
       </Dialog>
     </FMPageScaffold>
