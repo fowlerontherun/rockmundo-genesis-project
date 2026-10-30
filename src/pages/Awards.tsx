@@ -116,14 +116,18 @@ export default function Awards() {
     castVote({ nomination_id: nominationId, show_id: selectedShow.id, voter_type: voteAs, voter_id: voterId });
   };
 
-  const handleRedCarpet = () => {
+  const handleRedCarpet = async () => {
     if (!selectedShow) return;
-    attendRedCarpet({
-      award_show_id: selectedShow.id,
-      outfit_choice: outfitChoice,
-      participant_type: "user",
-    });
-    setShowRedCarpetDialog(false);
+    try {
+      await attendRedCarpetAsync({
+        award_show_id: selectedShow.id,
+        outfit_choice: outfitChoice,
+        participant_type: "user",
+      });
+      setShowRedCarpetDialog(false);
+    } catch {
+      // Keep the dialog open so the player can retry after an RPC failure.
+    }
   };
 
   if (showsLoading) {
