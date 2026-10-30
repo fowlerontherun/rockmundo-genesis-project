@@ -30,8 +30,8 @@ import type {
 } from "../domain/festivalArtistProgramme";
 import type { FestivalArtistCandidate } from "../domain/festivalArtistWorkflows";
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
+import { suggestedFestivalResponseDeadline, validateFestivalResponseDeadline } from "../domain/festivalResponseDeadline";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const billingLabel = (value: string) => value.replaceAll("_", " ");
 const invitedBilling = (message: string) => billingPositions.find((position) =>
   message.includes(`Proposed billing: ${billingLabel(position)}.`),
@@ -49,32 +49,14 @@ const fallbackIdentityLabel = (identity: ArtistIdentity) => {
   return "NPC artist";
 };
 
-const responseDeadline = (festivalDates: string[]) => {
-  const now = Date.now();
-  const festivalStart = festivalDates[0]
-    ? new Date(`${festivalDates[0]}T12:00:00.000Z`).getTime()
-    : now + 30 * DAY_MS;
-  const preferred = Math.min(now + 14 * DAY_MS, festivalStart - DAY_MS);
-  return new Date(Math.max(now + 60_000, Math.min(preferred, festivalStart - 60_000))).toISOString();
-};
-
 const preferredDate = (festivalDates: string[], requested: string[] = []) =>
   requested.find((date) => festivalDates.includes(date)) ?? festivalDates[0] ?? null;
 
-const toDateTimeLocalInput = (iso: string) => {
+const toDateTimeLocalInput = (iso: string | null) => {
+  if (!iso) return "";
   const date = new Date(iso);
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
-};
-
-const deadlineFromInput = (value: string, festivalDates: string[]) => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
-    return responseDeadline(festivalDates);
-  }
-  const festivalStart = festivalDates[0] ? Date.parse(`${festivalDates[0]}T12:00:00Z`) : Infinity;
-  if (parsed.getTime() >= festivalStart) return responseDeadline(festivalDates);
-  return parsed.toISOString();
 };
 
 const deadlineLabel = (value: string | null) =>
@@ -122,10 +104,10 @@ export function SimplifiedFestivalLineupManager({
   const [feeInputs, setFeeInputs] = useState<Record<string, string>>({});
   const [billingInputs, setBillingInputs] = useState<Record<string, (typeof billingPositions)[number]>>({});
   const [responseDeadlineInput, setResponseDeadlineInput] = useState(() =>
-    toDateTimeLocalInput(responseDeadline(data.festivalDates)),
+    toDateTimeLocalInput(suggestedFestivalResponseDeadline(data.festivalDates)),
   );
   useEffect(() => {
-    setResponseDeadlineInput(toDateTimeLocalInput(responseDeadline(data.festivalDates)));
+    setResponseDeadlineInput(toDateTimeLocalInput(suggestedFestivalResponseDeadline(data.festivalDates)));
   }, [festivalEditionId, data.festivalDates.join("|")]);
   const queryClient = useQueryClient();
   // Keep a created draft available for retry when the separate send request fails.
@@ -196,6 +178,7 @@ export function SimplifiedFestivalLineupManager({
     sendOffer.error ??
     withdrawInvitation.error ??
     withdrawOffer.error;
+  const validatedDeadline = validateFestivalResponseDeadline(responseDeadlineInput, data.festivalDates);
   const workflowPending =
     reviewApplication.isPending ||
     inviteArtist.isPending ||
@@ -227,6 +210,10 @@ export function SimplifiedFestivalLineupManager({
     requestedDates?: string[];
     billingPosition?: (typeof billingPositions)[number];
   }) => {
+    if (!validatedDeadline) {
+      toast.error("Choose a valid future response deadline before the festival starts.");
+      return;
+    }
     const sourceKey = JSON.stringify([festivalCompanyId, festivalEditionId, input.identity,
       input.applicationId ?? null, input.invitationId ?? null, input.feeMinor, input.setMinutes,
       input.requestedDates ?? [], input.billingPosition ?? "support"]);
@@ -242,7 +229,7 @@ export function SimplifiedFestivalLineupManager({
       setMinutes: Math.max(10, Math.min(240, input.setMinutes)),
       preferredDate: preferredDate(data.festivalDates, input.requestedDates),
       billingPosition: input.billingPosition ?? "support",
-      responseDeadline: deadlineFromInput(responseDeadlineInput, data.festivalDates),
+      responseDeadline: validatedDeadline,
       message: "Festival performance offer",
       idempotencyKey: crypto.randomUUID(),
     });
@@ -276,6 +263,10 @@ export function SimplifiedFestivalLineupManager({
   };
 
   const invite = (candidate: FestivalArtistCandidate) => {
+    if (!validatedDeadline) {
+      toast.error("Choose a valid future response deadline before the festival starts.");
+      return;
+    }
     const key = identityKey(candidate.identity);
     const suggestedFeeMinor = suggestedCandidateFee(candidate);
     const chosenFeeMinor = majorInputToMinor(
@@ -289,7 +280,7 @@ export function SimplifiedFestivalLineupManager({
       suggestedFeeMinor: chosenFeeMinor,
       suggestedSetMinutes: 60,
       suggestedDates: data.festivalDates[0] ? [data.festivalDates[0]] : [],
-      responseDeadline: deadlineFromInput(responseDeadlineInput, data.festivalDates),
+      responseDeadline: validatedDeadline,
       message: `We would like to invite you to perform at this year\'s Festival. Proposed billing: ${billingLabel(billingInputs[key] ?? "support")}.`,
       idempotencyKey: crypto.randomUUID(),
     });
@@ -390,7 +381,14 @@ export function SimplifiedFestivalLineupManager({
             type="datetime-local"
             value={responseDeadlineInput}
             onChange={(event) => setResponseDeadlineInput(event.target.value)}
+            aria-invalid={!validatedDeadline}
+            aria-describedby="festival-response-deadline-hint"
           />
+          <p id="festival-response-deadline-hint" role={!validatedDeadline ? "alert" : undefined} className="text-xs text-muted-foreground">
+            {validatedDeadline
+              ? "Response deadline valid. The server will verify it again before saving."
+              : "Choose a future deadline before the festival begins. Invalid dates and expired festival editions cannot be invited or offered."}
+          </p>
         </CardContent>
       </Card>
 

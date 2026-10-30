@@ -95,11 +95,29 @@ describe("band festival appearances", () => {
     ]);
     expect(festivalAppearanceAsActivity(appearance, "user", "profile", new Date(2026, 8, 26)).status)
       .toBe("scheduled");
-    expect(festivalAppearanceAsActivity(appearance, "user", "profile", new Date(2026, 8, 28)).status)
-      .toBe("completed");
+    const historical = festivalAppearanceAsActivity(appearance, "user", "profile", new Date(2026, 8, 28));
+    expect(historical.status).toBe("scheduled");
+    expect(historical.metadata?.festival_dates_finished).toBe(true);
+    expect(historical.metadata?.performance_outcome_verified).toBe(false);
   });
 
-  it("rejects malformed or incomplete projections rather than adding false gigs", () => {
+  it("marks an appearance completed only when its authoritative session finished", () => {
+    const [completed] = parseBandFestivalAppearances([{ ...fixture, session_status: "completed" }]);
+    const activity = festivalAppearanceAsActivity(completed, "user", "profile", new Date(2026, 8, 26));
+    expect(activity.status).toBe("completed");
+    expect(activity.metadata?.festival_dates_finished).toBe(false);
+    expect(activity.metadata?.performance_outcome_verified).toBe(true);
+  });
+
+  it("does not turn an in-progress session into a completed set after the festival ends", () => {
+    const [inProgress] = parseBandFestivalAppearances([{ ...fixture, session_status: "in_progress" }]);
+    const activity = festivalAppearanceAsActivity(inProgress, "user", "profile", new Date(2026, 8, 28));
+    expect(activity.status).toBe("in_progress");
+    expect(activity.metadata?.festival_dates_finished).toBe(true);
+    expect(activity.metadata?.performance_outcome_verified).toBe(false);
+  });
+
+    it("rejects malformed or incomplete projections rather than adding false gigs", () => {
     expect(() => parseBandFestivalAppearances({})).toThrow();
     expect(() => parseBandFestivalAppearances([{ ...fixture, festival_date: null }])).toThrow();
   });
