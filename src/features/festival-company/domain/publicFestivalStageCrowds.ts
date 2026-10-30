@@ -112,3 +112,26 @@ export function filterPublicFestivalStageCrowdsForUniqueStages(
     nameCounts.get(crowd.stageName.trim().toLocaleLowerCase("en-GB")) === 1,
   );
 }
+
+/**
+ * A verified festival-wide runtime update does not certify that *each* stage
+ * observation is recent. Expired rows must never animate a currently busy
+ * stage merely because a different part of the festival ticked recently.
+ */
+export function filterFreshPublicFestivalStageCrowds(
+  crowds: readonly PublicFestivalStageCrowd[],
+  now: number,
+  maxAgeMs = 30 * 60_000,
+): PublicFestivalStageCrowd[] {
+  if (!Number.isFinite(now) || !Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return [];
+  const stageIds = new Map<string, number>();
+  for (const crowd of crowds) {
+    stageIds.set(crowd.stageId, (stageIds.get(crowd.stageId) ?? 0) + 1);
+  }
+  return crowds.filter((crowd) => {
+    if (stageIds.get(crowd.stageId) !== 1) return false;
+    const observed = Date.parse(crowd.lastCalculatedAt);
+    const age = now - observed;
+    return Number.isFinite(observed) && age >= -2 * 60_000 && age <= maxAgeMs;
+  });
+}
