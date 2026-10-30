@@ -87,6 +87,20 @@ export function getFestivalLocalClockHour(now: number, timeZone: string): number
   }
 }
 
+/**
+ * Labels must disclose UTC fallback when the published timezone is invalid.
+ * The date formatter deliberately uses UTC for resilience in this case.
+ */
+export function festivalTimeZoneLabel(timeZone: string): string {
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone }).format(0);
+    return "festival time";
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return "UTC fallback — festival timezone unavailable";
+  }
+}
+
 /** Cancellation takes precedence over a date-derived Upcoming/Live/Ended badge. */
 export function festivalVisitorEventLabel(
   phase: FestivalPublicEventPhase,
