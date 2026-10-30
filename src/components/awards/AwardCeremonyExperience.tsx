@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +27,10 @@ interface AwardCeremonyExperienceProps {
   show: AwardShow;
   bandId?: string;
   hasNomination: boolean;
-  onAttendRedCarpet: (outfitChoice: string) => void;
-  onBookPerformance: (slotLabel: string, stage: string) => void;
+  onAttendRedCarpet: (outfitChoice: string) => Promise<unknown>;
+  onBookPerformance: (slotLabel: string, stage: string) => Promise<unknown>;
+  redCarpetAttended?: boolean;
+  redCarpetLoading?: boolean;
   isAttending?: boolean;
   isBooking?: boolean;
   currentGameYear?: number;
@@ -56,11 +58,9 @@ const CEREMONY_PHASES: { id: CeremonyPhase; label: string; icon: React.ElementTy
 ];
 
 const OUTFIT_OPTIONS = [
-  { id: "casual", label: "Casual Rockstar", fame: 15, description: "Leather jacket and jeans" },
   { id: "standard", label: "Smart Formal", fame: 25, description: "Classic suit or dress" },
   { id: "designer", label: "Designer Outfit", fame: 50, description: "Head-to-toe designer wear" },
   { id: "custom", label: "Custom Couture", fame: 75, description: "One-of-a-kind statement piece" },
-  { id: "outrageous", label: "Outrageous Statement", fame: 100, description: "Meat dress level bold" },
 ];
 
 const PERFORMANCE_SLOTS = [
@@ -149,18 +149,27 @@ export function AwardCeremonyExperience({
   hasNomination,
   onAttendRedCarpet,
   onBookPerformance,
+  redCarpetAttended = false,
+  redCarpetLoading = false,
   isAttending,
   isBooking,
   currentGameYear,
 }: AwardCeremonyExperienceProps) {
-  const [currentPhase, setCurrentPhase] = useState<CeremonyPhase>("red_carpet");
+  const [currentPhase, setCurrentPhase] = useState<CeremonyPhase>(redCarpetAttended ? "opening" : "red_carpet");
   const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null);
   const [showPerformanceDialog, setShowPerformanceDialog] = useState(false);
-  const [redCarpetComplete, setRedCarpetComplete] = useState(false);
+  const [redCarpetComplete, setRedCarpetComplete] = useState(redCarpetAttended);
   const [segmentIndex, setSegmentIndex] = useState(0);
   const [crowdEnergy, setCrowdEnergy] = useState(44);
   const [suspense, setSuspense] = useState(28);
   const [hostMood, setHostMood] = useState("Confident");
+
+  useEffect(() => {
+    if (redCarpetAttended) {
+      setRedCarpetComplete(true);
+      setCurrentPhase((phase) => phase === "red_carpet" ? "opening" : phase);
+    }
+  }, [redCarpetAttended]);
 
   const runOfShow = useMemo(() => buildRunOfShow(show), [show]);
   const activeSegment = runOfShow[segmentIndex];
@@ -198,7 +207,9 @@ export function AwardCeremonyExperience({
               return (
                 <div key={phase.id} className="flex items-center">
                   <button
-                    onClick={() => setCurrentPhase(phase.id)}
+                    onClick={() => { if (idx <= currentPhaseIndex) setCurrentPhase(phase.id); }}
+                    disabled={idx > currentPhaseIndex}
+                    aria-label={phase.label}
                     className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                       isActive && "bg-amber-500 text-white scale-110 shadow-lg",
@@ -247,13 +258,17 @@ export function AwardCeremonyExperience({
               OUTFIT_OPTIONS.map((outfit) => (
                 <button
                   key={outfit.id}
-                  onClick={() => {
+                  onClick={async () => {
                     setSelectedOutfit(outfit.id);
-                    onAttendRedCarpet(outfit.id);
-                    setRedCarpetComplete(true);
-                    setTimeout(() => setCurrentPhase("opening"), 1000);
+                    try {
+                      await onAttendRedCarpet(outfit.id);
+                      setRedCarpetComplete(true);
+                      setCurrentPhase("opening");
+                    } catch {
+                      // The mutation shows the server error. Do not claim arrival.
+                    }
                   }}
-                  disabled={isAttending}
+                  disabled={isAttending || redCarpetLoading}
                   className={cn(
                     "w-full p-4 rounded-lg border text-left transition-all hover:border-amber-500/50",
                     selectedOutfit === outfit.id && "border-amber-500 bg-amber-500/10"
@@ -293,7 +308,7 @@ export function AwardCeremonyExperience({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-500" />Live Awards Timeline</CardTitle>
-            <CardDescription>Winners stay hidden until each live envelope reveal.</CardDescription>
+            <CardDescription>Ceremony segments are a preview; official results are published by the game, not by advancing this timeline.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Progress value={((segmentIndex + 1) / Math.max(runOfShow.length, 1)) * 100} />
@@ -316,7 +331,7 @@ export function AwardCeremonyExperience({
             )}
 
             {hasNomination && activeSegment?.type === "award" && (
-              <Badge className="bg-amber-500">Your band is in contention for this category. Envelope stays sealed until reveal.</Badge>
+              <Badge className="bg-amber-500">Your nomination is recorded; check official results after the show.</Badge>
             )}
 
             <div className="flex gap-2 flex-wrap">
@@ -338,8 +353,21 @@ export function AwardCeremonyExperience({
           <CardContent className="text-center py-8 space-y-3">
             <PartyPopper className="h-16 w-16 mx-auto text-amber-500" />
             <h3 className="text-2xl font-bold">Show Complete</h3>
-            <p className="text-muted-foreground">Final results are now revealed after the live envelope moments.</p>
+            <p className="text-muted-foreground">This ceremony preview is complete. Official winners appear in Awards History only after results are published.</p>
+            <Button onClick={() => setCurrentPhase("after_party")}>Go to After Party</Button>
             <p className="text-sm text-muted-foreground flex justify-center items-center gap-1"><Newspaper className="h-4 w-4" />{resolveHeadline(crowdEnergy, suspense, hasNomination)}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentPhase === "after_party" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Drama className="h-4 w-4 text-amber-500" />After Party</CardTitle>
+            <CardDescription>Celebrate the ceremony and relive the night. Published winners and rewards are recorded separately in Awards History.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{resolveHeadline(crowdEnergy, suspense, hasNomination)}</p>
           </CardContent>
         </Card>
       )}
@@ -354,9 +382,13 @@ export function AwardCeremonyExperience({
             {PERFORMANCE_SLOTS.map((slot) => (
               <button
                 key={slot.id}
-                onClick={() => {
-                  onBookPerformance(slot.label, slot.stage);
-                  setShowPerformanceDialog(false);
+                onClick={async () => {
+                  try {
+                    await onBookPerformance(slot.label, slot.stage);
+                    setShowPerformanceDialog(false);
+                  } catch {
+                    // Keep the booking dialog open on database rejection.
+                  }
                 }}
                 disabled={isBooking}
                 className="w-full p-4 rounded-lg border text-left transition-all hover:border-primary/50"
