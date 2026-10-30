@@ -10,7 +10,7 @@ export interface PublicFestivalStageCrowd {
   festivalDate: string;
   lastCalculatedAt: string;
   crowdBand: AttendanceBand;
-  mood: FestivalCrowdState;
+  mood: FestivalCrowdState | null;
 }
 
 const crowdBands: readonly AttendanceBand[] = [
@@ -50,7 +50,7 @@ export function readPublicFestivalStageCrowds(
         typeof item.lastCalculatedAt !== "string" ||
         !Number.isFinite(Date.parse(item.lastCalculatedAt)) ||
         !crowdBands.includes(item.crowdBand as AttendanceBand) ||
-        !FESTIVAL_CROWD_STATES.includes(item.mood as FestivalCrowdState)) {
+        (item.mood !== null && !FESTIVAL_CROWD_STATES.includes(item.mood as FestivalCrowdState))) {
       continue;
     }
     candidates.push({
@@ -59,7 +59,7 @@ export function readPublicFestivalStageCrowds(
       festivalDate: item.festivalDate,
       lastCalculatedAt: item.lastCalculatedAt,
       crowdBand: item.crowdBand as AttendanceBand,
-      mood: item.mood as FestivalCrowdState,
+      mood: item.mood as FestivalCrowdState | null,
     });
   }
 
@@ -84,6 +84,7 @@ export const festivalCrowdBandLabels: Record<AttendanceBand, string> = {
 
 export const festivalCrowdMoodLabels: Record<FestivalCrowdState, string> = {
   bored: "Bored",
+  restless: "Restless",
   calm: "Calm",
   interested: "Interested",
   engaged: "Engaged",
