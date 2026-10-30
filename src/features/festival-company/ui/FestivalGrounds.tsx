@@ -12,6 +12,7 @@ interface FestivalGroundsProps {
   slug: string;
   festivalLaunchId: string;
   festivalEditionId: string | null;
+  cancelled: boolean;
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
@@ -28,19 +29,21 @@ interface FestivalGroundsProps {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
-  const live = usePublicFestivalLiveStatus(slug);
-  const experience = usePublicFestivalLiveExperience(slug);
+export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, cancelled, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+  // A cancelled edition cannot have active live-stage observations. Keep the
+  // historic programme while avoiding unnecessary runtime polling.
+  const live = usePublicFestivalLiveStatus(cancelled ? "" : slug);
+  const experience = usePublicFestivalLiveExperience(cancelled ? "" : slug);
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const freshness = festivalLiveSnapshotFreshness(record, Date.now());
   const staleLive = freshness === "stale";
   const unverifiedLive = Boolean(record) && freshness === "unavailable";
   const suppressObservations = staleLive || unverifiedLive;
-  const verified = !live.isError && !suppressObservations && festivalEditionId !== null &&
+  const verified = !cancelled && !live.isError && !suppressObservations && festivalEditionId !== null &&
     record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const showRefreshAction = suppressObservations || live.isError || experience.isError;
+  const showRefreshAction = !cancelled && (suppressObservations || live.isError || experience.isError);
   const stageCrowds = filterPublicFestivalStageCrowdsForUniqueStages(readPublicFestivalStageCrowds(verified, festivalLaunchId), stages);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
@@ -66,7 +69,8 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
     : [];
 
   const schedule = stageTimetableProgress(selectedStage?.name ?? "", lineup, currentTime);
-  const scheduleLabel = schedule.kind === "scheduled_now" ? "Scheduled now (not live confirmed)"
+  const scheduleLabel = cancelled ? "Festival cancelled · archived programme"
+    : schedule.kind === "scheduled_now" ? "Scheduled now (not live confirmed)"
     : schedule.kind === "next" ? "Next scheduled set"
     : schedule.kind === "finished" ? "Published sets finished" : "No published stage times";
 
@@ -113,7 +117,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
@@ -125,7 +129,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                   <p className="text-sm text-muted-foreground">
                     {formatFestivalEditionDate(schedule.act.startsAt!, timezone, { dateStyle: "medium", timeStyle: "short" })}
                   </p>
-                  {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
+                  {!cancelled && schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
                     <div className="mt-2">
                       <p className="text-xs text-muted-foreground">Published set time elapsed: {schedule.progressPercent}%</p>
                       <div role="img" aria-label={`Published set time elapsed: ${schedule.progressPercent} percent, not a confirmed live performance`} className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -133,13 +137,13 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, sta
                       </div>
                     </div>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">Based on published timetable, not live stage confirmation.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{cancelled ? "These are archived planned times. The festival was cancelled; this is not a performance announcement." : "Based on published timetable, not live stage confirmation."}</p>
                 </>
               ) : <p className="mt-1 text-sm text-muted-foreground">{schedule.kind === "finished" ? "All published stage sets have passed." : "Check back for programme updates."}</p>}
             </div>
             <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
-              {live.isPending || experience.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
+              {cancelled ? <p className="mt-1 text-sm">This festival was cancelled. No performances are currently scheduled to take place.</p> : live.isPending || experience.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
                 <p className="mt-1 text-sm">The last festival runtime update is too old to confirm current stage activity. Published timetable information remains available.</p>
               ) : unverifiedLive ? (
                 <p className="mt-1 text-sm">Official runtime freshness could not be verified. Live stage information is hidden until it can be checked.</p>
