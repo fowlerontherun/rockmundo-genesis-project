@@ -43,6 +43,17 @@ describe("canonical public edition runtime", () => {
     expect(parsed.performances).toEqual([]);
   });
 
+  it("accepts an official live transition without invented scheduled timestamps", () => {
+    const item = {
+      id: "123e4567-e89b-42d3-a456-426614174099",
+      artistName: "Confirmed artist", stageName: "Main Stage",
+      scheduledStart: null, scheduledEnd: null,
+      status: "live", delayMinutes: 0,
+    };
+    const parsed = parseFestivalPublicLiveStatus({ ...result, performances: [item] });
+    expect(parsed.performances).toEqual([item]);
+  });
+
   it("maps an undeployed canonical RPC to an unavailable state instead of repeated polling", () => {
     const error = mapFestivalRuntimeError(
       "Could not find the function public.get_public_festival_edition_live_status(p_slug) in the schema cache",
