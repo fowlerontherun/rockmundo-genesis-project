@@ -39,7 +39,7 @@ export const usePurchaseFestivalTickets = () => {
     },
     onSuccess: (_, input) => {
       requestKeys.current.confirm(input);
-      void Promise.all([
+      return Promise.all([
         queryClient.invalidateQueries({ queryKey: ["public-festival-tickets", input.festivalLaunchId] }),
         queryClient.invalidateQueries({ queryKey: ["public-festival"] }),
         queryClient.invalidateQueries({ queryKey: ["festival-directory"] }),
