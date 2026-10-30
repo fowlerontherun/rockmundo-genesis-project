@@ -92,46 +92,47 @@ export const useAwards = (userId?: string, bandId?: string) => {
     },
   });
 
-  // Fetch user/band nominations
+  // Browser callers pass a character profile ID, NOT auth.users.id.
+  // Nomination/win rows store the authenticated account ID and/or band ID.
+  // Resolve the account inside each query instead of comparing to profileId.
   const { data: nominations = [], isLoading: nominationsLoading } = useQuery({
     queryKey: ["award-nominations", userId, bandId],
     queryFn: async () => {
       if (!userId) return [];
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const accountId = authData.user?.id;
+      if (!accountId) return [];
 
-      let query = (supabase as any)
+      const filters = [`user_id.eq.${accountId}`];
+      if (bandId) filters.push(`band_id.eq.${bandId}`);
+      const { data, error } = await (supabase as any)
         .from("award_nominations")
         .select("*")
-        .eq("user_id", userId);
-
-      if (bandId) {
-        query = query.eq("band_id", bandId);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
-
+        .or(filters.join(","))
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data as AwardNomination[];
     },
     enabled: !!userId,
   });
 
-  // Fetch user/band wins
   const { data: wins = [], isLoading: winsLoading } = useQuery({
     queryKey: ["award-wins", userId, bandId],
     queryFn: async () => {
       if (!userId) return [];
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const accountId = authData.user?.id;
+      if (!accountId) return [];
 
-      let query = (supabase as any)
+      const filters = [`user_id.eq.${accountId}`];
+      if (bandId) filters.push(`band_id.eq.${bandId}`);
+      const { data, error } = await (supabase as any)
         .from("award_wins")
         .select("*")
-        .eq("user_id", userId);
-
-      if (bandId) {
-        query = query.eq("band_id", bandId);
-      }
-
-      const { data, error } = await query.order("won_at", { ascending: false });
-
+        .or(filters.join(","))
+        .order("won_at", { ascending: false });
       if (error) throw error;
       return data as AwardWin[];
     },
@@ -142,20 +143,19 @@ export const useAwards = (userId?: string, bandId?: string) => {
     queryKey: ["award-invites", userId, bandId],
     queryFn: async () => {
       if (!userId && !bandId) return [];
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const accountId = authData.user?.id;
+      if (!accountId) return [];
 
-      let query = (supabase as any)
+      const filters = [`invitee_user_id.eq.${accountId}`];
+      if (userId) filters.push(`invitee_user_id.eq.${userId}`);
+      if (bandId) filters.push(`invitee_band_id.eq.${bandId}`);
+      const { data, error } = await (supabase as any)
         .from("award_show_invites")
-        .select("*");
-
-      if (userId && bandId) {
-        query = query.or(`invitee_user_id.eq.${userId},invitee_band_id.eq.${bandId}`);
-      } else if (userId) {
-        query = query.eq("invitee_user_id", userId);
-      } else if (bandId) {
-        query = query.eq("invitee_band_id", bandId);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
+        .select("*")
+        .or(filters.join(","))
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as AwardShowInvite[];
     },

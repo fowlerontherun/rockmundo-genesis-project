@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
-import { useAwards, type AwardShow, type AwardNomination } from "@/hooks/useAwards";
+import { useAwards, type AwardShow, type AwardNomination, type AwardWin } from "@/hooks/useAwards";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +108,48 @@ export default function Awards() {
   const activeShows = shows.filter(s => s.status !== 'completed');
   const completedShows = shows.filter(s => s.status === 'completed');
   const revealedWins = wins.filter((win) => shows.find((show) => show.id === win.award_show_id)?.status === 'completed');
+
+  // Published winners are public, but only for shows whose DB status is
+  // completed. Never reveal the admin-only preview or an unfinalised ballot.
+  const completedShowIds = completedShows.map((show) => show.id).sort();
+  const {
+    data: publishedResults = [],
+    isLoading: resultsLoading,
+    isError: resultsError,
+  } = useQuery({
+    queryKey: ["award-published-results", completedShowIds.join(",")],
+    enabled: completedShowIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("award_wins")
+        .select("id, award_show_id, category_name, winner_name, band_id, fame_boost, prize_money, won_at")
+        .in("award_show_id", completedShowIds)
+        .order("category_name", { ascending: true });
+      if (error) throw error;
+      return (data || []) as Pick<AwardWin, "id" | "award_show_id" | "category_name" | "winner_name" | "band_id" | "fame_boost" | "prize_money" | "won_at">[];
+    },
+  });
+
+  // Performers must come from actual confirmed award bookings; do not invent
+  // headliners or interludes in the default ceremony timeline.
+  const { data: bookedPerformances = [], isError: performancesError } = useQuery({
+    queryKey: ["award-performance-bookings", selectedShow?.id],
+    enabled: Boolean(selectedShow?.id && showCeremonyDialog),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("award_performance_bookings")
+        .select("id, slot_label, stage, bands(name)")
+        .eq("award_show_id", selectedShow!.id)
+        .eq("status", "confirmed");
+      if (error) throw error;
+      return (data || []).map((entry: any) => ({
+        id: entry.id as string,
+        slot_label: entry.slot_label as string,
+        stage: entry.stage as string | null,
+        band_name: entry.bands?.name as string | undefined,
+      }));
+    },
+  });
 
   const handleVote = (nominationId: string) => {
     if (!selectedShow) return;
@@ -307,9 +349,41 @@ export default function Awards() {
             </Card>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {completedShows.map(show => (
-                <AwardShowCard key={show.id} show={show} compact />
-              ))}
+              {completedShows.map(show => {
+                const winners = publishedResults.filter((win) => win.award_show_id === show.id);
+                return (
+                  <div key={show.id} className="space-y-3">
+                    <AwardShowCard show={show} compact />
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-amber-500" /> Official published results
+                        </CardTitle>
+                        <CardDescription>Winners recorded by the awards settlement system.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {resultsLoading && <p className="text-sm text-muted-foreground">Loading official results…</p>}
+                        {resultsError && <p role="alert" className="text-sm text-destructive">Results could not be loaded. Please retry.</p>}
+                        {!resultsLoading && !resultsError && winners.length === 0 && (
+                          <p className="text-sm text-muted-foreground">No prizes were issued for this ceremony.</p>
+                        )}
+                        {winners.map((win) => (
+                          <div key={win.id} className="flex items-start justify-between gap-3 rounded border p-3">
+                            <div>
+                              <p className="font-medium">{win.category_name}</p>
+                              <p className="text-sm">{win.winner_name}</p>
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground">
+                              <p>+{win.fame_boost.toLocaleString()} fame</p>
+                              {win.prize_money > 0 && <p>${win.prize_money.toLocaleString()} prize</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -553,6 +627,8 @@ export default function Awards() {
             <AwardCeremonyExperience
               key={selectedShow.id}
               show={selectedShow}
+              confirmedPerformances={bookedPerformances}
+              performancesLoadingFailed={performancesError}
               redCarpetAttended={hasRedCarpetAttendance}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
               onAttendRedCarpet={(outfit) =>

@@ -19,9 +19,18 @@ import {
 import { cn } from "@/lib/utils";
 import type { AwardShow } from "@/hooks/useAwards";
 
+type ConfirmedAwardPerformance = {
+  id: string;
+  slot_label: string;
+  stage: string | null;
+  band_name?: string;
+};
+
 interface AwardCeremonyExperienceProps {
   show: AwardShow;
   hasNomination: boolean;
+  confirmedPerformances?: ConfirmedAwardPerformance[];
+  performancesLoadingFailed?: boolean;
   onAttendRedCarpet: (outfitChoice: string) => Promise<unknown>;
   redCarpetAttended?: boolean;
   redCarpetLoading?: boolean;
@@ -57,6 +66,7 @@ const OUTFIT_OPTIONS = [
 ];
 
 const defaultHost = "Avery Stone";
+const EMPTY_CONFIRMED_PERFORMANCES: ConfirmedAwardPerformance[] = [];
 
 const crowdDelta: Record<NonNullable<RunOfShowSegment["crowd_profile"]>, number> = {
   calm: 4,
@@ -65,14 +75,47 @@ const crowdDelta: Record<NonNullable<RunOfShowSegment["crowd_profile"]>, number>
   chaotic: 24,
 };
 
-const buildRunOfShow = (show: AwardShow): RunOfShowSegment[] => {
+const buildRunOfShow = (
+  show: AwardShow,
+  confirmedPerformances: ConfirmedAwardPerformance[],
+): RunOfShowSegment[] => {
   const categories = ((show.categories as any[]) || []).slice(0, 5);
   const host = show.host_name || defaultHost;
   const scripted = Array.isArray(show.run_of_show) ? (show.run_of_show as RunOfShowSegment[]) : [];
-  if (scripted.length > 0) return scripted;
+  if (scripted.length > 0) {
+    // A script does not prove that an artist was actually booked.
+    // Keep authored presenter/award segments, but reconcile performances
+    // against confirmed booking receipts before naming performers.
+    const approved = new Set<string>();
+    const scriptedSegments = scripted.flatMap((segment) => {
+      if (segment.type !== "performance") return [segment];
+      const booking = confirmedPerformances.find((entry) =>
+        (entry.band_name && entry.band_name.toLowerCase() === segment.performer?.toLowerCase())
+        || (entry.slot_label && entry.slot_label.toLowerCase() === segment.title.toLowerCase()),
+      );
+      if (!booking || !booking.band_name) return [];
+      approved.add(booking.id);
+      return [{
+        ...segment,
+        performer: booking.band_name,
+        title: booking.slot_label || segment.title,
+        songs: undefined, // No verified setlist is stored in these booking receipts.
+        commentary: `Confirmed for ${booking.stage || "the main stage"}.`,
+      }];
+    });
+    for (const booking of confirmedPerformances) {
+      if (approved.has(booking.id) || !booking.band_name) continue;
+      scriptedSegments.push({
+        type: "performance",
+        title: booking.slot_label || "Confirmed Performance",
+        performer: booking.band_name,
+        commentary: `Confirmed for ${booking.stage || "the main stage"}.`,
+      });
+    }
+    return scriptedSegments;
+  }
 
-  const interludeBands = ["Neon Parade", "Glass Anthem", "Night Echo", "Silver Circuit"];
-
+  // No invented performers: only existing, confirmed slots are presented.
   const segments: RunOfShowSegment[] = [
     {
       type: "host_intro",
@@ -94,28 +137,25 @@ const buildRunOfShow = (show: AwardShow): RunOfShowSegment[] => {
       audio_cue: "envelope_suspense_sting",
       crowd_profile: "hype",
     });
+  });
 
-    if (index < 4) {
-      segments.push({
-        type: "performance",
-        title: `Interlude Performance ${index + 1}`,
-        performer: interludeBands[index],
-        songs: [`Interlude Song ${index + 1}`],
-        commentary: `${interludeBands[index]} performs a single song while the stage rotates for the next award setup.`,
-        audio_cue: "interlude_performance_bed",
-        crowd_profile: "chaotic",
-      });
-    }
+  confirmedPerformances.forEach((booking) => {
+    segments.push({
+      type: "performance",
+      title: booking.slot_label || "Confirmed Performance",
+      performer: booking.band_name || "Confirmed performer",
+      commentary: `A confirmed performance is scheduled for ${booking.stage || "the main stage"}.`,
+      audio_cue: "interlude_performance_bed",
+      crowd_profile: "hype",
+    });
   });
 
   segments.push({
-    type: "performance",
-    title: "Grand Closing Performance",
-    performer: "Headliner Collective",
-    songs: ["Finale Song I", "Finale Song II", "Finale Song III"],
-    commentary: `${host} closes the show with a three-song finale and thanks performers, presenters, and voters around the world.`,
+    type: "host_intro",
+    title: "Closing Remarks",
+    commentary: `${host} thanks the performers, presenters and voters for joining ${show.show_name}.`,
     audio_cue: "grand_closer_fireworks",
-    crowd_profile: "chaotic",
+    crowd_profile: "warm",
   });
 
   return segments;
@@ -132,6 +172,8 @@ export function AwardCeremonyExperience({
   show,
   hasNomination,
   onAttendRedCarpet,
+  confirmedPerformances = EMPTY_CONFIRMED_PERFORMANCES,
+  performancesLoadingFailed = false,
   redCarpetAttended = false,
   redCarpetLoading = false,
   isAttending,
@@ -152,7 +194,10 @@ export function AwardCeremonyExperience({
     }
   }, [redCarpetAttended]);
 
-  const runOfShow = useMemo(() => buildRunOfShow(show), [show]);
+  const runOfShow = useMemo(
+    () => buildRunOfShow(show, confirmedPerformances),
+    [show, confirmedPerformances],
+  );
   const activeSegment = runOfShow[segmentIndex];
   const currentPhaseIndex = CEREMONY_PHASES.findIndex((phase) => phase.id === currentPhase);
 
@@ -289,9 +334,18 @@ export function AwardCeremonyExperience({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Trophy className="h-4 w-4 text-amber-500" />Live Awards Timeline</CardTitle>
-            <CardDescription>Ceremony segments are a preview; official results are published by the game, not by advancing this timeline.</CardDescription>
+            <CardDescription>
+              Ceremony segments are a preview, not an official winner announcement.
+              The completed show history displays winners after database settlement.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {performancesLoadingFailed && (
+              <p role="alert" className="text-sm text-destructive">
+                Confirmed performance bookings could not be verified.
+                This preview does not display an invented lineup.
+              </p>
+            )}
             <Progress value={((segmentIndex + 1) / Math.max(runOfShow.length, 1)) * 100} />
             {activeSegment && (
               <div className="rounded-lg border p-4 space-y-2">
@@ -331,7 +385,7 @@ export function AwardCeremonyExperience({
         <Card className="bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border-amber-500/30">
           <CardContent className="text-center py-8 space-y-3">
             <PartyPopper className="h-16 w-16 mx-auto text-amber-500" />
-            <h3 className="text-2xl font-bold">Show Complete</h3>
+            <h3 className="text-2xl font-bold">Ceremony Preview Complete</h3>
             <p className="text-muted-foreground">This ceremony preview is complete. Official winners appear in Awards History only after results are published.</p>
             <Button onClick={() => setCurrentPhase("after_party")}>Go to After Party</Button>
             <p className="text-sm text-muted-foreground flex justify-center items-center gap-1"><Newspaper className="h-4 w-4" />{resolveHeadline(crowdEnergy, suspense, hasNomination)}</p>
