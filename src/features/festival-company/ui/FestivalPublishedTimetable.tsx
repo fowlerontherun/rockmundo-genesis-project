@@ -11,19 +11,20 @@ interface Props {
   performances: FestivalPublicConfirmedAct[];
   timezone: string;
   now: number;
+  cancelled: boolean;
 }
 
 const dayLabel = (day: string) => new Date(day + "T12:00:00Z").toLocaleDateString(
   "en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" },
 );
 
-export function FestivalPublishedTimetable({ performances, timezone, now }: Props) {
+export function FestivalPublishedTimetable({ performances, timezone, now, cancelled }: Props) {
   const [stageName, setStageName] = useState("");
   const [festivalDate, setFestivalDate] = useState("");
   const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [limit, setLimit] = useState(12);
   const options = festivalTimetableOptions(performances);
-  const filtered = filterPublishedFestivalTimetable(performances, { stageName, festivalDate, upcomingOnly }, now);
+  const filtered = filterPublishedFestivalTimetable(performances, { stageName, festivalDate, upcomingOnly: cancelled ? false : upcomingOnly }, now);
   const conflicts = publishedStageOverlapIds(performances);
   const visible = filtered.slice(0, limit);
   const firstUpcoming = filtered.find((act) => Date.parse(act.startsAt!) > now);
@@ -32,7 +33,11 @@ export function FestivalPublishedTimetable({ performances, timezone, now }: Prop
     <section aria-label="Published festival performance timetable" className="space-y-4">
       <div>
         <h2 className="text-xl font-bold">Published timetable</h2>
-        <p className="text-sm text-muted-foreground">These are the announced stage times in {festivalTimeZoneLabel(timezone)}. Scheduled now does not confirm a live show.</p>
+        <p className="text-sm text-muted-foreground">
+          {cancelled
+            ? "This edition was cancelled. Its previously published programme is retained for reference only; none of these times are upcoming performances."
+            : <>These are the announced stage times in {festivalTimeZoneLabel(timezone)}. Scheduled now does not confirm a live show.</>}
+        </p>
       </div>
       {performances.length === 0 ? (
         <p className="rounded-lg border p-4 text-sm text-muted-foreground">
@@ -55,10 +60,10 @@ export function FestivalPublishedTimetable({ performances, timezone, now }: Prop
                 {options.days.map((day) => <option key={day} value={day}>{dayLabel(day)}</option>)}
               </select>
             </label>
-            <label className="flex items-center gap-2 self-end rounded-md border px-3 py-2 text-sm">
+            {!cancelled && <label className="flex items-center gap-2 self-end rounded-md border px-3 py-2 text-sm">
               <input type="checkbox" checked={upcomingOnly} onChange={(e) => { setUpcomingOnly(e.target.checked); setLimit(12); }} />
               Show sets still in progress or upcoming
-            </label>
+            </label>}
           </div>
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {filtered.length} published set{filtered.length === 1 ? "" : "s"} match your filters.
@@ -72,8 +77,8 @@ export function FestivalPublishedTimetable({ performances, timezone, now }: Prop
             <>
               <div className="space-y-2">
                 {visible.map((entry) => {
-                  const current = Date.parse(entry.startsAt!) <= now && now < Date.parse(entry.endsAt!);
-                  const next = firstUpcoming?.id === entry.id;
+                  const current = !cancelled && Date.parse(entry.startsAt!) <= now && now < Date.parse(entry.endsAt!);
+                  const next = !cancelled && firstUpcoming?.id === entry.id;
                   const overlaps = conflicts.has(entry.id);
                   return (
                     <article key={entry.id} className="rounded-lg border p-3">
@@ -88,7 +93,8 @@ export function FestivalPublishedTimetable({ performances, timezone, now }: Prop
                             <p className="text-sm text-muted-foreground">{entry.stageName}</p>
                           </div>
                         </div>
-                        {current ? <span className="rounded-full border border-violet-400/40 px-2 py-1 text-xs font-semibold">Scheduled now · not live confirmed</span>
+                        {cancelled ? <span className="rounded-full border border-amber-400/40 px-2 py-1 text-xs font-semibold">Cancelled edition · archived programme</span>
+                          : current ? <span className="rounded-full border border-violet-400/40 px-2 py-1 text-xs font-semibold">Scheduled now · not live confirmed</span>
                           : next ? <span className="rounded-full border border-sky-400/40 px-2 py-1 text-xs font-semibold">Next scheduled set</span> : null}
                       </div>
                       {overlaps && (
