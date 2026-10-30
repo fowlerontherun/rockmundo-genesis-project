@@ -19,15 +19,9 @@ DECLARE
   v_show public.award_shows%ROWTYPE;
   v_band public.bands%ROWTYPE;
 BEGIN
-  -- Selection and winner processing must never be player controlled.
-  IF TG_OP = 'UPDATE' THEN
-    IF auth.role() IS DISTINCT FROM 'service_role'
-       AND NOT COALESCE(public.has_role(auth.uid(), 'admin'), false) THEN
-      RAISE EXCEPTION 'Only award administrators can edit nominations'
-        USING ERRCODE = '42501';
-    END IF;
-    RETURN NEW;
-  END IF;
+  -- Guard INSERT only. An UPDATE trigger would block the trusted vote-count
+  -- sync triggers because auth.uid() remains the voting account identity.
+  -- Ordinary client updates are already blocked by the admin-only RLS policy.
 
   -- The trusted administrator/worker path remains available for adjudication.
   IF auth.role() = 'service_role'
@@ -89,5 +83,5 @@ $$;
 REVOKE ALL ON FUNCTION public.guard_award_nomination_submission() FROM PUBLIC;
 DROP TRIGGER IF EXISTS guard_award_nomination_submission_trg ON public.award_nominations;
 CREATE TRIGGER guard_award_nomination_submission_trg
-  BEFORE INSERT OR UPDATE ON public.award_nominations
+  BEFORE INSERT ON public.award_nominations
   FOR EACH ROW EXECUTE FUNCTION public.guard_award_nomination_submission();

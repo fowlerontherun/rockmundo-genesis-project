@@ -168,6 +168,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       .from("award_nominations")
       .select("*")
       .eq("award_show_id", showId)
+      .eq("status", "shortlisted")
       .order("vote_count", { ascending: false });
 
     if (error) throw error;
@@ -204,7 +205,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
 
       validateNominationSubmission(nomination);
 
-      if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(currentGameYear)) {
+      if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(shows.find((show) => show.id === nomination.award_show_id)?.year ?? currentGameYear)) {
         throw new Error("Lifetime Achievement nominations are only available every 4 in-game years");
       }
 
@@ -338,44 +339,6 @@ export const useAwards = (userId?: string, bandId?: string) => {
   });
 
 
-  // Book performance slot
-  const bookPerformance = useMutation({
-    mutationFn: async (booking: {
-      award_show_id: string;
-      band_id: string;
-      slot_label: string;
-      stage: string;
-      song_ids: string[];
-      rehearsal_scheduled?: string;
-    }) => {
-      if (!userId) throw new Error("User not authenticated");
-
-      const { data, error } = await (supabase as any)
-        .from("award_performance_bookings")
-        .insert({
-          ...booking,
-          user_id: userId,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === "23505") {
-          throw new Error("This performance slot is already booked");
-        }
-        throw error;
-      }
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["award-performance-bookings"] });
-      toast.success("Performance slot booked!");
-    },
-    onError: (error: any) => {
-      toast.error("Failed to book performance", { description: error.message });
-    },
-  });
-
   // Attend red carpet
   const attendRedCarpet = useMutation({
     mutationFn: async (attendance: {
@@ -428,14 +391,11 @@ export const useAwards = (userId?: string, bandId?: string) => {
     submitNomination: submitNomination.mutate,
     castVote: castVote.mutate,
     respondToInvite: respondToInvite.mutate,
-    bookPerformance: bookPerformance.mutate,
-    bookPerformanceAsync: bookPerformance.mutateAsync,
     attendRedCarpet: attendRedCarpet.mutate,
     attendRedCarpetAsync: attendRedCarpet.mutateAsync,
     isSubmitting: submitNomination.isPending,
     isVoting: castVote.isPending,
     isRespondingInvite: respondToInvite.isPending,
-    isBooking: bookPerformance.isPending,
     isAttending: attendRedCarpet.isPending,
   };
 };

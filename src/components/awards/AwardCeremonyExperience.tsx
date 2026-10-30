@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,12 +10,9 @@ import {
   AlertCircle,
   Gauge,
   Drama,
-  Mic,
-  Music,
   Newspaper,
   PartyPopper,
   Sparkles,
-  Star,
   Trophy,
   Volume2,
 } from "lucide-react";
@@ -25,14 +21,11 @@ import type { AwardShow } from "@/hooks/useAwards";
 
 interface AwardCeremonyExperienceProps {
   show: AwardShow;
-  bandId?: string;
   hasNomination: boolean;
   onAttendRedCarpet: (outfitChoice: string) => Promise<unknown>;
-  onBookPerformance: (slotLabel: string, stage: string) => Promise<unknown>;
   redCarpetAttended?: boolean;
   redCarpetLoading?: boolean;
   isAttending?: boolean;
-  isBooking?: boolean;
   currentGameYear?: number;
 }
 
@@ -61,14 +54,6 @@ const OUTFIT_OPTIONS = [
   { id: "standard", label: "Smart Formal", fame: 25, description: "Classic suit or dress" },
   { id: "designer", label: "Designer Outfit", fame: 50, description: "Head-to-toe designer wear" },
   { id: "custom", label: "Custom Couture", fame: 75, description: "One-of-a-kind statement piece" },
-];
-
-const PERFORMANCE_SLOTS = [
-  { id: "interlude_1", label: "Interlude 1", stage: "main", prestige: 1 },
-  { id: "interlude_2", label: "Interlude 2", stage: "main", prestige: 2 },
-  { id: "interlude_3", label: "Interlude 3", stage: "main", prestige: 3 },
-  { id: "interlude_4", label: "Interlude 4", stage: "main", prestige: 4 },
-  { id: "grand_closer", label: "Grand Closer (3 Songs)", stage: "main", prestige: 5 },
 ];
 
 const defaultHost = "Avery Stone";
@@ -145,19 +130,15 @@ const resolveHeadline = (crowd: number, suspense: number, hasNomination: boolean
 
 export function AwardCeremonyExperience({
   show,
-  bandId,
   hasNomination,
   onAttendRedCarpet,
-  onBookPerformance,
   redCarpetAttended = false,
   redCarpetLoading = false,
   isAttending,
-  isBooking,
   currentGameYear,
 }: AwardCeremonyExperienceProps) {
   const [currentPhase, setCurrentPhase] = useState<CeremonyPhase>(redCarpetAttended ? "opening" : "red_carpet");
   const [selectedOutfit, setSelectedOutfit] = useState<string | null>(null);
-  const [showPerformanceDialog, setShowPerformanceDialog] = useState(false);
   const [redCarpetComplete, setRedCarpetComplete] = useState(redCarpetAttended);
   const [segmentIndex, setSegmentIndex] = useState(0);
   const [crowdEnergy, setCrowdEnergy] = useState(44);
@@ -335,11 +316,9 @@ export function AwardCeremonyExperience({
             )}
 
             <div className="flex gap-2 flex-wrap">
-              {bandId && (
-                <Button variant="outline" onClick={() => setShowPerformanceDialog(true)}>
-                  <Music className="h-4 w-4 mr-1" />Book Performance Slot
-                </Button>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Performance slots are confirmed through invitations. Check your Awards Show Invitations above.
+              </p>
               <Button onClick={advanceSegment}>
                 {segmentIndex >= runOfShow.length - 1 ? "Go To Finale" : "Next Segment"}
               </Button>
@@ -372,46 +351,6 @@ export function AwardCeremonyExperience({
         </Card>
       )}
 
-      <Dialog open={showPerformanceDialog} onOpenChange={setShowPerformanceDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Book Awards Performance</DialogTitle>
-            <DialogDescription>Reserve one interlude or the 3-song grand closer set.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {PERFORMANCE_SLOTS.map((slot) => (
-              <button
-                key={slot.id}
-                onClick={async () => {
-                  try {
-                    await onBookPerformance(slot.label, slot.stage);
-                    setShowPerformanceDialog(false);
-                  } catch {
-                    // Keep the booking dialog open on database rejection.
-                  }
-                }}
-                disabled={isBooking}
-                className="w-full p-4 rounded-lg border text-left transition-all hover:border-primary/50"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Mic className="h-4 w-4 text-amber-500" />
-                    <div>
-                      <p className="font-medium">{slot.label}</p>
-                      <p className="text-sm text-muted-foreground">{slot.stage} stage</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: slot.prestige }, (_, i) => (
-                      <Star key={i} className="h-3 w-3 text-amber-400 fill-amber-400" />
-                    ))}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
