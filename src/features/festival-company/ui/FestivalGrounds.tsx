@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
-import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterPublicFestivalStageCrowdsForUniqueStages } from "../domain/publicFestivalStageCrowds";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterPublicFestivalStageCrowdsForUniqueStages, filterFreshPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
 import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
@@ -44,7 +44,6 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
   const showRefreshAction = !cancelled && (suppressObservations || live.isError || experience.isError);
-  const stageCrowds = filterPublicFestivalStageCrowdsForUniqueStages(readPublicFestivalStageCrowds(verified, festivalLaunchId), stages);
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
@@ -53,6 +52,10 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const stageCrowds = filterFreshPublicFestivalStageCrowds(
+    filterPublicFestivalStageCrowdsForUniqueStages(readPublicFestivalStageCrowds(verified, festivalLaunchId), stages),
+    currentTime,
+  );
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(timer);
