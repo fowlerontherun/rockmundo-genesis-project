@@ -108,7 +108,28 @@ END
 $seed_dependencies$;
 
 -- Seed mentors
-INSERT INTO education_mentors (name, focus_skill, description, specialty, cost, base_xp, difficulty, required_skill_value, skill_gain_ratio, is_active, city_id, lore_biography, lore_achievement) VALUES
+-- The September mentor schema requires cooldown_hours and bonus_description.
+-- January makes all mentors accessible by cost/location, but this catalogue
+-- deliberately retains its advertised skill prerequisites; do not invent a
+-- cooldown of zero or relax any required mentor columns.
+-- Modeling mastery uses the master difficulty from this seeded catalogue.
+ALTER TABLE public.education_mentors
+  DROP CONSTRAINT IF EXISTS education_mentors_difficulty_check;
+ALTER TABLE public.education_mentors
+  ADD CONSTRAINT education_mentors_difficulty_check
+  CHECK (difficulty IN ('beginner', 'intermediate', 'advanced', 'master'));
+
+INSERT INTO public.education_mentors (
+  name, focus_skill, description, specialty, cost, cooldown_hours, base_xp,
+  difficulty, required_skill_value, skill_gain_ratio, bonus_description,
+  is_active, city_id, lore_biography, lore_achievement
+)
+SELECT
+  seed.name, seed.focus_skill, seed.description, seed.specialty, seed.cost,
+  168, seed.base_xp, seed.difficulty, seed.required_skill_value,
+  seed.skill_gain_ratio, seed.specialty, seed.is_active, seed.city_id,
+  seed.lore_biography, seed.lore_achievement
+FROM (VALUES
 ('Naomi Fierce', 'modeling_mastery_posing', 'The queen of the catwalk teaches posing at its absolute pinnacle.', 'Posing & Presence', 50000, 200, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 'Former top supermodel who walked for every major fashion house in her 20-year career.', 'Named Model of the Century by Vogue International'),
 ('Karl Stein', 'fashion_mastery_fundamentals', 'Legendary designer who shaped modern fashion theory and trend forecasting.', 'Fashion Design Theory', 100000, 250, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Paris') LIMIT 1), 'Revolutionary fashion designer who founded three iconic fashion houses and mentored dozens of industry leaders.', 'Won the Lifetime Achievement Award at Paris Fashion Week'),
 ('Valentina Rossi', 'fashion_mastery_textiles', 'Master textile innovator who has revolutionized fabric technology in haute couture.', 'Textile & Material Science', 75000, 220, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Milan') LIMIT 1), 'Third-generation Italian textile artisan who combines traditional weaving with cutting-edge materials.', 'Developed the proprietary silk-carbon blend used by top fashion houses'),
@@ -116,7 +137,12 @@ INSERT INTO education_mentors (name, focus_skill, description, specialty, cost, 
 ('Tyra LaRue', 'modeling_professional_runway', 'Retired supermodel turned runway coach who trains the next generation of catwalk stars.', 'Runway & Presentation', 30000, 150, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('New York') LIMIT 1), 'Opened and closed more fashion shows than any other model in the past decade.', 'Created the signature power stride taught at top modeling schools'),
 ('Isabella Fontaine', 'fashion_professional_styling', 'Celebrity stylist who has dressed everyone from pop stars to presidents.', 'Style & Aesthetics', 45000, 180, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Paris') LIMIT 1), 'Parisian stylist known for her impeccable taste and ability to create viral red carpet moments.', 'Styled 15 Met Gala best-dressed winners'),
 ('Marcus Blackwell', 'clothing_mastery_branding', 'Built a streetwear empire from nothing — now teaches brand building at the highest level.', 'Fashion Branding & Commerce', 60000, 200, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Los Angeles') LIMIT 1), 'Started screen-printing t-shirts in his garage; now runs a $500M streetwear empire.', 'His brand collab with a major rapper broke every sales record in fashion history'),
-('Yuki Shimada', 'clothing_professional_genre_aesthetics', 'Genre fashion specialist who designs for musicians and understands the intersection of music and style.', 'Genre Aesthetics & Music Fashion', 40000, 170, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Seoul') LIMIT 1), 'K-pop stylist turned fashion designer whose genre-specific collections sell out within hours.', 'Dressed 3 of the top 10 best-selling K-pop groups');
+('Yuki Shimada', 'clothing_professional_genre_aesthetics', 'Genre fashion specialist who designs for musicians and understands the intersection of music and style.', 'Genre Aesthetics & Music Fashion', 40000, 170, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Seoul') LIMIT 1), 'K-pop stylist turned fashion designer whose genre-specific collections sell out within hours.', 'Dressed 3 of the top 10 best-selling K-pop groups')
+) AS seed (
+  name, focus_skill, description, specialty, cost, base_xp, difficulty,
+  required_skill_value, skill_gain_ratio, is_active, city_id,
+  lore_biography, lore_achievement
+);
 
 -- Seed university courses
 INSERT INTO university_courses (university_id, skill_slug, name, description, base_price, base_duration_days, required_skill_level, xp_per_day_min, xp_per_day_max) VALUES
