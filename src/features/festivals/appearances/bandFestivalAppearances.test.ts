@@ -4,6 +4,7 @@ import {
   appearanceOnLocalDay,
   festivalAppearanceAsActivity,
   formatFestivalSetTime,
+  formatFestivalInstant,
   festivalLocalDateKey,
   isFutureFestivalAppearance,
   parseBandFestivalAppearances,
@@ -87,7 +88,12 @@ describe("band festival appearances", () => {
     }
   });
 
-  it("does not claim an official confirmed time without an assigned stage", () => {
+  it("handles malformed imported instants without throwing during stage formatting", () => {
+    expect(formatFestivalInstant("invalid", "Europe/London")).toBe("Time TBA");
+    expect(formatFestivalInstant("", null)).toBe("Time TBA");
+  });
+
+    it("does not claim an official confirmed time without an assigned stage", () => {
     const [appearance] = parseBandFestivalAppearances([{
       ...fixture, confirmed_start_at: "2026-09-26T19:00:00Z",
       confirmed_end_at: "2026-09-26T20:00:00Z", time_confirmed: true, stage_name: null,
