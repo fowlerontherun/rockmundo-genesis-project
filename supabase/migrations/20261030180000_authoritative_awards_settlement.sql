@@ -33,6 +33,26 @@ BEGIN
     RAISE EXCEPTION 'Award show not found' USING ERRCODE='P0002';
   END IF;
 
+  IF v_show.status='completed' THEN
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+      'category',w.category_name,'nominee',w.winner_name,
+      'band_id',w.band_id,'weighted_votes',null,
+      'ballots',null,'will_award',true,'published',true
+    ) ORDER BY w.category_name),'[]'::jsonb)
+    INTO v_results FROM public.award_wins w
+    WHERE w.award_show_id=p_show_id;
+    RETURN jsonb_build_object(
+      'show_id',p_show_id,'show_name',v_show.show_name,'status',v_show.status,
+      'results',v_results,'awards_to_issue',0,
+      'winner_fame_boost',v_show.winner_fame_boost,
+      'winner_prize_money',v_show.winner_prize_money,
+      'pending_nominations',0,'ballots_on_nonfinalists',0,
+      'invalid_shortlisted_nominations',0,
+      'existing_wins',jsonb_array_length(v_results),
+      'unawarded_categories','[]'::jsonb,'ready',false
+    );
+  END IF;
+
   SELECT count(*) FILTER (WHERE status='pending')
     INTO v_pending FROM public.award_nominations WHERE award_show_id=p_show_id;
   SELECT count(*) INTO v_disputed_votes
@@ -293,6 +313,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
 AS $$
 DECLARE
   v_nomination public.award_nominations%ROWTYPE;
+  v_show_id uuid;
   v_show_status text;
 BEGIN
   IF auth.uid() IS NULL
@@ -304,16 +325,24 @@ BEGIN
     RAISE EXCEPTION 'Nomination decision must be shortlisted or rejected'
       USING ERRCODE='22023';
   END IF;
-  SELECT * INTO v_nomination FROM public.award_nominations
-    WHERE id=p_nomination_id FOR UPDATE;
+  -- Lock the show before nomination, matching finalisation's lock order.
+  -- This prevents admin review/finalisation deadlocks.
+  SELECT award_show_id INTO v_show_id
+    FROM public.award_nominations WHERE id=p_nomination_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Nomination not found' USING ERRCODE='P0002';
   END IF;
   SELECT status INTO v_show_status FROM public.award_shows
-    WHERE id=v_nomination.award_show_id FOR SHARE;
+    WHERE id=v_show_id FOR SHARE;
   IF NOT FOUND OR v_show_status <> 'nominations_open' THEN
     RAISE EXCEPTION 'Nomination review is closed for this show'
       USING ERRCODE='23514';
+  END IF;
+  SELECT * INTO v_nomination FROM public.award_nominations
+    WHERE id=p_nomination_id AND award_show_id=v_show_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Nomination disappeared during review'
+      USING ERRCODE='P0002';
   END IF;
   IF v_nomination.status IN ('winner','runner_up') THEN
     RAISE EXCEPTION 'Settled nominations cannot be reviewed'
