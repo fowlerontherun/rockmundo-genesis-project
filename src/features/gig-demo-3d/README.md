@@ -169,3 +169,6 @@ The static tree is built once per scene and freed on disposal. A bounded query c
 Checks: `npx vitest run src/features/gig-demo-3d/cameraCollision.test.ts src/features/gig-demo-3d/cameraCollision.venues.test.ts src/features/gig-demo-3d/venueCamera.test.ts src/features/gig-demo-3d/venueCameraAngles.test.ts --maxWorkers=1`.
 
 `npm run test:gig-motion:webgl` additionally renders manual camera angles in a club and a portrait café and checks their scenery sightlines. The geometry suite covers 11 shots on portrait/landscape displays across cafés, bars, theatres, arenas, festival tents and stadiums. These tests verify collision correctness, not an FPS guarantee or visibility of every performer in every composition.
+
+
+When every local camera correction is obstructed or closer than 1.6 metres to the subject, the resolver searches a bounded set of alternative angles around that subject. Clearance outranks preserving the original angle, and the search order is fixed for replay consistency. The static index includes opaque back-face walls, excludes background sky spheres, and honours each geometry's rendered draw range so hidden triangles do not create phantom obstacles.
