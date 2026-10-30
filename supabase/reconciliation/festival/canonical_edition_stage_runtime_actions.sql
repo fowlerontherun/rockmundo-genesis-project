@@ -101,3 +101,75 @@ REVOKE ALL ON FUNCTION public.record_canonical_festival_stage_action(uuid,uuid,u
  FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.record_canonical_festival_stage_action(uuid,uuid,uuid,text,text,integer)
  TO authenticated;
+
+
+-- Private owner control projection: no access to raw evidence, actor IDs,
+-- ticket details or crowd headcounts. Never report scheduled work as live.
+CREATE OR REPLACE FUNCTION public.get_canonical_festival_stage_control(p_runtime_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=''
+AS $control$
+DECLARE
+  v_runtime public.festival_edition_runtimes%ROWTYPE;
+  v_actor uuid := public._caller_profile_id();
+  v_timezone text;
+  v_day date;
+  v_rows jsonb := '[]'::jsonb;
+BEGIN
+  IF auth.uid() IS NULL OR v_actor IS NULL THEN
+    RAISE EXCEPTION 'festival_stage_control_forbidden';
+  END IF;
+  SELECT * INTO v_runtime FROM public.festival_edition_runtimes
+  WHERE id=p_runtime_id;
+  IF NOT FOUND OR NOT public._festival_edition_runtime_authorised(
+    v_runtime.festival_company_id,v_runtime.edition_id,v_actor
+  ) THEN RAISE EXCEPTION 'festival_stage_control_forbidden'; END IF;
+  SELECT nullif(c.timezone,'') INTO v_timezone
+  FROM public.festival_editions_v2 ed JOIN public.cities c ON c.id=ed.city_id
+  WHERE ed.id=v_runtime.edition_id;
+  IF v_timezone IS NULL THEN RAISE EXCEPTION 'festival_stage_timezone_missing'; END IF;
+  v_day := (now() AT TIME ZONE v_timezone)::date;
+
+  IF v_runtime.state IN ('gates_open','live','paused') THEN
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+      'stageId',stage.id,
+      'stageName',stage.name,
+      'scheduleItemId',(item.value->>'id')::uuid,
+      'artistName',item.value->>'artistName',
+      'festivalDate',v_day,
+      'status',current_event.event_status,
+      'observedAt',current_event.observed_at
+    ) ORDER BY stage.sort_order,(item.value->>'slotIndex')::integer),'[]'::jsonb)
+    INTO v_rows
+    FROM jsonb_array_elements(coalesce(v_runtime.generated_schedule->'items','[]'::jsonb)) item
+    JOIN public.festival_site_plan_stages stage ON stage.id=(item.value->>'stageId')::uuid
+    JOIN public.festival_site_plans plan ON plan.id=stage.festival_site_plan_id
+    LEFT JOIN LATERAL (
+      SELECT ev.event_status,ev.observed_at
+      FROM private.festival_edition_stage_events ev
+      WHERE ev.runtime_id=v_runtime.id
+        AND ev.edition_id=v_runtime.edition_id
+        AND ev.schedule_item_id=(item.value->>'id')::uuid
+        AND ev.stage_id=stage.id
+        AND ev.festival_date=v_day
+      ORDER BY ev.observed_at DESC,ev.recorded_at DESC LIMIT 1
+    ) current_event ON true
+    WHERE item.value->>'festivalDate'=v_day::text
+      AND stage.status='ready'
+      AND plan.festival_edition_id=v_runtime.edition_id
+      AND plan.festival_company_id=v_runtime.festival_company_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'runtimeId',v_runtime.id,
+    'editionId',v_runtime.edition_id,
+    'runtimeVersion',v_runtime.version,
+    'runtimeState',v_runtime.state,
+    'festivalDate',v_day,
+    'items',v_rows
+  );
+END;
+$control$;
+REVOKE ALL ON FUNCTION public.get_canonical_festival_stage_control(uuid)
+  FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.get_canonical_festival_stage_control(uuid)
+  TO authenticated;
