@@ -1,3 +1,4 @@
+import { CameraCollisionWorld, safeCameraPose, type CameraBlocker } from './cameraCollision';
 import { productionLayout, stageLightPositions } from './venueProduction';
 import { crowdMerchChance } from '@/features/player-model/merchWearables';
 import { planVenueLighting, venueBeamCue } from './venueLightShow';
@@ -108,6 +109,7 @@ export class ConcertScene {
   private confetti: T.Points | null = null;
   private venueProfile: VenueProfile | null = null;
   private distantAudience: T.Group | null = null;
+  private cameraCollision: CameraCollisionWorld | null = null;
   private sceneKey: CameraShot = 'front';
   private onStats: (stats: DemoStats) => void;
   constructor(private canvas: HTMLCanvasElement, initial: DemoSettings, onStats: (stats: DemoStats) => void, private onState: (state: 'loading' | 'ready' | 'error', message?: string) => void, private options?: ConcertOptions) {
@@ -138,6 +140,7 @@ export class ConcertScene {
     }) : 0;
     buildVenue(this.scene, this.assetManager, options?.venue, distantMerch ? { color: distantMerch.garment_color, chance: distantChance } : null);
     this.distantAudience = this.scene.getObjectByName('venue-distant-audience') as T.Group ?? null;
+    this.cameraCollision = options?.television ? null : new CameraCollisionWorld(this.scene);
     this.buildLighting(); this.particles = this.buildParticles();
     this.composer = new EffectComposer(this.renderer); this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.2, 0.4, 1.18); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
@@ -392,6 +395,7 @@ export class ConcertScene {
       } else if (selected === 'side_pit') {
         this.targetPos.y = subject.y + 1.48;
         this.cameraPos.copy(this.targetPos).add(new T.Vector3(-3.45, -Math.min(1.05, p.stageHeight + .5), 4.6));
+        this.cameraPos.y = Math.max(2.5, this.cameraPos.y); // see over the front-row heads
       } else if (selected === 'side_stage') {
         this.cameraPos.copy(this.targetPos).add(new T.Vector3(-Math.max(4.6, Math.min(9, p.stageWidth * .24)), 1.25, -1.8));
       } else if (selected === 'crane') {
@@ -528,12 +532,44 @@ export class ConcertScene {
       }
     }
 
+    if (this.cameraCollision && this.venueProfile && !this.options?.television) {
+      const blockers: CameraBlocker[] = this.actors.filter(actor => actor.root.visible).map(actor => ({
+        center: actor.root.position.clone().add(new T.Vector3(0, 1.15, 0)), radius: 1.05,
+      }));
+      // Only detailed foreground fans can engulf a stage lens. Distant instanced
+      // stadium spectators do not need per-person collision tests.
+      const matrix = new T.Matrix4();
+      for (const object of this.scene.children) {
+        if (!(object instanceof T.InstancedMesh) || !object.name.startsWith('crowd-variant-')) continue;
+        for (let i = 0; i < object.count; i++) {
+          object.getMatrixAt(i, matrix);
+          // Transform the torso anchor too, so leaning and surfing fans have
+          // their safety bubble in the same place as their rendered body.
+          const center = new T.Vector3(0, 1.05, 0).applyMatrix4(matrix).applyMatrix4(object.matrixWorld);
+          blockers.push({ center, radius: .65 });
+        }
+      }
+      const wantedDistance = this.cameraPos.distanceTo(this.targetPos);
+      this.cameraPos.copy(safeCameraPose(this.cameraCollision, this.venueProfile, this.cameraPos, this.targetPos, blockers));
+      const actualDistance = this.cameraPos.distanceTo(this.targetPos);
+      // Preserve the subject's coverage when a wall forces the lens closer,
+      // especially on narrow phone displays.
+      if (actualDistance > .1 && actualDistance < wantedDistance) {
+        shotFov = Math.min(100, 2 * Math.atan(Math.tan(shotFov * Math.PI / 360) * wantedDistance / actualDistance) * 180 / Math.PI);
+      }
+    }
+
     // Cut between director lenses: interpolating across the arena travels through
     // the crowd, performers and scenery before arriving at a valid shot.
-    const shotCut = (camera === 'director' || !!this.options?.television) && selected !== this.sceneKey;
-    const lerp = shotCut || this.options?.television || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
-    this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
-    this.camera.fov = T.MathUtils.lerp(this.camera.fov, shotFov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
+    const shotCut = selected !== this.sceneKey;
+    const lerp = shotCut || this.cameraCollision || this.options?.television || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
+    if (lerp === 1) {
+      this.camera.position.copy(this.cameraPos); this.lookAt.copy(this.targetPos); this.camera.fov = shotFov;
+    } else {
+      this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
+      this.camera.fov = T.MathUtils.lerp(this.camera.fov, shotFov, lerp);
+    }
+    this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
   }
   private frame = (now: number) => {
     if (this.disposed || !this.hasContext || document.hidden) { this.raf = 0; return; }
@@ -885,6 +921,7 @@ export class ConcertScene {
   private contextRestored = () => { this.onState('error', 'The graphics connection is restored. Retry to rebuild the stage lighting and materials.'); };
   private disposeScene() {
     this.crowd?.dispose();
+    this.cameraCollision = null;
     const geometries = new Set<T.BufferGeometry>(), materials = new Set<T.Material>(), textures = new Set<T.Texture>();
     this.scene.traverse(object => {
       const mesh = object as T.Mesh; if (mesh.geometry) geometries.add(mesh.geometry);

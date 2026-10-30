@@ -39,6 +39,20 @@ try {
   assert.deepEqual(await capture(10, 'phone_lights'), phones, 'Phone props must reconstruct with the moving hands');
   const still = await capture(10, 'phone_lights', true);
   assert.deepEqual(await capture(35, 'phone_lights', true), still, 'Reduced motion must freeze crowd articulation');
+  for (const shot of ['front', 'side_pit', 'side_stage', 'drums', 'backline_reverse', 'crane']) {
+    const pose = await page.evaluate(camera => window.renderGigMotion(10, 'wave', false, camera), shot);
+    assert.ok(pose.sightline.clear >= pose.sightline.distance - .001, `${shot}: scenery must not obstruct the lens`);
+    await page.screenshot();
+  }
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto('http://127.0.0.1:4187/tests/gig-experience/fixtures/visual-motion.html?venue=cafe_stage');
+  await page.waitForFunction(() => window.gigMotionState?.state === 'ready', undefined, { timeout: 60000 });
+  for (const shot of ['front', 'side_pit', 'side_stage', 'drums', 'backline_reverse']) {
+    const pose = await page.evaluate(camera => window.renderGigMotion(10, 'wave', false, camera), shot);
+    assert.ok(pose.sightline.clear >= pose.sightline.distance - .001, `Portrait café ${shot}: clear scenery`);
+    await page.screenshot();
+  }
+  if (process.env.GIG_MOTION_SCREENSHOT) await page.screenshot({ path: process.env.GIG_MOTION_SCREENSHOT });
   assert.deepEqual(errors, [], 'The real WebGL render must have no shader or page errors');
   console.log('Gig WebGL smoke passed: shaders, backwards seek, animation and reduced motion.');
 } finally {

@@ -4,17 +4,19 @@
 <script type="module">
 import { ConcertScene } from '/src/features/gig-demo-3d/ConcertScene.ts';
 import { DEFAULT_SETTINGS } from '/src/features/gig-demo-3d/config.ts';
+import { resolveVenueProfile } from '/src/features/gig-demo-3d/venueProfile.ts';
 import { venuePreviewOptions } from '/src/features/gig-demo-3d/venuePreview.ts';
 // Render on demand so software WebGL can test real shaders without a busy loop.
 let render;
 window.requestAnimationFrame = callback => { render = callback; return 1; };
-const options = { ...venuePreviewOptions('rock_club', 600), externalClock: true };
+const kind = new URLSearchParams(location.search).get('venue');
+const options = { ...venuePreviewOptions(kind ?? 'rock_club', kind ? resolveVenueProfile({ type: kind }).capacity : 600), externalClock: true };
 const settings = { ...DEFAULT_SETTINGS, quality: 'low', playing: false, camera: 'band_medium', crowd: 1 };
 const scene = new ConcertScene(document.querySelector('canvas'), settings, () => {}, (state, message) => {
   window.gigMotionState = { state, message };
 }, options);
-window.renderGigMotion = (seconds, reaction = 'wave', reducedMotion = false) => {
-  scene.setSettings({ ...settings, reducedMotion });
+window.renderGigMotion = (seconds, reaction = 'wave', reducedMotion = false, camera = 'band_medium') => {
+  scene.setSettings({ ...settings, reducedMotion, camera });
   scene.setFrame({ positionMs: seconds * 1000, section: 'chorus', sectionProgress: .4, energy: .8,
     crowd: 1, occupancy: 1, crowdReaction: reaction, crowdPreviousReaction: reaction === 'bounce' ? undefined : 'still', crowdReactionElapsed: reaction === 'bounce' ? undefined : .4,
     rhythmSeconds: seconds, performing: true, look: 'electric', lightLevel: 1, focusId: 'preview-1', effect: null,
@@ -22,7 +24,7 @@ window.renderGigMotion = (seconds, reaction = 'wave', reducedMotion = false) => 
   render(performance.now() + 1000);
   const crowd = scene.scene.children.filter(mesh => mesh.name.startsWith('crowd-variant-'));
   const phones = scene.scene.getObjectByName('crowd-phone-screens');
-  return { camera: scene.camera.position.toArray(), phones: { count: phones.count, matrices: Array.from(phones.instanceMatrix.array).slice(0, phones.count * 16) },
+  return { camera: scene.camera.position.toArray(), sightline: { distance: scene.camera.position.distanceTo(scene.lookAt), clear: scene.cameraCollision.clearDistance(scene.lookAt, scene.camera.position) }, phones: { count: phones.count, matrices: Array.from(phones.instanceMatrix.array).slice(0, phones.count * 16) },
     crowd: crowd.map(mesh => ({ count: mesh.count, matrices: Array.from(mesh.instanceMatrix.array), motion: Array.from(mesh.geometry.attributes.crowdMotion.array) })),
     distant: ['clock', 'strength', 'reaction', 'previousReaction', 'blend'].map(key => scene.distantAudience.userData[key].value) };
 };
