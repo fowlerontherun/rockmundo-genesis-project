@@ -78,6 +78,31 @@ BEGIN
    AND item.value->>'stageId'=p_stage_id::text
    AND item.value->>'festivalDate'=v_day::text LIMIT 1;
  IF v_item IS NULL THEN RAISE EXCEPTION 'festival_stage_slot_identity_mismatch'; END IF;
+ -- Never announce a withdrawn or cross-edition artist booking as performing.
+ IF p_status IN ('ready','starting','live') AND nullif(v_item->>'sourceBookingId','') IS NOT NULL
+   AND NOT EXISTS (
+     SELECT 1 FROM public.festival_artist_bookings b
+     JOIN public.festival_artist_programmes prog ON prog.id=b.festival_artist_programme_id
+     WHERE b.id=(v_item->>'sourceBookingId')::uuid
+       AND prog.festival_edition_id=v_runtime.edition_id
+       AND b.status IN ('confirmed','awaiting_schedule','scheduled')
+       AND b.band_id::text IS NOT DISTINCT FROM v_item->>'bandId'
+   )
+ THEN RAISE EXCEPTION 'festival_stage_artist_booking_unverified'; END IF;
+
+ -- One running/starting act per stage. The same runtime-row lock serialises
+ -- workers, and only the latest state of each *other* act is considered.
+ IF p_status IN ('starting','live') AND EXISTS (
+   SELECT 1 FROM (
+     SELECT DISTINCT ON (schedule_item_id) schedule_item_id,event_status
+     FROM private.festival_edition_stage_events
+     WHERE runtime_id=v_runtime.id AND stage_id=p_stage_id
+       AND festival_date=v_day AND schedule_item_id<>p_schedule_item_id
+     ORDER BY schedule_item_id,observed_at DESC,recorded_at DESC
+   ) current_on_stage
+   WHERE current_on_stage.event_status IN ('starting','live')
+ ) THEN RAISE EXCEPTION 'festival_stage_overlap_not_permitted'; END IF;
+
  INSERT INTO public.festival_runtime_evidence(runtime_id,evidence_type,evidence,evidence_digest)
  VALUES (
   p_runtime_id,'stage_'||p_status,
