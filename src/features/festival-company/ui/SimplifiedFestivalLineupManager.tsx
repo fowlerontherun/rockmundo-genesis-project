@@ -210,11 +210,13 @@ export function SimplifiedFestivalLineupManager({
     requestedDates?: string[];
     billingPosition?: (typeof billingPositions)[number];
   }) => {
-    if (!validatedDeadline) {
+    // Re-check against the clock on submission, not just the last React render.
+    const submittedDeadline = validateFestivalResponseDeadline(responseDeadlineInput, data.festivalDates);
+    if (!submittedDeadline) {
       toast.error("Choose a valid future response deadline before the festival starts.");
       return;
     }
-    const sourceKey = JSON.stringify([festivalCompanyId, festivalEditionId, input.identity,
+    const sourceKey = JSON.stringify([festivalCompanyId, festivalEditionId, submittedDeadline, input.identity,
       input.applicationId ?? null, input.invitationId ?? null, input.feeMinor, input.setMinutes,
       input.requestedDates ?? [], input.billingPosition ?? "support"]);
     let draft = pendingOfferBySource.current.get(sourceKey);
@@ -229,7 +231,7 @@ export function SimplifiedFestivalLineupManager({
       setMinutes: Math.max(10, Math.min(240, input.setMinutes)),
       preferredDate: preferredDate(data.festivalDates, input.requestedDates),
       billingPosition: input.billingPosition ?? "support",
-      responseDeadline: validatedDeadline,
+      responseDeadline: submittedDeadline,
       message: "Festival performance offer",
       idempotencyKey: crypto.randomUUID(),
     });
@@ -263,7 +265,8 @@ export function SimplifiedFestivalLineupManager({
   };
 
   const invite = (candidate: FestivalArtistCandidate) => {
-    if (!validatedDeadline) {
+    const submittedDeadline = validateFestivalResponseDeadline(responseDeadlineInput, data.festivalDates);
+    if (!submittedDeadline) {
       toast.error("Choose a valid future response deadline before the festival starts.");
       return;
     }
@@ -280,7 +283,7 @@ export function SimplifiedFestivalLineupManager({
       suggestedFeeMinor: chosenFeeMinor,
       suggestedSetMinutes: 60,
       suggestedDates: data.festivalDates[0] ? [data.festivalDates[0]] : [],
-      responseDeadline: validatedDeadline,
+      responseDeadline: submittedDeadline,
       message: `We would like to invite you to perform at this year\'s Festival. Proposed billing: ${billingLabel(billingInputs[key] ?? "support")}.`,
       idempotencyKey: crypto.randomUUID(),
     });
