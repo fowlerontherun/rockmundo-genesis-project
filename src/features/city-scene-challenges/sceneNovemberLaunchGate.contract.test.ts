@@ -58,6 +58,19 @@ describe('November City Scene prelaunch operator gate', () => {
     ]) expect(sql).toContain(gate);
   });
 
+  it('watches for any eligible missing city even when other cities have launched', () => {
+    expect(sql).toContain('from private.scene_november_city_readiness()');
+    expect(sql).toContain("readiness = 'missing_after_grace'");
+    expect(sql).toContain("'eligible_cities_now'");
+    expect(sql).toContain("'monthly_created_cities'");
+    expect(sql).toContain("'monthly_missing_cities'");
+    expect(sql).toContain("'city_readiness'");
+    expect(sql).toContain("'projected_target'");
+    expect(sql).toContain("'november_cycles'");
+    expect(sql).toContain("'objectives'");
+    expect(sql).not.toContain('scene_contributions');
+  });
+
   it('reports statuses and safe aggregate evidence instead of identities', () => {
     for (const key of [
       'launch_gate', 'launch_phase', 'checked_utc', 'evidence',

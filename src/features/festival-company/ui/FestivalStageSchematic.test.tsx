@@ -40,7 +40,22 @@ describe("illustrated festival stage schedule indicators", () => {
     expect(screen.queryByText("Scheduled set (not confirmed live)")).toBeNull();
   });
 
-  it("retains accessible stage selection", () => {
+  it("renders weather atmosphere without interpreting illustrated people as attendance", () => {
+    const { container } = render(
+      <FestivalStageSchematic
+        {...base}
+        now={Date.parse("2026-10-29T16:30:00Z")}
+        weatherState="heavy_rain"
+      />,
+    );
+    expect(container.querySelectorAll('[data-weather-visual="rain"]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-crowd-figure="illustration"]')).toHaveLength(11);
+    expect(container.querySelector('[data-testid="festival-stage-illustration"]')?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByText(/People and weather artwork illustrate the atmosphere/)).toBeTruthy();
+    expect(screen.getByText("Attendance not available")).toBeTruthy();
+  });
+
+    it("retains accessible stage selection", () => {
     const onSelectStage = vi.fn();
     render(<FestivalStageSchematic {...base} onSelectStage={onSelectStage} now={Date.parse("2026-10-29T16:30:00Z")} />);
     fireEvent.click(screen.getByRole("button", { name: /Main Stage/ }));
