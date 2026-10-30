@@ -5,7 +5,7 @@ import {
   festivalTimetableOptions,
   publishedStageOverlapIds,
 } from "../domain/festivalTimetableFilters";
-import { formatFestivalEditionTime } from "./festivalPublicDisplay";
+import { formatFestivalEditionTime, festivalTimeZoneLabel } from "./festivalPublicDisplay";
 
 interface Props {
   performances: FestivalPublicConfirmedAct[];
@@ -32,7 +32,7 @@ export function FestivalPublishedTimetable({ performances, timezone, now }: Prop
     <section aria-label="Published festival performance timetable" className="space-y-4">
       <div>
         <h2 className="text-xl font-bold">Published timetable</h2>
-        <p className="text-sm text-muted-foreground">These are the announced stage times in festival local time. Scheduled now does not confirm a live show.</p>
+        <p className="text-sm text-muted-foreground">These are the announced stage times in {festivalTimeZoneLabel(timezone)}. Scheduled now does not confirm a live show.</p>
       </div>
       {performances.length === 0 ? (
         <p className="rounded-lg border p-4 text-sm text-muted-foreground">
