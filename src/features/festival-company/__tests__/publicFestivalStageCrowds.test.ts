@@ -4,6 +4,7 @@ import {
   festivalCrowdBandLabels,
   festivalCrowdMoodLabels,
   filterPublicFestivalStageCrowdsForUniqueStages,
+  filterFreshPublicFestivalStageCrowds,
 } from "../domain/publicFestivalStageCrowds";
 
 const launchId = "123e4567-e89b-42d3-a456-426614174000";
@@ -89,7 +90,36 @@ describe("public festival stage crowd snapshots", () => {
     ])).toHaveLength(2);
   });
 
-  it("preserves genuinely quiet stage reports rather than treating them as missing", () => {
+  it("hides individual old stage observations while retaining fresh stage data", () => {
+    const now = Date.parse("2026-10-28T15:30:00Z");
+    const older = readPublicFestivalStageCrowds(payload([
+      { ...crowd, stageName: "Main Stage", lastCalculatedAt: "2026-10-28T14:20:00Z" },
+      { ...crowd, stageId: "new-stage", stageName: "Side Stage", lastCalculatedAt: "2026-10-28T15:28:00Z" },
+    ]), launchId);
+    expect(filterFreshPublicFestivalStageCrowds(older, now).map((item) => item.stageName)).toEqual(["Side Stage"]);
+  });
+
+  it("does not accept future-dated observations or invalid clocks as real audiences", () => {
+    const now = Date.parse("2026-10-28T15:30:00Z");
+    const rows = readPublicFestivalStageCrowds(payload([
+      { ...crowd, stageName: "Future Stage", lastCalculatedAt: "2026-10-28T15:35:00Z" },
+      { ...crowd, stageId: "near", stageName: "Near Stage", lastCalculatedAt: "2026-10-28T15:31:00Z" },
+    ]), launchId);
+    expect(filterFreshPublicFestivalStageCrowds(rows, now).map((item) => item.stageName)).toEqual(["Near Stage"]);
+    expect(filterFreshPublicFestivalStageCrowds(rows, Number.NaN)).toEqual([]);
+  });
+
+  it("fails closed if two stage records reuse the same runtime stage identity", () => {
+    const now = Date.parse("2026-10-28T15:20:00Z");
+    const rows = readPublicFestivalStageCrowds(payload([
+      crowd,
+      { ...crowd, stageName: "Other Stage", mood: "tired" },
+      { ...crowd, stageId: "independent-stage", stageName: "Third Stage" },
+    ]), launchId);
+    expect(filterFreshPublicFestivalStageCrowds(rows, now).map((item) => item.stageName)).toEqual(["Third Stage"]);
+  });
+
+    it("preserves genuinely quiet stage reports rather than treating them as missing", () => {
     expect(readPublicFestivalStageCrowds(payload([{ ...crowd, crowdBand: "quiet", mood: "calm" }]), launchId)[0]?.crowdBand).toBe("quiet");
   });
 });
