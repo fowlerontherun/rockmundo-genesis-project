@@ -57,8 +57,8 @@ export default function Awards() {
   const {
     shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,
-    submitNomination, castVote, bookPerformanceAsync, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
-    isSubmitting, isVoting, isBooking, isAttending, isRespondingInvite,
+    submitNomination, castVote, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
+    isSubmitting, isVoting, isAttending, isRespondingInvite,
   } = useAwards(profileId ?? undefined, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
@@ -556,7 +556,6 @@ export default function Awards() {
               key={selectedShow.id}
               show={selectedShow}
               redCarpetAttended={hasRedCarpetAttendance}
-              bandId={userBand?.id}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
               onAttendRedCarpet={(outfit) =>
                 attendRedCarpetAsync({
@@ -565,19 +564,8 @@ export default function Awards() {
                   participant_type: "user",
                 })
               }
-              onBookPerformance={(slotLabel, stage) => {
-                if (!userBand) return Promise.reject(new Error("An active band is required"));
-                return bookPerformanceAsync({
-                  award_show_id: selectedShow.id,
-                  band_id: userBand.id,
-                  slot_label: slotLabel,
-                  stage,
-                  song_ids: [],
-                });
-              }}
               isAttending={isAttending}
               redCarpetLoading={redCarpetLoading}
-              isBooking={isBooking}
               currentGameYear={currentGameYear}
             />
           ))}
