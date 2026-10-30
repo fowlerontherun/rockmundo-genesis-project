@@ -129,7 +129,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelle
                     <span key={segment} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${segment < band.intensity ? "bg-emerald-500" : "bg-muted"}`} />
                   ))}
                 </span>
-                <span className="mt-1 block text-xs text-muted-foreground">Mood · {festivalCrowdMoodLabels[crowd.mood]}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Mood · {crowd.mood ? festivalCrowdMoodLabels[crowd.mood] : "Not measured"}</span>
               </span>
             ) : <span className="mt-3 block text-xs text-muted-foreground">Stage crowd not reported</span>}
           </button>

@@ -20,3 +20,12 @@ The new canonical_edition_stage_crowd_evidence_ledger.sql is a service-evidence 
 6. Create a forward-only timestamped migration only after staging tests pass. Do not bulk-apply future-dated launch-scoped migrations or rewrite completed historical evidence.
 
 Issue #4696 remains open until actual emission, crowd allocations and public visitor projection are verified.
+## 30 October 2026 implementation update
+
+New owner-only canonical stage control RPC and owner UI now support explicit stage confirmations. Official stage events are source-backed and immutable; stage overlap and booking mismatches are rejected. The public projection only shows recent current-day events with matching runtime/stage/edition IDs. A newly added SQL harness checks anonymous vs authenticated privileges, absent data, unknown festival slugs and redaction.
+
+**Release gate:** The existing one-click `run_simplified_festival_edition` completes and settles an edition immediately, so it does NOT drive a staged live runtime; two existing production runtimes are completed. No stage-specific allocation emitter is deployed. This package contains an allocation *capture* pipeline, not a fabricated audience distribution. Actual canonical live tick, gate admissions and per-stage audience allocations still need integration before showing a crowd density band or declaring the festival experience fully live.
+
+The public projection deliberately returns `scheduledStart` and `scheduledEnd` as null for observed events whose generated schedule contains no trustworthy UTC timetable, and `mood` as null when not measured. The visitor UI now handles these states honestly.
+
+All SQL scripts passed a transaction-scoped `BEGIN ... ROLLBACK` schema compilation and grant preflight against RockMundo on 30 October 2026, with unknown slug returning no data. **No schema changes or event fixtures were persisted.** Before deployment, exercise the staged live fixture and permissions on a disposable DB and validate settlement invariants.

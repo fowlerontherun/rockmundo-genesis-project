@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   canAdvanceCanonicalStageState,
@@ -7,7 +8,7 @@ import {
 } from "./canonicalStageEventModel";
 
 const sql = readFileSync(
-  new URL("../../../../supabase/reconciliation/festival/canonical_edition_stage_evidence_ledger.sql", import.meta.url),
+  resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_evidence_ledger.sql"),
   "utf8",
 );
 

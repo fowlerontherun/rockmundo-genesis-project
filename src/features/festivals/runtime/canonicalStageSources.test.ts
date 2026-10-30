@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const actionSql = readFileSync(new URL("../../../../supabase/reconciliation/festival/canonical_edition_stage_runtime_actions.sql", import.meta.url), "utf8");
-const crowdSql = readFileSync(new URL("../../../../supabase/reconciliation/festival/canonical_edition_stage_crowd_evidence_ledger.sql", import.meta.url), "utf8");
+const actionSql = readFileSync(resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_runtime_actions.sql"), "utf8");
+const publicSql = readFileSync(resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_public_live_projection.sql"), "utf8");
+const crowdSql = readFileSync(resolve(process.cwd(), "supabase/reconciliation/festival/canonical_edition_stage_crowd_evidence_ledger.sql"), "utf8");
 
 describe("canonical Festival V2 evidence sources", () => {
   it("writes stage events only through a real operator-confirmed canonical runtime action", () => {
@@ -15,6 +17,9 @@ describe("canonical Festival V2 evidence sources", () => {
     expect(actionSql).toContain("clock_timestamp()");
     expect(actionSql).toContain("FOR UPDATE");
     expect(actionSql).toContain("festival_stage_slot_identity_mismatch");
+    expect(actionSql).toContain("festival_stage_artist_booking_unverified");
+    expect(actionSql).toContain("festival_stage_overlap_not_permitted");
+    expect(actionSql).toContain("get_canonical_festival_stage_control");
   });
 
   it("requires explicit actor authority, active runtime, expected version and replay isolation", () => {
@@ -37,6 +42,20 @@ describe("canonical Festival V2 evidence sources", () => {
     expect(crowdSql).toContain("v_at AT TIME ZONE v_timezone");
     expect(crowdSql).toContain("festival_stage_allocation_stale_or_wrong_day");
     expect(crowdSql).toContain("festival_stage_allocation_idempotency_conflict");
+  });
+
+
+  it("publishes confirmed and recent same-day stage observations only", () => {
+    expect(publicSql).toContain("private.festival_edition_stage_events");
+    expect(publicSql).toContain("private.festival_edition_stage_crowd_observations");
+    expect(publicSql).toContain("ev.runtime_id=v_runtime.id");
+    expect(publicSql).toContain("ev.festival_date=v_day");
+    expect(publicSql).toContain("stage.status='ready'");
+    expect(publicSql).toContain("now() - interval '10 minutes'");
+    expect(publicSql).toContain("'performances', v_performances");
+    expect(publicSql).toContain("'stageCrowds', v_stage_crowds");
+    expect(publicSql).toContain("'scheduledStart', NULL");
+    expect(publicSql).not.toContain("'observedAudience', latest.observed_audience");
   });
 
   it("does not reveal exact headcounts or private mood observations to visitor APIs", () => {
