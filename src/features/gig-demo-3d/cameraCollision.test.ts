@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { CameraCollisionWorld, constrainCamera, safeCameraPose } from './cameraCollision';
+import { CameraCollisionWorld, constrainCamera, safeCameraPose, cameraLensFootprint } from './cameraCollision';
 import { resolveVenueProfile, VENUE_TYPES, type VenueKind } from './venueProfile';
 
 const v = (x: number, y: number, z: number) => new T.Vector3(x, y, z);
@@ -94,6 +94,32 @@ describe('gig camera scenery clearance', () => {
     geometry.setDrawRange(first.attributes.position.count, second.attributes.position.count);
     const mesh = new T.Mesh(geometry, new T.MeshBasicMaterial());
     expect(new CameraCollisionWorld(mesh).clearDistance(v(0, 2, 0), v(0, 2, 7))).toBeCloseTo(6);
+  });
+
+  it('detects thin posts at the middle of a screen edge', () => {
+    const root = new T.Group(); wall(root, [.16, .16, .16], [.35, 2, 4]);
+    const world = new CameraCollisionWorld(root);
+    expect(world.clearDistance(v(0, 2, 0), v(0, 2, 7))).toBeLessThan(4);
+  });
+  it('protects wider lens footprints without reusing a narrow cached result', () => {
+    const root = new T.Group(); wall(root, [.16, .16, .16], [.8, 2, 4]);
+    const world = new CameraCollisionWorld(root), target = v(0, 2, 0), lens = v(0, 2, 7);
+    expect(world.clearDistance(target, lens)).toBe(7);
+    expect(world.clearDistance(target, lens, { halfWidth: .8, halfHeight: .35 })).toBeLessThan(4);
+    expect(world.clearDistance(target, lens)).toBe(7);
+  });
+
+  it('sizes lens clearance for corrected FOV and ultrawide screens', () => {
+    const near = .08, aspect = 6, footprint = cameraLensFootprint(near, aspect);
+    const corner = near * Math.tan(100 * Math.PI / 360);
+    expect(footprint.halfWidth).toBeGreaterThan(corner * aspect);
+    expect(footprint.halfHeight).toBeGreaterThan(corner);
+    expect(cameraLensFootprint(near, 1.8)).toEqual({ halfWidth: .35, halfHeight: .35 });
+    expect(Object.values(cameraLensFootprint(NaN, Infinity)).every(Number.isFinite)).toBe(true);
+    const p = resolveVenueProfile({ type: 'dive_bar' });
+    const lens = constrainCamera(v(999, 999, 999), p, footprint);
+    expect(p.roomWidth / 2 - lens.x).toBeGreaterThan(footprint.halfWidth);
+    expect(p.roofHeight - lens.y).toBeGreaterThan(footprint.halfHeight);
   });
 
 });

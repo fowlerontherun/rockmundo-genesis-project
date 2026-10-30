@@ -44,6 +44,12 @@ try {
     assert.ok(pose.sightline.clear >= pose.sightline.distance - .001, `${shot}: scenery must not obstruct the lens`);
     await page.screenshot();
   }
+  await page.setViewportSize({ width: 2400, height: 600 });
+  for (const shot of ['front', 'side_stage', 'crane']) {
+    const pose = await page.evaluate(camera => window.renderGigMotion(10, 'wave', false, camera), shot);
+    assert.ok(pose.sightline.clear >= pose.sightline.distance - .001, `Ultrawide ${shot}: clear lens footprint`);
+    await page.screenshot();
+  }
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto('http://127.0.0.1:4187/tests/gig-experience/fixtures/visual-motion.html?venue=cafe_stage');
   await page.waitForFunction(() => window.gigMotionState?.state === 'ready', undefined, { timeout: 60000 });

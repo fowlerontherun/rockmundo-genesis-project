@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import * as T from 'three';
 import { ConcertScene } from './ConcertScene';
-import { CameraCollisionWorld } from './cameraCollision';
+import { CameraCollisionWorld, cameraLensFootprint } from './cameraCollision';
 import { buildVenueEnvironment } from './venueEnvironment';
 import { buildVenueProduction } from './venueProduction';
 import { DEFAULT_SETTINGS } from './config';
@@ -29,7 +29,7 @@ describe('camera clearance through real venue scenery', () => {
     rig.settings.camera = 'side_stage'; rig.moveCamera(.001);
     expect(rig.camera.position).toEqual(first);
   });
-  it.each(['cafe_stage', 'dive_bar', 'theatre', 'indoor_arena', 'festival_tent', 'stadium'])('%s keeps ordinary gig lenses clear on portrait and landscape displays', type => {
+  it.each(['cafe_stage', 'dive_bar', 'theatre', 'indoor_arena', 'festival_tent', 'stadium'])('%s keeps ordinary gig lenses clear on portrait, landscape and ultrawide displays', type => {
     const p = resolveVenueProfile({ type }), scene = new T.Scene();
     const material = new T.MeshStandardMaterial();
     buildVenueEnvironment(scene, p, 123, material, material);
@@ -39,7 +39,7 @@ describe('camera clearance through real venue scenery', () => {
       const root = new T.Group(); root.position.set(...stagePosition(p, [.5, .2, .8, .5][i], [.78, .62, .62, .18][i]));
       return { id: String(i), role, root, hasVocals: () => role === 'vocals' };
     });
-    for (const aspect of [.45, 1.8]) for (const camera of ['front', 'stage', 'lead_close', 'band_medium', 'side_pit', 'side_stage', 'crane', 'guitar', 'drums', 'backline_reverse', 'bass_close']) {
+    for (const aspect of [.45, 1.8, 4]) for (const camera of ['front', 'stage', 'lead_close', 'band_medium', 'side_pit', 'side_stage', 'crane', 'guitar', 'drums', 'backline_reverse', 'bass_close']) {
       const rig = Object.assign(Object.create(ConcertScene.prototype), {
         scene, venueProfile: p, cameraCollision: world, options: { externalClock: true },
         settings: { ...DEFAULT_SETTINGS, camera }, camera: new T.PerspectiveCamera(42, aspect, .08, 500),
@@ -48,7 +48,7 @@ describe('camera clearance through real venue scenery', () => {
       rig.moveCamera(.016);
       const distance = rig.camera.position.distanceTo(rig.lookAt);
       expect(distance, `${camera}: meaningful lens distance`).toBeGreaterThan(.8);
-      expect(world.clearDistance(rig.lookAt, rig.camera.position), `${camera}: no wall/prop between lens and subject`).toBeGreaterThanOrEqual(distance - .001);
+      expect(world.clearDistance(rig.lookAt, rig.camera.position, cameraLensFootprint(rig.camera.near, aspect)), `${camera}: no wall/prop between lens and subject`).toBeGreaterThanOrEqual(distance - .001);
       expect(Math.abs(rig.camera.position.x)).toBeLessThan(p.roomWidth / 2);
       expect(rig.camera.position.y).toBeGreaterThan(.3);
       if (!p.outdoor) expect(rig.camera.position.y).toBeLessThan(p.roofHeight);
