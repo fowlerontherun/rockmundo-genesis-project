@@ -32,11 +32,16 @@ export class CameraCollisionWorld {
         if (!ancestor.visible || ancestor.userData.animated || ancestor.userData.motorizedHead) return;
       }
       const materials = Array.isArray(object.material) ? object.material : [object.material];
-      const solid = (m: T.Material) => m.visible && !m.transparent && m.side !== T.BackSide;
+      const solid = (m: T.Material) => m.visible && !m.transparent;
+      // BackSide is also used by opaque walls. Exclude background domes by
+      // geometry, rather than dropping every surface rendered from its back.
+      if (object.geometry.type === 'SphereGeometry' && materials.every(m => m.side === T.BackSide)) return;
       if (!materials.some(solid)) return;
       const positions = object.geometry.attributes.position, index = object.geometry.index;
       const count = index?.count ?? positions.count;
-      for (let i = 0; i < count; i += 3) {
+      const start = Math.max(0, object.geometry.drawRange.start);
+      const end = Math.min(count, start + object.geometry.drawRange.count);
+      for (let i = start; i + 2 < end; i += 3) {
         const group = object.geometry.groups.find(g => i >= g.start && i < g.start + g.count);
         if (!solid(materials[group?.materialIndex ?? 0] ?? materials[0])) continue;
         const points = [0, 1, 2].map(offset => new T.Vector3().fromBufferAttribute(positions, index ? index.getX(i + offset) : i + offset).applyMatrix4(object.matrixWorld));
@@ -108,18 +113,40 @@ export function safeCameraPose(world: CameraCollisionWorld, p: VenueProfile, des
     const line = new T.Line3(target, point), nearest = line.closestPointToPoint(center, true, new T.Vector3());
     return center.distanceTo(target) < radius + .25 || center.distanceTo(point) > 3 || nearest.distanceTo(center) > radius;
   });
-  let best = requested, bestScore = -Infinity;
-  for (const candidate of candidates) {
+  let best = requested, bestScore = -Infinity, foundUsable = false;
+  const evaluate = (candidate: T.Vector3) => {
     const distance = candidate.distanceTo(target);
     const clear = world.clearDistance(target, candidate);
     const corrected = clear < distance - .001
       ? target.clone().lerp(candidate, Math.max(0, clear - CLEARANCE) / Math.max(.001, distance)) : candidate;
     constrainCamera(corrected, p);
-    const remaining = world.clearDistance(target, corrected);
-    const usable = remaining >= corrected.distanceTo(target) - .001 && candidatesClear(corrected);
-    const score = (usable ? 1000 : 0) + Math.min(corrected.distanceTo(target), 2) * 20 - corrected.distanceTo(desired);
+    const correctedDistance = corrected.distanceTo(target);
+    const sceneryClear = world.clearDistance(target, corrected) >= correctedDistance - .001;
+    const bodiesClear = candidatesClear(corrected);
+    const usefulDistance = correctedDistance >= 1.6;
+    const usable = sceneryClear && bodiesClear && usefulDistance;
+    foundUsable ||= usable;
+    // Scenery and body clearance outrank preserving the requested angle. A
+    // 20cm wall correction inside the singer is never a usable close-up.
+    const score = (sceneryClear ? 10000 : 0) + (bodiesClear ? 1000 : 0) + (usefulDistance ? 100 : 0)
+      + Math.min(correctedDistance, 2) * 20 - corrected.distanceTo(desired);
     if (score > bestScore) { best = corrected; bestScore = score; }
-    if (usable && corrected.distanceTo(candidate) < .001 && candidate === requested) break;
+    return usable && corrected.distanceTo(candidate) < .001;
+  };
+  for (const candidate of candidates) {
+    if (evaluate(candidate) && candidate === requested) break;
+  }
+  if (!foundUsable) {
+    // A curtain, speaker bank or cluster of foreground bodies may block every
+    // local correction. Search other sides of the subject only in that case.
+    // Absolute angles and fixed order preserve replay/seek determinism.
+    const yaw = Math.atan2(requested.x - target.x, requested.z - target.z);
+    const radius = T.MathUtils.clamp(requested.distanceTo(target), 3, 8);
+    for (const rise of [0, 2]) for (const turn of [1, -1, 2, -2, 3, -3, 4]) {
+      const angle = yaw + turn * Math.PI / 4;
+      evaluate(constrainCamera(new T.Vector3(target.x + Math.sin(angle) * radius,
+        Math.max(requested.y, target.y + rise), target.z + Math.cos(angle) * radius), p));
+    }
   }
   return best;
 }

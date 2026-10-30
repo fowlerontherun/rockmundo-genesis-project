@@ -63,4 +63,37 @@ describe('gig camera scenery clearance', () => {
     expect(safeCameraPose(world, profile, desired, target, blockers)).toEqual(safe);
     expect(desired).toEqual(v(0, 2, 5));
   });
+  it('finds another side of the subject when every original shot hits a nearby wall', () => {
+    const root = new T.Group(); wall(root, [12, 8, .3], [0, 4, .7]);
+    const world = new CameraCollisionWorld(root), target = v(0, 2, 0);
+    const body = { center: v(0, 1.7, 0), radius: 1.05 };
+    const safe = safeCameraPose(world, profile, v(0, 2, 6), target, [body]);
+    expect(safe.distanceTo(target)).toBeGreaterThanOrEqual(1.6);
+    expect(safe.distanceTo(body.center)).toBeGreaterThanOrEqual(body.radius + .35);
+    expect(world.clearDistance(target, safe)).toBeCloseTo(safe.distanceTo(target));
+  });
+  it('escapes foreground bodies covering all seven original candidate positions', () => {
+    const target = v(0, 2, 0), desired = v(0, 2, 5);
+    const blockers = [desired, ...[1.3, 2.6].flatMap(rise => [0, -2, 2].map(side => desired.clone().add(v(side, rise, 0))))]
+      .map(center => ({ center, radius: .8 }));
+    const world = new CameraCollisionWorld();
+    const safe = safeCameraPose(world, profile, desired, target, blockers);
+    expect(blockers.every(({ center, radius }) => safe.distanceTo(center) >= radius + .35)).toBe(true);
+    expect(safeCameraPose(world, profile, desired, target, blockers)).toEqual(safe);
+  });
+  it('blocks opaque back-face scenery as well as front-face scenery', () => {
+    const plane = new T.Mesh(new T.PlaneGeometry(10, 8), new T.MeshBasicMaterial({ side: T.BackSide }));
+    plane.position.set(0, 4, 4);
+    const world = new CameraCollisionWorld(plane);
+    expect(world.clearDistance(v(0, 2, 0), v(0, 2, 7))).toBeCloseTo(4);
+  });
+  it('ignores triangles outside the rendered geometry draw range', () => {
+    const first = new T.PlaneGeometry(10, 8).toNonIndexed(); first.translate(0, 4, 4);
+    const second = new T.PlaneGeometry(10, 8).toNonIndexed(); second.translate(0, 4, 6);
+    const geometry = mergeGeometries([first, second]);
+    geometry.setDrawRange(first.attributes.position.count, second.attributes.position.count);
+    const mesh = new T.Mesh(geometry, new T.MeshBasicMaterial());
+    expect(new CameraCollisionWorld(mesh).clearDistance(v(0, 2, 0), v(0, 2, 7))).toBeCloseTo(6);
+  });
+
 });
