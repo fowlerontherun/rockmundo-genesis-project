@@ -69,9 +69,7 @@ export const useCheckInToFestival = () => {
   const invalidate = useAttendanceMutationInvalidation();
   return useMutation({
     mutationFn: ({ attendanceId }: { attendanceId: string }) => checkInToFestival(attendanceId),
-    onSuccess: () => {
-      void invalidate();
-    },
+    onSuccess: () => invalidate(),
   });
 };
 
@@ -79,8 +77,6 @@ export const useLeaveFestivalEarly = () => {
   const invalidate = useAttendanceMutationInvalidation();
   return useMutation({
     mutationFn: ({ attendanceId }: { attendanceId: string }) => leaveFestivalEarly(attendanceId),
-    onSuccess: () => {
-      void invalidate();
-    },
+    onSuccess: () => invalidate(),
   });
 };
