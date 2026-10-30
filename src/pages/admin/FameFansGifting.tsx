@@ -23,6 +23,7 @@ export default function FameFansGifting() {
   const [selectedBand, setSelectedBand] = useState<any>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [giftDialogOpen, setGiftDialogOpen] = useState(false);
+  const [bandGrantRequestId, setBandGrantRequestId] = useState(() => crypto.randomUUID());
   const [giftType, setGiftType] = useState<"band" | "player">("band");
 
   // Fetch bands
@@ -54,47 +55,23 @@ export default function FameFansGifting() {
   // Grant fame/fans to band
   const grantToBandMutation = useMutation({
     mutationFn: async ({ bandId, fame, fans, money, reason }: { bandId: string; fame: number; fans: number; money: number; reason: string }) => {
-      const band = bands.find(b => b.id === bandId);
-      if (!band) throw new Error("Band not found");
-
-      const updates: any = {};
-      if (fame > 0) updates.fame = (band.fame || 0) + fame;
-      if (fans > 0) {
-        updates.total_fans = (band.total_fans || 0) + fans;
-        updates.casual_fans = (band.casual_fans || 0) + Math.floor(fans * 0.6);
-        updates.dedicated_fans = (band.dedicated_fans || 0) + Math.floor(fans * 0.3);
-        updates.superfans = (band.superfans || 0) + Math.floor(fans * 0.1);
-      }
-      // band_earnings is the sole cash writer; a second direct update double-credits after #4119.
-
-      if (Object.keys(updates).length > 0) {
-        const { error } = await supabase.from("bands").update(updates).eq("id", bandId);
-        if (error) throw error;
-      }
-
-      // Log the gift in band_fame_events
-      if (fame > 0) {
-        await supabase.from("band_fame_events").insert({
-          band_id: bandId,
-          event_type: "admin_grant",
-          fame_gained: fame,
-          event_data: { reason, fans_granted: fans, money_granted: money },
-        });
-      }
-
-      // Log money gift as band_earnings
-      if (money > 0) {
-        const { error: earningsError } = await supabase.from("band_earnings").insert({
-          band_id: bandId,
-          amount: money,
-          source: "leader_deposit",
-          description: `Admin grant: ${reason}`,
-        });
-        if (earningsError) throw earningsError;
-      }
+      // The admin RPC derives authorization, updates fame/fans, and posts the
+      // band earnings ledger credit in one transaction. Never write money
+      // directly from the browser (or update band_balance separately).
+      const { data, error } = await (supabase as any).rpc("admin_grant_band_support", {
+        p_request_id: bandGrantRequestId,
+        p_band_id: bandId,
+        p_fame: fame,
+        p_fans: fans,
+        p_money: money,
+        p_reason: reason.trim(),
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bands-fame"] });
+      setBandGrantRequestId(crypto.randomUUID());
       toast({ title: "Fame/Fans/Money granted to band successfully" });
       setGiftDialogOpen(false);
     },
