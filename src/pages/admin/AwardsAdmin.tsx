@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Trophy, Plus, Calendar, Users, Award } from "lucide-react";
+import { Trophy, Plus, Calendar, Users, Award, ShieldCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +16,37 @@ import { format } from "date-fns";
 import { useAwardShowInvites, useInviteBandToPerform, useNominatableBands } from "@/hooks/useAwardInvites";
 
 
+interface AwardSettlementPreview {
+  show_id: string;
+  show_name: string;
+  status: string;
+  ready: boolean;
+  winner_fame_boost: number;
+  winner_prize_money: number;
+  pending_nominations: number;
+  ballots_on_nonfinalists: number;
+  invalid_shortlisted_nominations: number;
+  existing_wins: number;
+  awards_to_issue: number;
+  unawarded_categories: string[];
+  results: {
+    category: string;
+    nominee: string;
+    nomination_id?: string;
+    weighted_votes: number | null;
+    ballots: number | null;
+    tied_on_votes?: boolean;
+    will_award: boolean;
+    published?: boolean;
+  }[];
+}
+
 const AwardsAdmin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [previewShowId, setPreviewShowId] = useState<string | null>(null);
+  const [confirmPayouts, setConfirmPayouts] = useState(false);
   const [newShow, setNewShow] = useState({
     show_name: "",
     show_date: "",
@@ -139,6 +167,44 @@ const AwardsAdmin = () => {
     },
   });
 
+  const { data: resultPreview, isLoading: previewLoading, error: previewError } = useQuery({
+    queryKey: ["admin-awards-results-preview", previewShowId],
+    enabled: Boolean(previewShowId),
+    queryFn: async (): Promise<AwardSettlementPreview> => {
+      const { data, error } = await (supabase as any).rpc("award_admin_preview_results", {
+        p_show_id: previewShowId,
+      });
+      if (error) throw error;
+      return data as AwardSettlementPreview;
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const settleShow = useMutation({
+    mutationFn: async (showId: string) => {
+      const { data, error } = await (supabase as any).rpc("award_admin_finalize_show", {
+        p_show_id: showId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: { awards_issued?: number; already_completed?: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-awards-results-preview"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-award-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-nominations"] });
+      queryClient.invalidateQueries({ queryKey: ["award-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["award-wins"] });
+      queryClient.invalidateQueries({ queryKey: ["award-show-nominations"] });
+      setConfirmPayouts(false);
+      toast({ title: data.already_completed
+        ? "Awards already settled"
+        : `Results published for ${data.awards_issued ?? 0} categories` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Awards settlement failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const nextStatusFor = (status: string): string | null => {
     if (status === "upcoming") return "nominations_open";
     if (status === "nominations_open") return "voting_open";
@@ -213,6 +279,97 @@ const AwardsAdmin = () => {
         </Dialog>
       </div>
 
+      <Dialog open={Boolean(previewShowId)} onOpenChange={(open) => {
+        if (!open) { setPreviewShowId(null); setConfirmPayouts(false); }
+      }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Authoritative awards result preview</DialogTitle>
+            <DialogDescription>
+              Results use saved ballots. Winners and payouts are created only
+              when an administrator explicitly finalises a live show.
+            </DialogDescription>
+          </DialogHeader>
+          {previewLoading && <p className="text-sm text-muted-foreground">Checking ballots…</p>}
+          {previewError && <p role="alert" className="text-sm text-destructive">
+            Could not verify results: {(previewError as Error).message}
+          </p>}
+          {resultPreview && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>{resultPreview.status.replaceAll("_", " ")}</Badge>
+                <Badge variant={resultPreview.ready ? "default" : "secondary"}>
+                  {resultPreview.ready ? "Ready to finalise" : "Not ready to finalise"}
+                </Badge>
+              </div>
+              <p className="text-sm font-medium">{resultPreview.show_name}</p>
+              <p className="text-sm text-muted-foreground">
+                {resultPreview.awards_to_issue} prizes to publish ·
+                ${Number(resultPreview.winner_prize_money).toLocaleString()} and
+                {Number(resultPreview.winner_fame_boost).toLocaleString()} fame per winning band
+              </p>
+              <div className="space-y-2">
+                {resultPreview.results.map((result) => (
+                  <div key={result.category} className="rounded-md border p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{result.category}</span>
+                      <Badge variant={result.will_award ? "default" : "outline"}>
+                        {result.published ? "Published" : result.will_award ? "Predicted winner" : "No ballots"}
+                      </Badge>
+                    </div>
+                    <div>{result.nominee}</div>
+                    {result.ballots !== null && (
+                      <div className="text-xs text-muted-foreground">
+                        {result.ballots} ballots · {result.weighted_votes} weighted votes
+                        {result.tied_on_votes ? " · Tie resolved by oldest nomination" : ""}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {resultPreview.results.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No shortlisted nominees or published winners.</p>
+                )}
+              </div>
+              {resultPreview.unawarded_categories.length > 0 && (
+                <p className="text-sm text-amber-600">
+                  No prize will be issued for: {resultPreview.unawarded_categories.join(", ")}.
+                </p>
+              )}
+              {(resultPreview.pending_nominations > 0
+                || resultPreview.ballots_on_nonfinalists > 0
+                || resultPreview.invalid_shortlisted_nominations > 0) && (
+                <div role="alert" className="text-sm text-destructive">
+                  Resolve {resultPreview.pending_nominations} pending nominations,
+                  {resultPreview.ballots_on_nonfinalists} ballots on non-finalists and
+                  {resultPreview.invalid_shortlisted_nominations} invalid finalists before settling.
+                </div>
+              )}
+              {resultPreview.status === "live" && (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="award-confirm-payouts"
+                      checked={confirmPayouts}
+                      onCheckedChange={(checked) => setConfirmPayouts(checked === true)}
+                      disabled={!resultPreview.ready || settleShow.isPending} />
+                    <Label htmlFor="award-confirm-payouts" className="leading-snug">
+                      I have reviewed the winners and unawarded categories.
+                      Finalising publishes results and pays the configured prizes once.
+                    </Label>
+                  </div>
+                  <Button
+                    disabled={!resultPreview.ready || !confirmPayouts || settleShow.isPending || !previewShowId}
+                    onClick={() => { if (previewShowId) settleShow.mutate(previewShowId); }}
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    {settleShow.isPending ? "Finalising…" : "Finalise awards and pay winners"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="shows">
         <TabsList>
           <TabsTrigger value="shows">Award Shows</TabsTrigger>
@@ -243,6 +400,14 @@ const AwardsAdmin = () => {
                     })}
                   </div>
                   <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {(show.status === "voting_open" || show.status === "live" || show.status === "completed") && (
+                      <Button size="sm" variant="secondary" onClick={() => {
+                        setConfirmPayouts(false);
+                        setPreviewShowId(show.id);
+                      }}>
+                        <Award className="mr-2 h-4 w-4" /> Results & settlement
+                      </Button>
+                    )}
                     {nextStatusFor(show.status) ? (
                       <Button
                         size="sm"
@@ -258,7 +423,7 @@ const AwardsAdmin = () => {
                     ) : (
                       <span className="text-xs text-muted-foreground">
                         {show.status === "live"
-                          ? "Show completion is disabled until winner settlement is available."
+                          ? "Use Results & settlement to verify ballots and publish payouts."
                           : "No further admin phase change available."}
                       </span>
                     )}
@@ -295,6 +460,9 @@ const AwardsAdmin = () => {
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{nom.status}</Badge>
+                          {Number(nom.vote_count || 0) > 0 && nom.status === "pending" && (
+                            <span className="text-xs text-amber-600">Legacy votes: shortlist to preserve ballots</span>
+                          )}
                           {nom.status !== "winner" && nom.status !== "runner_up"
                             && shows.some((show: any) => show.id === nom.award_show_id && show.status === "nominations_open")
                             && (
@@ -305,7 +473,7 @@ const AwardsAdmin = () => {
                                     Shortlist
                                   </Button>
                                 )}
-                                {nom.status !== "rejected" && (
+                                {nom.status !== "rejected" && Number(nom.vote_count || 0) === 0 && (
                                   <Button size="sm" variant="outline" disabled={reviewNomination.isPending}
                                     onClick={() => reviewNomination.mutate({ nominationId: nom.id, decision: "rejected" })}>
                                     Reject
