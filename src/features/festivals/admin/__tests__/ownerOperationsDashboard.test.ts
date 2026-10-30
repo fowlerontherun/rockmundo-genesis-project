@@ -25,7 +25,33 @@ describe("festival owner operations dashboard models", () => {
     expect(preview[0]).toMatchObject({ type: "opener", start_time: "18:00", duration_minutes: 45 });
   });
 
-  it("filters persistent staff candidates", () => {
+  it("accepts valid owner schedule times including midnight boundaries", () => {
+    const preview = buildSlotPreview({
+      date: "2030-06-01",
+      openingTime: "00:00",
+      curfew: "02:00",
+      setLength: 45,
+      changeover: 15,
+      headline: true,
+      intermission: false,
+    });
+    expect(preview).toHaveLength(2);
+    expect(preview[0]).toMatchObject({ type: "opener", start_time: "00:00" });
+    expect(preview[1]).toMatchObject({ type: "headline", start_time: "01:00" });
+  });
+
+  it("rejects malformed or out-of-range owner schedule times", () => {
+    const input = {
+      date: "2030-06-01", openingTime: "18:00", curfew: "20:00",
+      setLength: 45, changeover: 15, headline: true, intermission: false,
+    };
+    expect(buildSlotPreview({ ...input, openingTime: "24:00" })).toEqual([]);
+    expect(buildSlotPreview({ ...input, openingTime: "18:60" })).toEqual([]);
+    expect(buildSlotPreview({ ...input, curfew: "20:99" })).toEqual([]);
+    expect(buildSlotPreview({ ...input, curfew: "12:00" })).toEqual([]);
+  });
+
+    it("filters persistent staff candidates", () => {
     const candidates = [{ id: "a", role: "security", skill: "crowd", wage_cents: 12000, availability: "available" }, { id: "b", role: "medic", skill: "first aid", wage_cents: 30000, availability: "busy" }];
     expect(filterCandidates(candidates, { role: "security", skill: "crowd", wage: "150", availability: "available" }).map((c) => c.id)).toEqual(["a"]);
   });
