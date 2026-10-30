@@ -68,6 +68,25 @@ export function formatFestivalEditionDate(
   }
 }
 
+/**
+ * Visual stage lighting uses festival-local clock time, not the visitor's
+ * device timezone. Unknown/invalid IANA zones must not crash the Grounds
+ * view or cause an invented daytime/nighttime claim.
+ */
+export function getFestivalLocalClockHour(now: number, timeZone: string): number | undefined {
+  if (!Number.isFinite(now)) return undefined;
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit", hourCycle: "h23", timeZone,
+    }).formatToParts(new Date(now));
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : undefined;
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return undefined;
+  }
+}
+
 /** Cancellation takes precedence over a date-derived Upcoming/Live/Ended badge. */
 export function festivalVisitorEventLabel(
   phase: FestivalPublicEventPhase,
