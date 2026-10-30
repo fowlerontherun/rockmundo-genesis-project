@@ -66,7 +66,38 @@ describe("band festival appearances", () => {
     expect(formatFestivalSetTime(appearance)).toMatch(/7:00\s*pm–8:00\s*pm/i);
   });
 
-  it("uses the Festival city's date even while the player is in another timezone", () => {
+  it("fails closed when an upstream confirmed slot has missing, malformed or reversed timestamps", () => {
+    const proposals = [
+      { confirmed_start_at: "not-a-date", confirmed_end_at: "2026-09-26T20:00:00Z" },
+      { confirmed_start_at: "2026-09-26T21:00:00Z", confirmed_end_at: "2026-09-26T20:00:00Z" },
+      { confirmed_start_at: "2026-09-26T19:00:00Z", confirmed_end_at: null },
+      { confirmed_start_at: "2026-09-26T19:00:00Z", confirmed_end_at: "2026-09-26T19:00:00Z" },
+    ];
+    for (const times of proposals) {
+      const [appearance] = parseBandFestivalAppearances([{
+        ...fixture, ...times, stage_name: "Main Stage", time_confirmed: true,
+      }]);
+      expect(appearance.timeConfirmed).toBe(false);
+      expect(appearance.confirmedStartAt).toBeNull();
+      expect(appearance.confirmedEndAt).toBeNull();
+      expect(formatFestivalSetTime(appearance)).toBe("Set time TBA");
+      const activity = festivalAppearanceAsActivity(appearance, "user", "profile");
+      expect(activity.metadata?.date_only).toBe(true);
+      expect(activity.description).toContain("Set time to be announced");
+    }
+  });
+
+  it("does not claim an official confirmed time without an assigned stage", () => {
+    const [appearance] = parseBandFestivalAppearances([{
+      ...fixture, confirmed_start_at: "2026-09-26T19:00:00Z",
+      confirmed_end_at: "2026-09-26T20:00:00Z", time_confirmed: true, stage_name: null,
+    }]);
+    expect(appearance.timeConfirmed).toBe(false);
+    expect(appearance.confirmedStartAt).toBeNull();
+    expect(festivalAppearanceAsActivity(appearance, "user", "profile").metadata?.date_only).toBe(true);
+  });
+
+    it("uses the Festival city's date even while the player is in another timezone", () => {
     const [appearance] = parseBandFestivalAppearances([fixture]);
     const londonAfterMidnight = new Date("2026-09-26T23:30:00Z");
     expect(festivalLocalDateKey(londonAfterMidnight, appearance.venueTimezone))
