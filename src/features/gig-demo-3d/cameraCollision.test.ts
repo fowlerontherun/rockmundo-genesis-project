@@ -101,6 +101,21 @@ describe('gig camera scenery clearance', () => {
     const world = new CameraCollisionWorld(root);
     expect(world.clearDistance(v(0, 2, 0), v(0, 2, 7))).toBeLessThan(4);
   });
+  it.each([0, .7])('detects thin scenery between lens sample lines at yaw %s', yaw => {
+    const root = new T.Group(); wall(root, [.04, .04, .1], [.17, 2.19, 4]);
+    root.rotation.y = yaw;
+    const target = v(0, 2, 0), lens = v(0, 2, 7).applyAxisAngle(v(0, 1, 0), yaw);
+    const world = new CameraCollisionWorld(root);
+    expect(world.clearDistance(target, lens)).toBeCloseTo(3.95);
+    const safe = safeCameraPose(world, profile, lens, target);
+    expect(world.clearDistance(target, safe)).toBeCloseTo(safe.distanceTo(target));
+  });
+  it('ignores scenery behind the subject or beyond the lens', () => {
+    const root = new T.Group();
+    wall(root, [2, 3, .1], [0, 2, -1]);
+    wall(root, [2, 3, .1], [0, 2, 8]);
+    expect(new CameraCollisionWorld(root).clearDistance(v(0, 2, 0), v(0, 2, 7))).toBe(7);
+  });
   it('protects wider lens footprints without reusing a narrow cached result', () => {
     const root = new T.Group(); wall(root, [.16, .16, .16], [.8, 2, 4]);
     const world = new CameraCollisionWorld(root), target = v(0, 2, 0), lens = v(0, 2, 7);

@@ -18,6 +18,28 @@ export interface CameraBlocker { center: T.Vector3; radius: number }
 interface TriangleEntry { triangle: T.Triangle; bounds: T.Box3; center: T.Vector3 }
 interface CollisionNode { bounds: T.Box3; triangles?: T.Triangle[]; left?: CollisionNode; right?: CollisionNode }
 
+/** Clip the actual triangle, rather than its bounding box, to the swept lens.
+ * This covers thin poles between sample rays while leaving doorways open. */
+function clippedTriangleDistance(triangle: T.Triangle, planes: readonly T.Plane[], origin: T.Vector3, forward: T.Vector3) {
+  let polygon = [triangle.a, triangle.b, triangle.c];
+  for (const plane of planes) {
+    const clipped: T.Vector3[] = [];
+    let previous = polygon[polygon.length - 1];
+    let previousDistance = plane.distanceToPoint(previous);
+    for (const point of polygon) {
+      const distance = plane.distanceToPoint(point);
+      if ((distance >= 0) !== (previousDistance >= 0)) {
+        clipped.push(previous.clone().lerp(point, previousDistance / (previousDistance - distance)));
+      }
+      if (distance >= 0) clipped.push(point);
+      previous = point; previousDistance = distance;
+    }
+    if (!clipped.length) return Infinity;
+    polygon = clipped;
+  }
+  return Math.min(...polygon.map(point => forward.dot(point) - forward.dot(origin)));
+}
+
 function buildTree(entries: TriangleEntry[]): CollisionNode {
   const bounds = new T.Box3();
   for (const entry of entries) bounds.union(entry.bounds);
@@ -63,16 +85,30 @@ export class CameraCollisionWorld {
     });
     if (entries.length) this.tree = buildTree(entries);
   }
-  private hitDistance(origin: T.Vector3, direction: T.Vector3, distance: number) {
-    const ray = new T.Ray(origin, direction), point = new T.Vector3();
+  private hitDistance(origin: T.Vector3, direction: T.Vector3, distance: number, right: T.Vector3, up: T.Vector3, footprint: Readonly<LensFootprint>) {
+    // Each plane faces inward. Together they enclose the entire rectangular
+    // lens footprint from just beyond the subject to the requested camera.
+    const planes = [
+      new T.Plane(right, footprint.halfWidth - right.dot(origin)),
+      new T.Plane(right.clone().negate(), footprint.halfWidth + right.dot(origin)),
+      new T.Plane(up, footprint.halfHeight - up.dot(origin)),
+      new T.Plane(up.clone().negate(), footprint.halfHeight + up.dot(origin)),
+      new T.Plane(direction, -direction.dot(origin) - .05),
+      new T.Plane(direction.clone().negate(), direction.dot(origin) + distance),
+    ];
+    const point = new T.Vector3();
     let nearest = distance;
     const visit = (node: CollisionNode) => {
-      if (!ray.intersectBox(node.bounds, point) || (!node.bounds.containsPoint(origin) && point.distanceTo(origin) > nearest)) return;
+      for (const plane of planes) {
+        const n = plane.normal;
+        point.set(n.x >= 0 ? node.bounds.max.x : node.bounds.min.x,
+          n.y >= 0 ? node.bounds.max.y : node.bounds.min.y,
+          n.z >= 0 ? node.bounds.max.z : node.bounds.min.z);
+        if (plane.distanceToPoint(point) < 0) return;
+      }
       if (node.triangles) for (const triangle of node.triangles) {
-        // Both faces of thin scenery block the lens.
-        if (!ray.intersectTriangle(triangle.a, triangle.b, triangle.c, false, point)) continue;
-        const hit = point.distanceTo(origin);
-        if (hit > .05 && hit < nearest) nearest = hit;
+        const hit = clippedTriangleDistance(triangle, planes, origin, direction);
+        if (hit < nearest) nearest = hit;
       }
       if (node.left) visit(node.left);
       if (node.right) visit(node.right);
@@ -90,11 +126,7 @@ export class CameraCollisionWorld {
     const right = new T.Vector3().crossVectors(forward, new T.Vector3(0, 1, 0));
     if (right.lengthSq() < .001) right.set(1, 0, 0); else right.normalize();
     const up = new T.Vector3().crossVectors(right, forward).normalize();
-    let clear = distance;
-    for (const [x, y] of [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1], [-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      const offset = right.clone().multiplyScalar(x * footprint.halfWidth).addScaledVector(up, y * footprint.halfHeight);
-      clear = Math.min(clear, this.hitDistance(target.clone().add(offset), forward, distance));
-    }
+    const clear = this.hitDistance(target, forward, distance, right, up, footprint);
     if (this.distances.size >= 128) this.distances.clear();
     this.distances.set(key, clear);
     return clear;
