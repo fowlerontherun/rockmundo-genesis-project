@@ -114,7 +114,7 @@ BEGIN
     ) VALUES(p_edition_id,p_idempotency_key,v_payload_hash);
   END IF;
   RETURN public.festival_edition_schedule_workspace(p_edition_id);
-END $function$
+END $function$;
 
 REVOKE ALL ON FUNCTION public.festival_schedule_upsert_item(uuid,uuid,jsonb,integer,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.festival_schedule_upsert_item(uuid,uuid,jsonb,integer,text) TO authenticated;
