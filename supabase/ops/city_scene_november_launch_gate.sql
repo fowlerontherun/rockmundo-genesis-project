@@ -60,6 +60,9 @@ with
       group by city_id, cadence, starts_at having count(*) > 1
     ) duplicates
   ),
+  city_readiness as (
+    select * from private.scene_november_city_readiness()
+  ),
   bad_monthly_objectives as (
     select count(*) as cycle_count from (
       select cc.id
@@ -109,8 +112,10 @@ select
                        and start_time >= now() - interval '45 minutes'
                        from latest_worker_run), false)
       or (select recent_count from worker_failures) > 0
+      -- A partially launched pilot is also a problem: inspect EACH
+      -- currently eligible city, not just whether any monthly cycle exists.
       or (now() >= timestamptz '2026-11-02 00:00:00+00'
-          and (select cycle_count from monthly) = 0)
+          and exists (select 1 from city_readiness where readiness = 'missing_after_grace'))
       then 'WATCH'
     else 'READY'
   end as launch_gate,
@@ -135,6 +140,20 @@ select
     'daily_active_cycles', (select daily from existing),
     'weekly_active_cycles', (select weekly from existing),
     'november_monthly_cycles', (select cycle_count from monthly),
+    'eligible_cities_now', (select count(*) from city_readiness where recently_active_accounts > 0),
+    'monthly_created_cities', (select count(*) from city_readiness where november_cycle_count > 0),
+    'monthly_missing_cities', (select count(*) from city_readiness where readiness = 'missing_after_grace'),
+    'city_readiness', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'city', city_name,
+        'eligible_accounts', recently_active_accounts,
+        'projected_target', projected_target_points,
+        'november_cycles', november_cycle_count,
+        'objectives', november_objective_count,
+        'status', readiness
+      ) order by city_name)
+      from city_readiness
+    ), '[]'::jsonb),
     'duplicate_monthly_groups', (select duplicate_groups from duplicates),
     'monthly_cycles_with_wrong_objective_count', (select cycle_count from bad_monthly_objectives),
     'payouts_enabled', (select payouts_enabled from rewards),
