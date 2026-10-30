@@ -7,6 +7,7 @@ import {
   orderFestivalPublicSponsors,
   formatFestivalEditionDate,
   formatFestivalEditionTime,
+  getFestivalLocalClockHour,
   hasIssuedFestivalAdmission,
   isPublishedFestivalPerformance,
 } from "../festivalPublicDisplay";
@@ -79,7 +80,31 @@ describe("public festival visitor facts", () => {
     expect(formatFestivalEditionTime("invalid", "Europe/London")).toBe("Time to be announced");
   });
 
-  it("#3964 renders the edition's calendar day, not the visitor's local day", () => {
+  it("uses festival-local stage lighting hours across British DST boundaries", () => {
+    const beforeFallBack = Date.parse("2026-10-25T00:30:00Z");
+    const afterFallBack = Date.parse("2026-10-25T02:30:00Z");
+    expect(getFestivalLocalClockHour(beforeFallBack, "Europe/London")).toBe(1);
+    expect(getFestivalLocalClockHour(afterFallBack, "Europe/London")).toBe(2);
+    expect(getFestivalLocalClockHour(Date.parse("2026-10-14T23:30:00Z"), "Europe/London")).toBe(0);
+    expect(getFestivalLocalClockHour(Date.parse("2026-10-14T23:30:00Z"), "America/Los_Angeles")).toBe(16);
+  });
+
+  it("does not render invented stage lighting periods for unsupported zones or invalid clocks", () => {
+    expect(getFestivalLocalClockHour(Date.parse("2026-10-14T23:30:00Z"), "Invalid/Zone")).toBeUndefined();
+    expect(getFestivalLocalClockHour(Number.NaN, "Europe/London")).toBeUndefined();
+    expect(getFestivalLocalClockHour(Number.POSITIVE_INFINITY, "Europe/London")).toBeUndefined();
+  });
+
+  it("keeps live-stage timestamp and crowd snapshot formatting readable with imported invalid IANA zones", () => {
+    expect(formatFestivalEditionDate("2026-10-14T23:30:00Z", "Invalid/Zone", {
+      dateStyle: "medium", timeStyle: "short",
+    })).toContain("23:30");
+    expect(formatFestivalEditionDate("not-a-timestamp", "Europe/London", {
+      dateStyle: "medium", timeStyle: "short",
+    })).toBe("Date to be confirmed");
+  });
+
+    it("#3964 renders the edition's calendar day, not the visitor's local day", () => {
     const instant = "2026-10-14T00:30:00.000Z";
     expect(formatFestivalEditionDate(instant, "America/Los_Angeles")).toBe("13 October 2026");
     expect(formatFestivalEditionDate(instant, "Asia/Tokyo")).toBe("14 October 2026");
