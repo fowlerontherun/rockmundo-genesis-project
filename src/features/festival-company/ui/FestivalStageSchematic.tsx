@@ -1,5 +1,6 @@
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
+import { formatFestivalEditionDate } from "./festivalPublicDisplay";
 import type { AttendanceBand, FestivalPublicLiveStatus, FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
 import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
@@ -102,7 +103,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, selected
                 <span className="mt-1 block text-sm font-medium">{schedule.act.artistName}</span>
                 {schedule.kind === "next" && schedule.act.startsAt && (
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: timezone }).format(new Date(schedule.act.startsAt))} · festival time
+                    {formatFestivalEditionDate(schedule.act.startsAt, timezone, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · festival time
                   </span>
                 )}
                 {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
