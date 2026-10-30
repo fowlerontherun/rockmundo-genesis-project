@@ -82,7 +82,38 @@ const buildRunOfShow = (
   const categories = ((show.categories as any[]) || []).slice(0, 5);
   const host = show.host_name || defaultHost;
   const scripted = Array.isArray(show.run_of_show) ? (show.run_of_show as RunOfShowSegment[]) : [];
-  if (scripted.length > 0) return scripted;
+  if (scripted.length > 0) {
+    // A script does not prove that an artist was actually booked.
+    // Keep authored presenter/award segments, but reconcile performances
+    // against confirmed booking receipts before naming performers.
+    const approved = new Set<string>();
+    const scriptedSegments = scripted.flatMap((segment) => {
+      if (segment.type !== "performance") return [segment];
+      const booking = confirmedPerformances.find((entry) =>
+        (entry.band_name && entry.band_name.toLowerCase() === segment.performer?.toLowerCase())
+        || (entry.slot_label && entry.slot_label.toLowerCase() === segment.title.toLowerCase()),
+      );
+      if (!booking || !booking.band_name) return [];
+      approved.add(booking.id);
+      return [{
+        ...segment,
+        performer: booking.band_name,
+        title: booking.slot_label || segment.title,
+        songs: undefined, // No verified setlist is stored in these booking receipts.
+        commentary: `Confirmed for ${booking.stage || "the main stage"}.`,
+      }];
+    });
+    for (const booking of confirmedPerformances) {
+      if (approved.has(booking.id) || !booking.band_name) continue;
+      scriptedSegments.push({
+        type: "performance",
+        title: booking.slot_label || "Confirmed Performance",
+        performer: booking.band_name,
+        commentary: `Confirmed for ${booking.stage || "the main stage"}.`,
+      });
+    }
+    return scriptedSegments;
+  }
 
   // No invented performers: only existing, confirmed slots are presented.
   const segments: RunOfShowSegment[] = [
@@ -106,8 +137,6 @@ const buildRunOfShow = (
       audio_cue: "envelope_suspense_sting",
       crowd_profile: "hype",
     });
-
-
   });
 
   confirmedPerformances.forEach((booking) => {
