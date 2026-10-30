@@ -45,7 +45,7 @@ describe('November City Scene operator-only city eligibility snapshot', () => {
     const body = migration.split('AS $function$')[1]?.split('$function$')[0];
     expect(body).toBeTruthy();
     expect(body).not.toMatch(/\b(insert|update|delete|drop|alter|truncate|grant|revoke)\b/i);
-    expect(migration).toContain('returns table'.toUpperCase().slice(0,1));
+    expect(migration).toContain('RETURNS TABLE(');
     expect(migration).not.toContain('source_event_id');
     expect(migration).not.toContain('avatar_url');
   });
