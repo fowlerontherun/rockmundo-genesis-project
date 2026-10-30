@@ -1,6 +1,7 @@
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
-import type { AttendanceBand, FestivalPublicLiveStatus } from "../domain/festivalRuntime";
+import type { AttendanceBand, FestivalPublicLiveStatus, FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
+import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalStageSchematicProps {
@@ -12,6 +13,7 @@ interface FestivalStageSchematicProps {
   attendanceBand?: AttendanceBand | null;
   performances?: FestivalPublicLiveStatus["performances"];
   stageCrowds?: PublicFestivalStageCrowd[];
+  weatherState?: FestivalRuntimeWeatherState | null;
   localHour?: number;
   onSelectStage: (id: string) => void;
 }
@@ -29,7 +31,7 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, lineup, now, timezone, selectedStageId, attendanceBand, performances = [], stageCrowds = [], localHour, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ stages, lineup, now, timezone, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, localHour, onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
@@ -78,7 +80,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, selected
             aria-pressed={selectedStageId === stage.id}
             className={`group relative min-h-44 overflow-hidden rounded-xl border-2 bg-card/90 p-4 text-center shadow-lg transition-transform motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStageId === stage.id ? "border-primary ring-2 ring-primary/30" : "border-border/70 hover:border-primary/60"}`}
           >
-            <div aria-hidden="true" className={`mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
+            <div aria-hidden="true" className={`relative mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
               <div className="h-3 bg-slate-900/80" />
               <div className="flex flex-1 items-center justify-center gap-2">
                 <span className="h-10 w-1 rotate-12 bg-amber-300/70 shadow-[0_0_15px_rgba(252,211,77,.6)]" />
@@ -86,6 +88,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, selected
                 <span className="h-10 w-1 -rotate-12 bg-cyan-300/70 shadow-[0_0_15px_rgba(103,232,249,.6)]" />
               </div>
               <div className="h-2 bg-slate-950" />
+              <FestivalStageAtmosphere weatherState={weatherState} activePerformance={Boolean(current)} />
             </div>
             <span className="block text-base font-bold">{stage.name}</span>
             {current ? (
@@ -132,6 +135,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, selected
         })}
       </div>
       <p className="relative mt-5 text-xs text-muted-foreground">Stage order is for discovery only. Routes, entrances and facilities require an organiser-published layout.</p>
+      <p className="relative mt-1 text-xs text-muted-foreground">People and weather artwork illustrate the atmosphere, not measured stage crowds. Crowd figures remain decorative unless authoritative stage snapshots are available.</p>
     </div>
   );
 }
