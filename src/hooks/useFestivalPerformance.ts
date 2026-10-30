@@ -402,21 +402,11 @@ export function useFestivalPerformance(participationId: string, bandId?: string)
             songsPerformedIds: songIds,
           });
 
-          // Update band balance with payment + merch (fame/fans already handled by career impact)
-          const { data: bandUpdate } = await (supabase as any)
-            .from("bands")
-            .select("band_balance")
-            .eq("id", bandId)
-            .single();
-
-          if (bandUpdate) {
-            await (supabase as any)
-              .from("bands")
-              .update({
-                band_balance: (bandUpdate.band_balance || 0) + result.paymentEarned + result.merchRevenue,
-              })
-              .eq("id", bandId);
-          }
+          // settle_legacy_festival_participation has already credited both
+          // performance pay and merchandise revenue exactly once, and it
+          // returns the same receipt on retry. Do NOT credit band_balance
+          // again from the browser: that double-pays the band and mutates
+          // the canonical treasury projection a second time.
         }
       }
 
