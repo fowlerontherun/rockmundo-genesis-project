@@ -1,13 +1,19 @@
-import type { FestivalPublicStage } from "../domain/festivalLaunch";
-import type { AttendanceBand, FestivalPublicLiveStatus } from "../domain/festivalRuntime";
-import { FESTIVAL_STAGE_CROWD_BANDS, FESTIVAL_STAGE_CROWD_MOODS, type FestivalPublicStageCrowd } from "../domain/festivalPublicStageCrowds";
+import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
+import { stageTimetableProgress } from "../domain/stageTimetableProgress";
+import type { AttendanceBand, FestivalPublicLiveStatus, FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
+import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalStageSchematicProps {
   stages: FestivalPublicStage[];
+  lineup: FestivalPublicConfirmedAct[];
+  now: number;
+  timezone: string;
   selectedStageId: string | undefined;
   attendanceBand?: AttendanceBand | null;
   performances?: FestivalPublicLiveStatus["performances"];
-  stageCrowds?: Record<string, FestivalPublicStageCrowd>;
+  stageCrowds?: PublicFestivalStageCrowd[];
+  weatherState?: FestivalRuntimeWeatherState | null;
   localHour?: number;
   onSelectStage: (id: string) => void;
 }
@@ -25,7 +31,7 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand, performances = [], stageCrowds = {}, localHour, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ stages, lineup, now, timezone, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, localHour, onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
@@ -61,7 +67,11 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
           const current = performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
           const delayed = performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
           const activeLighting = Boolean(current) && afterDark;
-          const crowd = stageCrowds[stage.id];
+          const schedule = stageTimetableProgress(stage.name, lineup, now);
+          const crowd = stageCrowds.find(
+            (item) => item.stageName.toLocaleLowerCase("en-GB") === stage.name.trim().toLocaleLowerCase("en-GB"),
+          );
+          const band = crowd ? atmosphereBands[crowd.crowdBand] : null;
           return (
           <button
             key={stage.id}
@@ -70,7 +80,7 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
             aria-pressed={selectedStageId === stage.id}
             className={`group relative min-h-44 overflow-hidden rounded-xl border-2 bg-card/90 p-4 text-center shadow-lg transition-transform motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStageId === stage.id ? "border-primary ring-2 ring-primary/30" : "border-border/70 hover:border-primary/60"}`}
           >
-            <div aria-hidden="true" className={`mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
+            <div aria-hidden="true" className={`relative mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
               <div className="h-3 bg-slate-900/80" />
               <div className="flex flex-1 items-center justify-center gap-2">
                 <span className="h-10 w-1 rotate-12 bg-amber-300/70 shadow-[0_0_15px_rgba(252,211,77,.6)]" />
@@ -78,6 +88,7 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
                 <span className="h-10 w-1 -rotate-12 bg-cyan-300/70 shadow-[0_0_15px_rgba(103,232,249,.6)]" />
               </div>
               <div className="h-2 bg-slate-950" />
+              <FestivalStageAtmosphere weatherState={weatherState} activePerformance={Boolean(current)} />
             </div>
             <span className="block text-base font-bold">{stage.name}</span>
             {current ? (
@@ -85,27 +96,46 @@ export function FestivalStageSchematic({ stages, selectedStageId, attendanceBand
             ) : delayed ? (
               <span className="mt-2 block rounded-full bg-amber-600 px-2 py-1 text-xs font-semibold text-white">Delayed · {delayed.artistName}</span>
             ) : null}
-            <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>
-            {crowd ? (
-              <span className="mt-3 block rounded-lg bg-muted/50 p-2">
-                <span className="block text-xs font-medium">Crowd: {FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].label}</span>
-                <span aria-hidden="true" className="mt-2 flex h-9 items-end justify-center gap-px overflow-hidden rounded-md bg-gradient-to-t from-slate-900/15 to-transparent">
-                  {Array.from({ length: 15 }, (_, silhouette) => (
-                    <span key={silhouette} className={`flex w-2 shrink-0 flex-col items-center ${(silhouette * 7) % 15 < FESTIVAL_STAGE_CROWD_BANDS[crowd.crowdBand].intensity * 3 ? "opacity-90" : "opacity-10"}`}>
-                      <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-                      <span className="mt-px h-4 w-2 rounded-t-md bg-violet-600" />
+            {!current && !delayed && schedule.act && (
+              <span className="mt-2 block rounded-lg border border-violet-400/30 bg-violet-500/10 p-2 text-left">
+                <span className="block text-xs font-semibold">{schedule.kind === "scheduled_now" ? "Scheduled set (not confirmed live)" : "Next scheduled set"}</span>
+                <span className="mt-1 block text-sm font-medium">{schedule.act.artistName}</span>
+                {schedule.kind === "next" && schedule.act.startsAt && (
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: timezone }).format(new Date(schedule.act.startsAt))} · festival time
+                  </span>
+                )}
+                {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
+                  <span className="mt-2 block">
+                    <span className="mb-1 block text-xs text-muted-foreground">Published set time elapsed · {schedule.progressPercent}%</span>
+                    <span className="block h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`Scheduled set time elapsed: ${schedule.progressPercent} percent, not confirmed performance progress`}>
+                      <span className="block h-full rounded-full bg-violet-500" style={{ width: `${schedule.progressPercent}%` }} />
                     </span>
+                  </span>
+                )}
+              </span>
+            )}
+            {!current && !delayed && schedule.kind === "finished" && (
+              <span className="mt-2 block text-xs text-muted-foreground">All published sets have passed</span>
+            )}
+            <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>
+            {crowd && band ? (
+              <span className="mt-3 block rounded-lg border bg-background/80 px-2 py-2 text-left">
+                <span className="block text-xs font-semibold">Reported crowd · {festivalCrowdBandLabels[crowd.crowdBand]}</span>
+                <span className="mt-1 flex gap-1" role="img" aria-label={`Reported stage audience: ${festivalCrowdBandLabels[crowd.crowdBand]}`}>
+                  {Array.from({ length: 5 }, (_, segment) => (
+                    <span key={segment} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${segment < band.intensity ? "bg-emerald-500" : "bg-muted"}`} />
                   ))}
                 </span>
-                <span className="mt-1 block text-[10px] text-muted-foreground">Stylised crowd art, not headcounts</span>
-                <span className="mt-1 block text-xs">Mood: {FESTIVAL_STAGE_CROWD_MOODS[crowd.mood]}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Mood · {festivalCrowdMoodLabels[crowd.mood]}</span>
               </span>
-            ) : <span className="mt-2 block text-xs text-muted-foreground">Stage crowd update unavailable</span>}
+            ) : <span className="mt-3 block text-xs text-muted-foreground">Stage crowd not reported</span>}
           </button>
           );
         })}
       </div>
       <p className="relative mt-5 text-xs text-muted-foreground">Stage order is for discovery only. Routes, entrances and facilities require an organiser-published layout.</p>
+      <p className="relative mt-1 text-xs text-muted-foreground">People and weather artwork illustrate the atmosphere, not measured stage crowds. Crowd figures remain decorative unless authoritative stage snapshots are available.</p>
     </div>
   );
 }

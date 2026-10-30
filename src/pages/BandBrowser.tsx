@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, TrendingUp, Music } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, Users, TrendingUp, Music, MapPin } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { parseCityBandFilter } from "@/features/city-scene-challenges/sceneCityFilter";
 
 interface Band {
   id: string;
@@ -22,11 +23,23 @@ interface Band {
 }
 
 export default function BandBrowser() {
+  const [searchParams] = useSearchParams();
+  const { cityId, invalidCity } = parseCityBandFilter(searchParams.get("city"));
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const { data: bands, isLoading } = useQuery({
-    queryKey: ["band-search", debouncedQuery],
+  const { data: cityName } = useQuery({
+    queryKey: ["band-browser-city", cityId],
+    enabled: Boolean(cityId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("cities").select("name").eq("id", cityId!).maybeSingle();
+      if (error) throw error;
+      return data?.name ?? null;
+    },
+  });
+
+  const { data: bands, isLoading, isError } = useQuery({
+    queryKey: ["band-search", debouncedQuery, cityId],
     queryFn: async () => {
       let query = supabase
         .from("bands")
@@ -43,6 +56,9 @@ export default function BandBrowser() {
         .order("fame", { ascending: false })
         .limit(20);
 
+      // Filter before limiting to 20; client-side filtering would miss quieter bands.
+      if (cityId) query = query.eq("home_city_id", cityId);
+
       if (debouncedQuery && debouncedQuery.length >= 2) {
         query = query.or(`name.ilike.%${debouncedQuery}%,genre.ilike.%${debouncedQuery}%`);
       }
@@ -53,6 +69,7 @@ export default function BandBrowser() {
 
       // Get song counts for each band
       const bandIds = (data || []).map(b => b.id);
+      if (!bandIds.length) return [] as (Band & { song_count: number })[];
       const { data: songCounts } = await supabase
         .from("songs")
         .select("band_id")
@@ -91,6 +108,23 @@ export default function BandBrowser() {
       icon={Users}
       backTo="/hub/band"
     >
+      {cityId && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
+              <span>Showing bands based in <strong>{cityName ?? "the selected city"}</strong>. Touring bands may be based elsewhere.</span>
+            </div>
+            <Button asChild variant="outline" size="sm"><Link to="/bands/browse">Show all cities</Link></Button>
+          </CardContent>
+        </Card>
+      )}
+      {invalidCity && (
+        <Card role="alert"><CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
+          <span>City filter is invalid. Showing bands from all cities.</span>
+          <Button asChild variant="outline" size="sm"><Link to="/bands/browse">Clear filter</Link></Button>
+        </CardContent></Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -122,11 +156,15 @@ export default function BandBrowser() {
         </Card>
       )}
 
-      {!isLoading && bands && bands.length === 0 && (
+      {isError && (
+        <Card role="alert"><CardContent className="p-6 text-center text-destructive">Unable to load bands. Try again shortly.</CardContent></Card>
+      )}
+
+      {!isLoading && !isError && bands && bands.length === 0 && (
         <Card>
           <CardContent className="p-6">
             <p className="text-center text-muted-foreground">
-              {debouncedQuery ? "No bands found matching your search." : "No active bands found."}
+              {cityId ? "No active bands based in this city match your search." : debouncedQuery ? "No bands found matching your search." : "No active bands found."}
             </p>
           </CardContent>
         </Card>

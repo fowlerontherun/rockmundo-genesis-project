@@ -7,6 +7,7 @@ import { TourRouteMap, type RoutePoint } from "@/components/tours/TourRouteMap";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { WorldSceneCity } from "@/features/city-scene-challenges/worldSceneStatus";
 
 export interface AtlasCity {
   id: string;
@@ -20,13 +21,16 @@ interface WorldAtlasProps {
   cities: AtlasCity[];
   currentCityId?: string | null;
   bandId?: string | null;
-  mode?: "explore" | "fame" | "tour";
+  mode?: "explore" | "fame" | "tour" | "scene";
+  sceneStatusByCity?: Record<string, WorldSceneCity>;
   onCitySelect?: (cityId: string) => void;
   onPlanRoute?: (cityIds: string[]) => void;
 }
 
+const EMPTY_WORLD_SCENES: Record<string, WorldSceneCity> = {};
+
 /** A shared city selection surface. Travel booking remains with the authoritative travel/tour flows. */
-export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect, onPlanRoute }: WorldAtlasProps) {
+export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", sceneStatusByCity = EMPTY_WORLD_SCENES, onCitySelect, onPlanRoute }: WorldAtlasProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [playedFilter, setPlayedFilter] = useState<"all" | "played" | "unplayed">("all");
@@ -60,6 +64,9 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
       lng: city.longitude, index, status: "scheduled" }];
   });
   const selectedFame = selected ? fame.get(selected.id) : null;
+  const selectedScene = selected ? sceneStatusByCity[selected.id] : undefined;
+  const sceneValues = useMemo(() => Object.fromEntries(Object.entries(sceneStatusByCity)
+    .map(([cityId, record]) => [cityId, record.confirmed_stage])), [sceneStatusByCity]);
   const cityFameValues = useMemo(() => Object.fromEntries(cityFans.map(row => [row.city_id, row.city_fame ?? 0])), [cityFans]);
   const choose = (id: string) => {
     setSelectedId(id);
@@ -105,13 +112,23 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
           <InteractiveWorldMap cities={filtered} currentCityId={currentCityId}
             routeCityIds={plannedStops} routeCities={cities} onCityClick={choose}
-            cityValues={fameUnavailable ? {} : cityFameValues} valueMode={mode === "fame" && !fameUnavailable ? "fame" : "default"} />
+            cityValues={mode === "scene" ? sceneValues : fameUnavailable ? {} : cityFameValues}
+            valueMode={mode === "scene" ? "scene" : mode === "fame" && !fameUnavailable ? "fame" : "default"} />
         </div>
         <aside className="rounded-lg border p-3 space-y-3" aria-label="Map city details">
           <h3 className="font-semibold">{selected ? selected.name : "Choose a city"}</h3>
           {selected ? <>
             <p className="text-sm text-muted-foreground">{selected.country}</p>
             {selected.dominant_genre && <p className="text-sm">Music scene: {selected.dominant_genre}</p>}
+            {mode === "scene" && <div className="rounded-lg border border-violet-400/25 bg-violet-500/5 p-3 text-sm space-y-2">
+              <p className="font-semibold">City Music Scene</p>
+              {selectedScene ? <>
+                <p>{selectedScene.confirmed_stage}% mural confirmed · {selectedScene.cadence} campaign</p>
+                <p className="text-xs text-muted-foreground">Ends {new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(new Date(selectedScene.ends_at))} UTC</p>
+                <p className="text-xs text-muted-foreground">Only persisted mural unlocks appear; a 0% stage does not mean no player activity.</p>
+                <Button asChild size="sm" variant="secondary"><Link to={`/cities/${encodeURIComponent(selected.id)}/scene-challenges`}>Open City Scene</Link></Button>
+              </> : <p className="text-xs text-muted-foreground">No active verified weekly or monthly campaign is currently reported for this city.</p>}
+            </div>}
             {bandId && !fameUnavailable && <div className="text-sm space-y-1">
               <p>Local fame: {(selectedFame?.city_fame ?? 0).toLocaleString()}</p>
               <p>Fans: {(selectedFame?.total_fans ?? 0).toLocaleString()}</p>
@@ -139,6 +156,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
             {filtered.map(city => <button key={city.id} type="button" onClick={() => choose(city.id)}
               className={`block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${selectedId === city.id ? "bg-muted" : ""}`}>
               {city.name} <span className="text-muted-foreground">· {city.country}</span>
+              {mode === "scene" && sceneStatusByCity[city.id] && <span className="float-right text-violet-500">{sceneStatusByCity[city.id].confirmed_stage}% revealed</span>}
               {bandId && !fameUnavailable && <span className="float-right">{(fame.get(city.id)?.city_fame ?? 0).toLocaleString()}</span>}
             </button>)}
             {filtered.length === 0 && <p className="text-sm text-muted-foreground">No matching cities.</p>}

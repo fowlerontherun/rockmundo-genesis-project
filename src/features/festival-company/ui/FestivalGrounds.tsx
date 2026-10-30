@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
-import { FESTIVAL_STAGE_CROWD_BANDS, FESTIVAL_STAGE_CROWD_MOODS, getFestivalPublicStageCrowds } from "../domain/festivalPublicStageCrowds";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterPublicFestivalStageCrowdsForUniqueStages } from "../domain/publicFestivalStageCrowds";
+import { stageTimetableProgress } from "../domain/stageTimetableProgress";
+import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
 
 interface FestivalGroundsProps {
   slug: string;
   festivalLaunchId: string;
+  festivalEditionId: string | null;
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
@@ -23,16 +26,21 @@ interface FestivalGroundsProps {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   const live = usePublicFestivalLiveStatus(slug);
   const experience = usePublicFestivalLiveExperience(slug);
-  const stageCrowds = getFestivalPublicStageCrowds(
-    experience.isError || experience.isPending ? null : experience.data,
-    festivalLaunchId,
-    stages,
-  );
-  const verifiedLive = live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const verifiedLive = !live.isError && live.data?.festivalLaunchId === festivalLaunchId && experience.data && typeof experience.data === "object" && !Array.isArray(experience.data) && (experience.data as Record<string, unknown>).editionId === festivalEditionId && festivalEditionId !== null ? live.data : null;
+  const raw = experience.data;
+  const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+  const verified = !live.isError && festivalEditionId !== null && record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
+  const stageCrowds = filterPublicFestivalStageCrowdsForUniqueStages(readPublicFestivalStageCrowds(verified, festivalLaunchId), stages);
+  const value = verified?.weather;
+  const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
+  const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
+  const weatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
+  const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
+    const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
@@ -42,16 +50,18 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
   const hourPart = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: timezone }).formatToParts(new Date(currentTime)).find((part) => part.type === "hour");
   const localHour = hourPart ? Number(hourPart.value) : undefined;
     const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
-  const selectedCrowd = selectedStage ? stageCrowds[selectedStage.id] : undefined;
+  const selectedCrowd = selectedStage
+    ? stageCrowds.find((item) => item.stageName.toLocaleLowerCase("en-GB") === selectedStage.name.trim().toLocaleLowerCase("en-GB"))
+    : undefined;
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
       .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""))
     : [];
 
-  const publishedActs = acts.filter((act) => act.startsAt && act.endsAt && Number.isFinite(Date.parse(act.startsAt)) && Number.isFinite(Date.parse(act.endsAt)));
-  const scheduledNow = publishedActs.find((act) => Date.parse(act.startsAt!) <= currentTime && currentTime < Date.parse(act.endsAt!));
-  const scheduledNext = publishedActs.find((act) => Date.parse(act.startsAt!) > currentTime);
-  const scheduleLabel = scheduledNow ? "Scheduled now" : scheduledNext ? "Next scheduled set" : "No further published sets";
+  const schedule = stageTimetableProgress(selectedStage?.name ?? "", lineup, currentTime);
+  const scheduleLabel = schedule.kind === "scheduled_now" ? "Scheduled now (not live confirmed)"
+    : schedule.kind === "next" ? "Next scheduled set"
+    : schedule.kind === "finished" ? "Published sets finished" : "No published stage times";
 
   const livePerformances = verifiedLive && selectedStage
     ? verifiedLive.performances.filter((entry) => entry.stageName === selectedStage.name)
@@ -60,7 +70,11 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
   const delayedPerformance = livePerformances.find((entry) => entry.status === "delayed");
   const cancelledPerformances = livePerformances.filter((entry) => entry.status === "cancelled");
   const liveStatus = livePerformance ?? delayedPerformance;
-  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed" : "No confirmed live performance";
+  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed"
+    : verifiedLive?.runtimeStatus === "runtime_complete" ? "Festival completed"
+    : verifiedLive?.currentDay === null ? "No active festival day" : "No confirmed live performance";
+
+  const lastRuntimeUpdate = verified && typeof verified.updatedAt === "string" && Number.isFinite(Date.parse(verified.updatedAt)) ? verified.updatedAt : null;
 
   const facilities = [
     { label: "Travel & arrival", icon: "🚌", details: visitorInformation.travel },
@@ -77,25 +91,44 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
           Select a stage to discover its announced artists. This is a stage guide, not a walking map.
         </p>
       </div>
-      {stages.length === 0 ? (
+      <div className="rounded-xl border bg-card p-4" aria-label="Festival site weather">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "🌤️"}</span>
+          <div>
+            <h3 className="font-semibold">Festival site conditions</h3>
+            <p className="text-sm">{weatherState ? weatherNames[weatherState] : "Weather information unavailable"}</p>
+            {groundCondition && <p className="text-xs text-muted-foreground">Ground: {groundCondition.replaceAll("_", " ")}</p>}
+            <p className="text-xs text-muted-foreground">Festival runtime conditions, not a live forecast.</p>
+          </div>
+        </div>
+      </div>
+            {stages.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} localHour={localHour} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
             <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{scheduleLabel}</p>
-              {scheduledNow || scheduledNext ? (
+              {schedule.act ? (
                 <>
-                  <p className="mt-1 font-bold">{(scheduledNow ?? scheduledNext)!.artistName}</p>
+                  <p className="mt-1 font-bold">{schedule.act.artistName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date((scheduledNow ?? scheduledNext)!.startsAt!))}
+                    {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(schedule.act.startsAt!))}
                   </p>
+                  {schedule.kind === "scheduled_now" && schedule.progressPercent !== null && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">Published set time elapsed: {schedule.progressPercent}%</p>
+                      <div role="img" aria-label={`Published set time elapsed: ${schedule.progressPercent} percent, not a confirmed live performance`} className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-violet-500" style={{ width: `${schedule.progressPercent}%` }} />
+                      </div>
+                    </div>
+                  )}
                   <p className="mt-1 text-xs text-muted-foreground">Based on published timetable, not live stage confirmation.</p>
                 </>
-              ) : <p className="mt-1 text-sm text-muted-foreground">Check back for programme updates.</p>}
+              ) : <p className="mt-1 text-sm text-muted-foreground">{schedule.kind === "finished" ? "All published stage sets have passed." : "Check back for programme updates."}</p>}
             </div>
             <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
@@ -107,27 +140,31 @@ export function FestivalGrounds({ slug, festivalLaunchId, stages, lineup, timezo
                   {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
+                  {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(lastRuntimeUpdate))} (festival time)</p>}
                 </>
               )}
             </div>
             <div className="mt-4 rounded-lg border bg-muted/30 p-3">
-              <h4 className="text-sm font-semibold">Crowd at this stage</h4>
+              <h4 className="text-sm font-semibold">Stage audience snapshot</h4>
               {selectedCrowd ? (
                 <>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span>{FESTIVAL_STAGE_CROWD_BANDS[selectedCrowd.crowdBand].label}</span>
-                    <span>Mood: {FESTIVAL_STAGE_CROWD_MOODS[selectedCrowd.mood]}</span>
-                  </div>
-                  <div className="mt-2 flex gap-1" role="img" aria-label={`Stage crowd density: ${FESTIVAL_STAGE_CROWD_BANDS[selectedCrowd.crowdBand].label}`}>
+                  <p className="mt-1 text-sm">Reported crowd: <strong>{festivalCrowdBandLabels[selectedCrowd.crowdBand]}</strong></p>
+                  <p className="text-sm">Audience mood: <strong>{festivalCrowdMoodLabels[selectedCrowd.mood]}</strong></p>
+                  <div className="mt-2 flex gap-1" role="img" aria-label={`Reported stage audience: ${festivalCrowdBandLabels[selectedCrowd.crowdBand]}`}>
                     {Array.from({ length: 5 }, (_, index) => (
-                      <span key={index} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${index < FESTIVAL_STAGE_CROWD_BANDS[selectedCrowd.crowdBand].intensity ? "bg-emerald-500" : "bg-muted"}`} />
+                      <span key={index} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${index < ({ quiet: 1, building: 2, busy: 3, very_busy: 4, near_capacity: 5, full: 5 }[selectedCrowd.crowdBand]) ? "bg-emerald-500" : "bg-muted"}`} />
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">Reported in-game stage crowd band and mood, not a headcount or safety assessment.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Snapshot: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(selectedCrowd.lastCalculatedAt))} (festival time).
+                    Not a live headcount or queue estimate.
+                  </p>
                 </>
-              ) : <p className="mt-2 text-sm text-muted-foreground">{experience.isPending ? "Checking stage crowd updates…" : "No verified crowd update for this stage."}</p>}
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">No unambiguous stage crowd snapshot is available.</p>
+              )}
             </div>
-                        <h4 className="mt-5 font-semibold">Announced artists</h4>
+            <h4 className="mt-5 font-semibold">Announced artists</h4>
             {acts.length ? (
               <ul className="mt-3 space-y-3">
                 {acts.map((act) => (

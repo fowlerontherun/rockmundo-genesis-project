@@ -11,6 +11,7 @@ import { ScenePoster } from '@/features/city-scene-challenges/ScenePoster';
 import { ScenePosterArchive } from '@/features/city-scene-challenges/ScenePosterArchive';
 import { SceneLegacy } from '@/features/city-scene-challenges/SceneLegacy';
 import { SceneMonthlyActions } from '@/features/city-scene-challenges/SceneMonthlyActions';
+import { citySceneGigBookingHref } from '@/features/city-scene-challenges/sceneCityGigLink';
 import { SceneDiscovery } from '@/features/city-scene-challenges/SceneDiscovery';
 import { SceneCycleCountdown, findNextSceneCycleExpiry } from '@/features/city-scene-challenges/SceneCycleCountdown';
 import { ScenePulse } from '@/features/city-scene-challenges/ScenePulse';
@@ -480,7 +481,7 @@ export default function CitySceneChallenges() {
                           <Progress value={percent(objective.earned_points, objective.target_points)} />
                           {action && !currentExpired && (
                             <Button asChild variant="outline" size="sm" className="w-full">
-                              <Link to={action.destination}>{action.buttonText}</Link>
+                              <Link to={objective.action_type === 'gig:verified_performance' ? citySceneGigBookingHref(board.city_id) : action.destination}>{action.buttonText}</Link>
                             </Button>
                           )}
                         </CardContent>
@@ -488,7 +489,7 @@ export default function CitySceneChallenges() {
                     );
                   })}
                 </div>
-                {active === 'monthly' && !currentExpired && <SceneMonthlyActions />}
+                {active === 'monthly' && !currentExpired && <SceneMonthlyActions cityId={board.city_id} />}
               </>
             )}
           </section>
