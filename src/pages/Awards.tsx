@@ -57,8 +57,8 @@ export default function Awards() {
   const {
     shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,
-    submitNomination, castVote, bookPerformanceAsync, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
-    isSubmitting, isVoting, isBooking, isAttending, isRespondingInvite,
+    submitNomination, castVote, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
+    isSubmitting, isVoting, isAttending, isRespondingInvite,
   } = useAwards(profileId ?? undefined, userBand?.id);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
@@ -253,7 +253,7 @@ export default function Awards() {
                   }}
                   canNominate={show.status === 'nominations_open'}
 
-                  canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
+                  canVote={show.status === 'voting_open'}
                   canAttend={show.status === 'live'}
                   isSubmitting={isSubmitting}
                 />
@@ -442,7 +442,7 @@ export default function Awards() {
                 {((selectedShow?.categories as any[]) || []).map((cat: any, i: number) => {
                   const categoryName = String(cat.name || `Category ${i + 1}`);
                   const lifetimeOnly = isLifetimeAchievementCategory(categoryName);
-                  const disabled = lifetimeOnly && !isLifetimeAchievementYear(currentGameYear);
+                  const disabled = lifetimeOnly && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear);
                   return (
                     <SelectItem key={i} value={categoryName} disabled={disabled}>
                       {categoryName}
@@ -452,7 +452,7 @@ export default function Awards() {
                 })}
               </SelectContent>
             </Select>
-            {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear) && (
+            {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear) && (
               <p className="text-xs text-destructive">Lifetime Achievement can only be nominated every 4 in-game years.</p>
             )}
 
@@ -528,7 +528,7 @@ export default function Awards() {
                 isSubmitting ||
                 !selectedCategory ||
                 !nomineeBand ||
-                (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear))
+                (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear))
               }
             >
               <Trophy className="h-4 w-4 mr-2" />
@@ -554,7 +554,6 @@ export default function Awards() {
               key={selectedShow.id}
               show={selectedShow}
               redCarpetAttended={hasRedCarpetAttendance}
-              bandId={userBand?.id}
               hasNomination={nominations.some(n => n.award_show_id === selectedShow.id)}
               onAttendRedCarpet={(outfit) =>
                 attendRedCarpetAsync({
@@ -563,19 +562,8 @@ export default function Awards() {
                   participant_type: "user",
                 })
               }
-              onBookPerformance={(slotLabel, stage) => {
-                if (!userBand) return Promise.reject(new Error("An active band is required"));
-                return bookPerformanceAsync({
-                  award_show_id: selectedShow.id,
-                  band_id: userBand.id,
-                  slot_label: slotLabel,
-                  stage,
-                  song_ids: [],
-                });
-              }}
               isAttending={isAttending}
               redCarpetLoading={redCarpetLoading}
-              isBooking={isBooking}
               currentGameYear={currentGameYear}
             />
           ))}
