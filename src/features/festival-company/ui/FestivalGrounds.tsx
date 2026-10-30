@@ -30,8 +30,10 @@ interface FestivalGroundsProps {
  * non-geographic until the published festival site plan provides coordinates.
  */
 export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, cancelled, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
-  const live = usePublicFestivalLiveStatus(slug);
-  const experience = usePublicFestivalLiveExperience(slug);
+  // A cancelled edition cannot have active live-stage observations. Keep the
+  // historic programme while avoiding unnecessary runtime polling.
+  const live = usePublicFestivalLiveStatus(cancelled ? "" : slug);
+  const experience = usePublicFestivalLiveExperience(cancelled ? "" : slug);
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const freshness = festivalLiveSnapshotFreshness(record, Date.now());
