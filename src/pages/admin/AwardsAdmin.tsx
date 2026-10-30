@@ -101,6 +101,51 @@ const AwardsAdmin = () => {
     },
   });
 
+  const reviewNomination = useMutation({
+    mutationFn: async ({ nominationId, decision }: { nominationId: string; decision: "shortlisted" | "rejected" }) => {
+      const { data, error } = await (supabase as any).rpc("award_admin_review_nomination", {
+        p_nomination_id: nominationId,
+        p_decision: decision,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-nominations"] });
+      queryClient.invalidateQueries({ queryKey: ["award-show-nominations"] });
+      toast({ title: "Nomination decision recorded" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Nomination review failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const advanceShow = useMutation({
+    mutationFn: async ({ showId, nextStatus }: { showId: string; nextStatus: string }) => {
+      const { data, error } = await (supabase as any).rpc("award_admin_advance_show", {
+        p_show_id: showId,
+        p_next_status: nextStatus,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-award-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["award-shows"] });
+      toast({ title: "Award show advanced" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Cannot advance award show", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const nextStatusFor = (status: string): string | null => {
+    if (status === "upcoming") return "nominations_open";
+    if (status === "nominations_open") return "voting_open";
+    if (status === "voting_open") return "live";
+    return null; // No completion until genuine winner settlement exists.
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -197,6 +242,27 @@ const AwardsAdmin = () => {
                       return <Badge key={`${index}-${name}`} variant="outline">{name}</Badge>;
                     })}
                   </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {nextStatusFor(show.status) ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={advanceShow.isPending}
+                        onClick={() => advanceShow.mutate({
+                          showId: show.id,
+                          nextStatus: nextStatusFor(show.status)!,
+                        })}
+                      >
+                        Advance to {nextStatusFor(show.status)?.replace("_", " ")}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {show.status === "live"
+                          ? "Show completion is disabled until winner settlement is available."
+                          : "No further admin phase change available."}
+                      </span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -226,7 +292,29 @@ const AwardsAdmin = () => {
                       <TableCell>{nom.category_name}</TableCell>
                       <TableCell>{nom.bands?.name}</TableCell>
                       <TableCell>{nom.nominee_type}</TableCell>
-                      <TableCell><Badge>{nom.status}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge>{nom.status}</Badge>
+                          {nom.status !== "winner" && nom.status !== "runner_up"
+                            && shows.some((show: any) => show.id === nom.award_show_id && show.status === "nominations_open")
+                            && (
+                              <>
+                                {nom.status !== "shortlisted" && (
+                                  <Button size="sm" disabled={reviewNomination.isPending}
+                                    onClick={() => reviewNomination.mutate({ nominationId: nom.id, decision: "shortlisted" })}>
+                                    Shortlist
+                                  </Button>
+                                )}
+                                {nom.status !== "rejected" && (
+                                  <Button size="sm" variant="outline" disabled={reviewNomination.isPending}
+                                    onClick={() => reviewNomination.mutate({ nominationId: nom.id, decision: "rejected" })}>
+                                    Reject
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
