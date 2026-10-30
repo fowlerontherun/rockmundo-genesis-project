@@ -16,12 +16,13 @@ const scene = new ConcertScene(document.querySelector('canvas'), settings, () =>
 window.renderGigMotion = (seconds, reaction = 'wave', reducedMotion = false) => {
   scene.setSettings({ ...settings, reducedMotion });
   scene.setFrame({ positionMs: seconds * 1000, section: 'chorus', sectionProgress: .4, energy: .8,
-    crowd: 1, occupancy: 1, crowdReaction: reaction, crowdPreviousReaction: 'still', crowdReactionElapsed: .4,
+    crowd: 1, occupancy: 1, crowdReaction: reaction, crowdPreviousReaction: reaction === 'bounce' ? undefined : 'still', crowdReactionElapsed: reaction === 'bounce' ? undefined : .4,
     rhythmSeconds: seconds, performing: true, look: 'electric', lightLevel: 1, focusId: 'preview-1', effect: null,
     performers: options.performers.map(p => ({ id: p.id, position: p.position, visible: true, walking: false, action: null, actionProgress: 0 })) });
   render(performance.now() + 1000);
   const crowd = scene.scene.children.filter(mesh => mesh.name.startsWith('crowd-variant-'));
-  return { camera: scene.camera.position.toArray(),
+  const phones = scene.scene.getObjectByName('crowd-phone-screens');
+  return { camera: scene.camera.position.toArray(), phones: { count: phones.count, matrices: Array.from(phones.instanceMatrix.array).slice(0, phones.count * 16) },
     crowd: crowd.map(mesh => ({ count: mesh.count, matrices: Array.from(mesh.instanceMatrix.array), motion: Array.from(mesh.geometry.attributes.crowdMotion.array) })),
     distant: ['clock', 'strength', 'reaction', 'previousReaction', 'blend'].map(key => scene.distantAudience.userData[key].value) };
 };

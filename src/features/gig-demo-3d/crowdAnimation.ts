@@ -49,7 +49,8 @@ function televisionCrowdMotion(reaction: string, personality: number, seconds: n
 
 /** Motion choice is derived from time and identity, never accumulated between frames. */
 export function crowdMotion(reaction: string, energy: number, personality: number, seconds: number): CrowdMotion {
-    const television = televisionCrowdMotion(reaction, personality, seconds);
+    const time = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    const television = televisionCrowdMotion(reaction, personality, time);
     if (television !== null) return television;
     if (reaction === 'still' || reaction === 'disperse')
         return 0;
@@ -65,7 +66,7 @@ export function crowdMotion(reaction: string, energy: number, personality: numbe
         return personality < .8 ? 1 : 4;
     if (/cheer|roar/.test(reaction))
         return personality < .5 ? 2 : 3;
-    const activity = (Math.floor(seconds / 7 + personality * 13) + Math.floor(personality * 17)) % 7;
+    const activity = (Math.floor(time / 7 + personality * 13) + Math.floor(personality * 17)) % 7;
     if (energy < .25)
         return personality < .65 ? 0 : 1;
     return ([1, 1, 3, 2, 7, 1, 6] as const)[energy > .6 ? activity : activity % 3];

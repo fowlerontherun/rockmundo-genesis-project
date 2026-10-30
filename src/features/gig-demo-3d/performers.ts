@@ -1,3 +1,4 @@
+import { blendedCrowdHand, type CrowdPoseAnchors } from './crowdPoseAnchor';
 import { reactionBlend, waveAmount, ease, type CrowdTransition } from './showMotion';
 import { detailedCrowdArea, isTvStudioAudienceBlocked } from './venueAudience';
 import { resolveTotpStudioStageGeometry } from './totpStudioGeometry';
@@ -838,7 +839,7 @@ export class DemoCrowd {
         mesh: T.InstancedMesh;
         motion: T.InstancedBufferAttribute;
         fans: Fan[];
-        phone: T.Vector3;
+        handPoses: CrowdPoseAnchors;
     }[] = [];
     private transform = new T.Object3D();
     private allFans: Fan[] = [];
@@ -868,15 +869,14 @@ export class DemoCrowd {
                 disposeModel(assembled);
             actor.update(0, 0, true);
             const geometry = crowdGeometry(actor);
-            let phone = new T.Vector3();
+            const handPoses = { idle: actor.bones.get('Hand.L')!.getWorldPosition(new T.Vector3()) } as CrowdPoseAnchors;
             for (const [pose, attribute] of [['raised', 'poseRaised'], ['clapOpen', 'poseClapOpen'], ['clapClosed', 'poseClapClosed'], ['danceLeft', 'poseDanceLeft'], ['danceRight', 'poseDanceRight'], ['runLeft', 'poseRunLeft'], ['runRight', 'poseRunRight']] as const) {
                 actor.fanPose = pose;
                 actor.update(0, 0, true);
                 const posed = crowdGeometry(actor);
                 geometry.setAttribute(attribute, posed.attributes.position.clone());
                 posed.dispose();
-                if (pose === 'raised')
-                    phone = actor.bones.get('Hand.L')!.getWorldPosition(new T.Vector3());
+                handPoses[pose] = actor.bones.get('Hand.L')!.getWorldPosition(new T.Vector3());
             }
             disposeModel(actor.root);
             const count = CROWD_LIMIT / CROWD_VARIANTS, motion = new T.InstancedBufferAttribute(new Float32Array(count * 4), 4).setUsage(T.DynamicDrawUsage);
@@ -893,7 +893,7 @@ export class DemoCrowd {
             }
             scene.add(mesh);
             this.allFans.push(...fans);
-            this.batches.push({ mesh, motion, fans, phone });
+            this.batches.push({ mesh, motion, fans, handPoses });
         }
         this.update(0, .8, .7, false);
     }
@@ -916,7 +916,7 @@ export class DemoCrowd {
         const surfX = surfBaseX + (eventArea.width * .25 - surfBaseX) * event.surf;
         const surfZ = surfBaseZ + (area.front + 1.2 + (1 - event.surfProgress) * eventArea.depth * .42 - surfBaseZ) * event.surf;
         const pivot = new T.Vector3();
-        for (const { mesh, motion, fans, phone } of this.batches) {
+        for (const { mesh, motion, fans, handPoses } of this.batches) {
             mesh.count = 0;
             for (const fan of fans) {
                 if (fan.rank >= target)
@@ -1000,11 +1000,12 @@ export class DemoCrowd {
                 const oldAmount = reduced ? 0 : previousAmount;
                 motion.setXYZW(mesh.count, mode + oldMode * 16 + poseBlend * .5,
                     (mode === 3 ? 0 : fan.phase) + 16 * Math.round(oldAmount * 255), mode === 3 ? 1 : fan.pace, amount);
-                mesh.count++;
-                if ((mode === 5 || previous === 5 && blend < 1) && !reduced) {
-                    const screen = phone.clone().add(new T.Vector3(0, .045, .015)).applyMatrix4(this.transform.matrix);
+                const instance = mesh.count++;
+                if ((mode === 5 || oldMode === 5 && poseBlend < 1) && !reduced) {
+                    const screen = blendedCrowdHand(handPoses, motion.getX(instance), motion.getY(instance), motion.getZ(instance), motion.getW(instance), this.time.value)
+                        .add(new T.Vector3(0, .045, .015)).applyMatrix4(this.transform.matrix);
                     this.transform.position.copy(screen);
-                    this.transform.scale.multiplyScalar(mode === 5 ? blend : 1 - blend);
+                    this.transform.scale.multiplyScalar(mode === 5 ? poseBlend : 1 - poseBlend);
                     this.transform.updateMatrix();
                     this.phones.setMatrixAt(phoneCount++, this.transform.matrix);
                 }

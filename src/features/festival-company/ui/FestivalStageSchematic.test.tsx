@@ -11,6 +11,7 @@ const act: FestivalPublicConfirmedAct = {
   endsAt: "2026-10-29T18:00:00Z",
 };
 const base = {
+  cancelled: false,
   stages: [stage], lineup: [act], selectedStageId: stage.id,
   timezone: "Europe/London", localHour: 17, onSelectStage: vi.fn(),
 };
