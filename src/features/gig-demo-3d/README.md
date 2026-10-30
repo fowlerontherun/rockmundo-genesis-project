@@ -156,3 +156,16 @@ npm run test:gig-motion:webgl
 ```
 
 The WebGL smoke test starts a local Vite fixture, loads the production scene, renders on demand with software WebGL, checks shader errors, and verifies crowd/camera reconstruction after seeks and crowd freezing under reduced motion. It needs no account or live database. It is a correctness smoke test, not a hardware FPS benchmark.
+
+
+### Ordinary gig camera clearance
+
+Ordinary venue cameras now resolve their final pose against a cached spatial tree of opaque scenery triangles. Wall, roof, stage and prop geometry can shorten or redirect a shot; doorways and proscenium openings remain open. Five parallel rays protect the central sightline and a conservative near-plane footprint. Transparent haze, sky domes, instanced audiences and animated fixtures are excluded from the static tree.
+
+Room/deck limits and nearby performer/front-row safety bubbles apply after shot composition. The pit lens has a minimum height above front-row heads. When a wall forces a closer lens, the field of view widens (up to 100 degrees) to retain more of the subject on narrow screens. Corrected poses and manual shot changes use direct positioning rather than interpolating through intervening scenery. The correction has no last-good-pose state, preserving replay seeking; TV broadcast camera paths remain separate.
+
+The static tree is built once per scene and freed on disposal. A bounded query cache avoids repeated ray tests for stationary framing. Foreground crowd clearance uses the existing detailed fan instances, never all stadium spectators.
+
+Checks: `npx vitest run src/features/gig-demo-3d/cameraCollision.test.ts src/features/gig-demo-3d/cameraCollision.venues.test.ts src/features/gig-demo-3d/venueCamera.test.ts src/features/gig-demo-3d/venueCameraAngles.test.ts --maxWorkers=1`.
+
+`npm run test:gig-motion:webgl` additionally renders manual camera angles in a club and a portrait café and checks their scenery sightlines. The geometry suite covers 11 shots on portrait/landscape displays across cafés, bars, theatres, arenas, festival tents and stadiums. These tests verify collision correctness, not an FPS guarantee or visibility of every performer in every composition.
