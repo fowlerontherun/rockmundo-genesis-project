@@ -155,7 +155,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
               ) : !verifiedLive ? <p className="mt-1 text-sm">No verified live status for this edition.</p> : (
                 <>
                   <p className="mt-1 font-semibold">{liveStatusLabel}</p>
-                  {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
+                  {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" && liveStatus.delayMinutes > 0 ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
                   {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
                   {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {formatFestivalEditionDate(lastRuntimeUpdate, timezone, { dateStyle: "medium", timeStyle: "short" })} ({festivalTimeZoneLabel(timezone)})</p>}
@@ -172,7 +172,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
               {selectedCrowd ? (
                 <>
                   <p className="mt-1 text-sm">Reported crowd: <strong>{festivalCrowdBandLabels[selectedCrowd.crowdBand]}</strong></p>
-                  <p className="text-sm">Audience mood: <strong>{festivalCrowdMoodLabels[selectedCrowd.mood]}</strong></p>
+                  <p className="text-sm">Audience mood: <strong>{selectedCrowd.mood ? festivalCrowdMoodLabels[selectedCrowd.mood] : "Not measured"}</strong></p>
                   <div className="mt-2 flex gap-1" role="img" aria-label={`Reported stage audience: ${festivalCrowdBandLabels[selectedCrowd.crowdBand]}`}>
                     {Array.from({ length: 5 }, (_, index) => (
                       <span key={index} aria-hidden="true" className={`h-2 flex-1 rounded-sm ${index < ({ quiet: 1, building: 2, busy: 3, very_busy: 4, near_capacity: 5, full: 5 }[selectedCrowd.crowdBand]) ? "bg-emerald-500" : "bg-muted"}`} />
