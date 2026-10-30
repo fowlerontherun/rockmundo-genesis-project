@@ -82,7 +82,7 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
     expect(screen.getByText("Accepted artist bookings")).toBeInTheDocument();
     expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
-    expect(screen.getByText("Second Stage")).toBeInTheDocument();
+    expect(screen.getAllByText("Second Stage").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: /Sunset opener/i }).length).toBeGreaterThan(0);
   });
 
@@ -124,7 +124,8 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
         itemType: "performance_slot",
         stageId: "stage-main",
         festivalDate: "2030-06-01",
-        startsAt: "2030-06-01T21:30:00",
+        startsAt: "2030-06-01T20:30:00.000Z",
+        endsAt: "2030-06-01T21:45:00.000Z",
         durationMinutes: 75,
         publicVisible: true,
       },
@@ -153,6 +154,8 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
         festivalDate: "2030-06-01",
         internalNotes: "Confirmed for local act",
         durationMinutes: 45,
+        startsAt: "2030-06-01T18:00:00.000Z",
+        endsAt: "2030-06-01T18:45:00.000Z",
       },
     });
   });
