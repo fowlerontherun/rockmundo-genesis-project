@@ -231,7 +231,7 @@ export default function Awards() {
                   }}
                   canNominate={show.status === 'nominations_open'}
 
-                  canVote={show.status === 'voting_open' || show.status === 'nominations_open'}
+                  canVote={show.status === 'voting_open'}
                   canAttend={show.status === 'live'}
                   isSubmitting={isSubmitting}
                 />
@@ -420,7 +420,7 @@ export default function Awards() {
                 {((selectedShow?.categories as any[]) || []).map((cat: any, i: number) => {
                   const categoryName = String(cat.name || `Category ${i + 1}`);
                   const lifetimeOnly = isLifetimeAchievementCategory(categoryName);
-                  const disabled = lifetimeOnly && !isLifetimeAchievementYear(currentGameYear);
+                  const disabled = lifetimeOnly && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear);
                   return (
                     <SelectItem key={i} value={categoryName} disabled={disabled}>
                       {categoryName}
@@ -430,7 +430,7 @@ export default function Awards() {
                 })}
               </SelectContent>
             </Select>
-            {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear) && (
+            {selectedCategory && isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear) && (
               <p className="text-xs text-destructive">Lifetime Achievement can only be nominated every 4 in-game years.</p>
             )}
 
@@ -506,7 +506,7 @@ export default function Awards() {
                 isSubmitting ||
                 !selectedCategory ||
                 !nomineeBand ||
-                (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(currentGameYear))
+                (isLifetimeAchievementCategory(selectedCategory) && !isLifetimeAchievementYear(selectedShow?.year ?? currentGameYear))
               }
             >
               <Trophy className="h-4 w-4 mr-2" />
