@@ -28,10 +28,15 @@ try {
     await page.screenshot();
     return state;
   };
+  const initial = await capture(0, 'bounce');
+  assert.ok(initial.crowd.every(mesh => mesh.motion.every(Number.isFinite)), 'The initial automatic crowd must not pack NaN poses');
   const original = await capture(10);
   await capture(35, 'applause');
   assert.deepEqual(await capture(10), original, 'A backwards seek must reconstruct crowd and camera state');
   assert.notDeepEqual(await capture(11), original, 'Active crowd must move');
+  const phones = await capture(10, 'phone_lights');
+  await capture(35, 'applause');
+  assert.deepEqual(await capture(10, 'phone_lights'), phones, 'Phone props must reconstruct with the moving hands');
   const still = await capture(10, 'phone_lights', true);
   assert.deepEqual(await capture(35, 'phone_lights', true), still, 'Reduced motion must freeze crowd articulation');
   assert.deepEqual(errors, [], 'The real WebGL render must have no shader or page errors');

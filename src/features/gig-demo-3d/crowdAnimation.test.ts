@@ -25,6 +25,16 @@ describe('individual crowd identity and motion', () => {
         }
         expect(new Set(Array.from({ length: 100 }, (_, i) => crowdMotion('bounce', .9, i / 100, 10))).size).toBeGreaterThanOrEqual(5);
     });
+    it('always produces valid initial and backwards-boundary poses', () => {
+        for (const time of [-20, -2.731, -.001, 0, .001, 2, NaN, Infinity]) {
+            for (let index = 0; index < 100; index++) {
+                const mode = crowdMotion('bounce', .9, index / 100, time);
+                expect(Number.isInteger(mode)).toBe(true);
+                expect(mode).toBeGreaterThanOrEqual(0);
+                expect(mode).toBeLessThanOrEqual(7);
+            }
+        }
+    });
     it('keeps television choreography isolated from ordinary gig reactions', () => {
         const nervous = Array.from({ length: 12 }, (_, index) => crowdMotion('tv_nervous', .8, index / 12, index * 2.75));
         const roaring = Array.from({ length: 12 }, (_, index) => crowdMotion('tv_roaring', .8, index / 12, index * 2.75));
@@ -63,12 +73,19 @@ describe('individual crowd identity and motion', () => {
         expect(phones.count).toBeGreaterThan(0);
         expect(phones.count).toBeLessThan(160);
         const state = snapshot();
+        const phoneState = () => Array.from(phones.instanceMatrix.array).slice(0, phones.count * 16);
+        const raisedPhones = phoneState();
         crowd.update(10, 1, .9, false, {}, 'phone_lights', undefined, { previousReaction: 'still', reactionElapsed: .3, rhythmSeconds: 5 });
         const transitioning = snapshot();
+        const risingPhones = phoneState();
+        expect(risingPhones).not.toEqual(raisedPhones);
+        const firstY = (values: number[]) => values[13];
+        expect(firstY(risingPhones)).toBeLessThan(firstY(raisedPhones));
         expect(transitioning).not.toEqual(state);
         crowd.update(90, 1, .9, false, {}, 'jump');
         crowd.update(10, 1, .9, false, {}, 'phone_lights', undefined, { previousReaction: 'still', reactionElapsed: .3, rhythmSeconds: 5 });
         expect(snapshot()).toEqual(transitioning);
+        expect(phoneState()).toEqual(risingPhones);
         crowd.update(10, 1, .9, false, {}, 'phone_lights');
         crowd.update(90, 1, .9, false, {}, 'jump');
         expect(phones.count).toBe(0);
@@ -79,6 +96,10 @@ describe('individual crowd identity and motion', () => {
         const reduced = snapshot();
         crowd.update(88, 1, .9, true, {}, 'bounce');
         expect(snapshot()).toEqual(reduced);
+        for (const seconds of [0, .001, .1, 1, 3]) {
+            crowd.update(seconds, 1, .9, false, {}, 'bounce');
+            expect(meshes.every(mesh => Array.from(mesh.geometry.attributes.crowdMotion.array).every(Number.isFinite))).toBe(true);
+        }
         const modes = () => meshes.flatMap(mesh => Array.from({ length: mesh.count }, (_, i) => Math.floor(mesh.geometry.attributes.crowdMotion.getX(i) % 16)));
         crowd.update(12, 1, 1, false, {}, 'mosh_pit');
         expect(modes().filter(mode => mode === 8).length).toBeGreaterThan(3);
