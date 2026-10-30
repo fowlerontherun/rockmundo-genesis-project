@@ -498,13 +498,7 @@ export default function Awards() {
                   nominee_id: nomineeBand.id,
                   nominee_name: nomineeBand.name,
                   band_id: nomineeBand.id,
-                  submission_data: {
-                    auto_nomination_score: Number(nomineeBand.fame || 0),
-                    auto_nomination_threshold: 85,
-                    auto_nomination_reason: "Band fame reached automatic shortlist threshold",
-                    nomination_source: "player_submission",
-                    nominated_by_profile_id: profileId,
-                  },
+                  submission_data: { nomination_source: "player_submission" },
                 });
                 setShowNominateDialog(false);
               }}
