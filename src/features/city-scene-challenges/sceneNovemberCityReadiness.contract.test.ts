@@ -11,7 +11,7 @@ describe('November City Scene operator-only city eligibility snapshot', () => {
   it('keeps read access service-only and does not create a browser RPC', () => {
     expect(migration).toContain('CREATE OR REPLACE FUNCTION private.scene_november_city_readiness()');
     // pg_get_functiondef() omits the outer trailing semicolon; migration replay must restore it.
-    expect(migration).toContain('$function$;\\n\\nrevoke all on function'.replaceAll('\\n', '\n'));
+    expect(migration).toContain('$function$;\n\nrevoke all on function');
     expect(migration.toLowerCase()).toContain('language sql');
     expect(migration).not.toMatch(/security\s+definer/i);
     expect(migration).toContain('revoke all on function private.scene_november_city_readiness() from public, anon, authenticated;');
