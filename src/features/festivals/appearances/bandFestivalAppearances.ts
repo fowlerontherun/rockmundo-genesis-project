@@ -56,6 +56,17 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
     if (!bookingId || !bandId || !editionId || !validFestivalDate(festivalDate)) {
       throw new Error("Incomplete Festival appearance");
     }
+    const proposedStartAt = nullableText(row.confirmed_start_at);
+    const proposedEndAt = nullableText(row.confirmed_end_at);
+    const stageName = nullableText(row.stage_name);
+    const startMillis = Date.parse(proposedStartAt ?? "");
+    const endMillis = Date.parse(proposedEndAt ?? "");
+    // Treat a malformed, missing or reversed published slot as unconfirmed.
+    // Never let a broken upstream field crash the desktop/mobile calendar or
+    // imply that a set time was officially assigned.
+    const confirmedTimeValid = row.time_confirmed === true && Boolean(stageName)
+      && Number.isFinite(startMillis) && Number.isFinite(endMillis)
+      && endMillis > startMillis;
     return {
       bookingId,
       bandId,
@@ -74,10 +85,10 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
       billingPosition: text(row.billing_position),
       setMinutes: Number(row.set_minutes) || 0,
       festivalDate,
-      confirmedStartAt: nullableText(row.confirmed_start_at),
-      confirmedEndAt: nullableText(row.confirmed_end_at),
-      stageName: nullableText(row.stage_name),
-      timeConfirmed: row.time_confirmed === true,
+      confirmedStartAt: confirmedTimeValid ? proposedStartAt : null,
+      confirmedEndAt: confirmedTimeValid ? proposedEndAt : null,
+      stageName,
+      timeConfirmed: confirmedTimeValid,
       sessionStatus: nullableText(row.session_status),
       heroImageReference: nullableText(row.hero_image_reference),
     };
@@ -122,10 +133,12 @@ export function formatFestivalInstant(
   timestamp: string,
   timezone: string | null,
 ): string {
+  const parsed = new Date(timestamp);
+  if (!Number.isFinite(parsed.getTime())) return "Time TBA";
   return new Intl.DateTimeFormat("en-GB", {
     hour: "numeric", minute: "2-digit", hour12: true,
     timeZone: safeFestivalTimezone(timezone),
-  }).format(new Date(timestamp));
+  }).format(parsed);
 }
 
 export function formatFestivalSetTime(appearance: BandFestivalAppearance): string {
