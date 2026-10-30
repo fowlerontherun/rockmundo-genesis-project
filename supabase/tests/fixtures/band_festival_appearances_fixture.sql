@@ -17,7 +17,7 @@ CREATE TABLE public.festival_companies(id uuid PRIMARY KEY,public_name text,slug
 CREATE TABLE public.cities(id uuid PRIMARY KEY,name text,country text,timezone text);
 CREATE TABLE public.festival_editions_v2(
   id uuid PRIMARY KEY,festival_company_id uuid NOT NULL,status text NOT NULL,
-  starts_on date NOT NULL,ends_on date NOT NULL,city_id uuid
+  starts_on date NOT NULL,ends_on date NOT NULL,city_id uuid,name text NOT NULL
 );
 CREATE TABLE public.festival_artist_programmes(id uuid PRIMARY KEY,festival_edition_id uuid NOT NULL);
 CREATE TABLE public.festival_artist_bookings(
@@ -55,9 +55,9 @@ INSERT INTO public.cities VALUES
 ('44444444-0000-0000-0000-000000000001','London','United Kingdom','Europe/London');
 INSERT INTO public.festival_companies VALUES
 ('55555555-0000-0000-0000-000000000001','Shock Festival','shock-festival');
-INSERT INTO public.festival_editions_v2 VALUES
+INSERT INTO public.festival_editions_v2(id,festival_company_id,status,starts_on,ends_on,city_id,name) VALUES
 ('66666666-0000-0000-0000-000000000001','55555555-0000-0000-0000-000000000001',
- 'announced','2026-09-26','2026-09-27','44444444-0000-0000-0000-000000000001');
+ 'announced','2026-09-26','2026-09-27','44444444-0000-0000-0000-000000000001','Shock Festival');
 INSERT INTO public.festival_artist_programmes VALUES
 ('77777777-0000-0000-0000-000000000001','66666666-0000-0000-0000-000000000001');
 INSERT INTO public.festival_artist_bookings VALUES
