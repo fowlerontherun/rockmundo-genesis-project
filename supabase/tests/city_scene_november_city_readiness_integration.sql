@@ -13,6 +13,11 @@ begin
     or not has_function_privilege('service_role','private.scene_november_city_readiness()','EXECUTE') then
     raise exception 'City readiness exposes operator data to players';
   end if;
+  if not has_schema_privilege('service_role','private','USAGE')
+    or has_schema_privilege('authenticated','private','USAGE')
+    or has_schema_privilege('anon','private','USAGE') then
+    raise exception 'Private schema privilege boundary is broken';
+  end if;
   if (select prosecdef from pg_proc
     where oid = 'private.scene_november_city_readiness()'::regprocedure) then
     raise exception 'City readiness must not be SECURITY DEFINER';
