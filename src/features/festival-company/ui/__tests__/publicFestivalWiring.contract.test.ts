@@ -14,7 +14,10 @@ describe("published festival public workflows", () => {
   });
 
   it("#3922: uses URL-keyed sponsor image error recovery", () => {
-    expect(page).toContain('import { SponsorIdentity } from "./SponsorIdentity"');
+    // The import can be combined with the safe-logo validator. Verify the
+    // functional recovery component is actually rendered in both placements.
+    expect(page).toMatch(/import\s*\{[^}]*\bSponsorIdentity\b[^}]*\}\s*from\s*["']\.\/SponsorIdentity["']/s);
+    expect((page.match(/<SponsorIdentity\b/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it("#3923: blocks purchases with no active character", () => {

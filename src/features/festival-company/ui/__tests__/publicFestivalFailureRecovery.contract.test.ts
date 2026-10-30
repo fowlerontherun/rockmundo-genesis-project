@@ -20,18 +20,19 @@ describe("festival visitor failure and retry wiring", () => {
     expect(page).toContain("{walletError ? (");
     expect(page).toContain("this does not mean you have no tickets");
     expect(page).toContain("Retry ticket wallet");
-    expect(page).toContain("!walletError && hasIssuedFestivalAdmission(myFestivalTickets)");
+    expect(page).toMatch(/!walletError\s*&&\s*!walletWaiting\s*&&\s*hasIssuedFestivalAdmission\(myFestivalTickets\)/);
+    expect(page).toContain("walletWaiting ? (");
   });
 
   it("#4075 handles attendance query errors and suppresses cached attendance actions", () => {
-    expect(page).toContain("isError: attendanceError, refetch: retryAttendance");
+    expect(page).toMatch(/isError:\s*attendanceError,[^\n]*refetch:\s*retryAttendance/);
     expect(page).toContain("attendanceError ? [] : attendance");
-    expect(page).toContain("!attendanceError && canOfferFestivalCheckIn");
+    expect(page).toMatch(/!attendanceError\s*&&\s*!attendancePending\s*&&\s*!eligibilityPending\s*&&\s*!walletWaiting\s*&&\s*canOfferFestivalCheckIn/);
     expect(page).toContain("if (attendanceError) void retryAttendance()");
   });
 
   it("#4076 does not infer a missing wristband when keepsakes cannot be loaded", () => {
-    expect(page).toContain("isError: memorabiliaError, refetch: retryMemorabilia");
+    expect(page).toMatch(/isError:\s*memorabiliaError,[^\n]*refetch:\s*retryMemorabilia/);
     expect(page).toContain("memorabiliaError ? undefined : festivalMemorabilia.find");
     expect(page).toContain("Festival keepsakes could not be verified");
     expect(page).toContain("Retry festival keepsakes");
@@ -39,7 +40,9 @@ describe("festival visitor failure and retry wiring", () => {
 
   it("#4077 formats both the lineup and timetable through safe edition time", () => {
     expect(page).toContain("formatFestivalEditionTime(entry.startsAt, f.timezone)");
-    expect(page).toContain("formatFestivalEditionTime(entry.startsAt!, f.timezone)");
+    expect(page).toContain('<FestivalPublishedTimetable key={f.id} performances={publishedPerformances} timezone={f.timezone}');
+    const timetable = read("../FestivalPublishedTimetable.tsx");
+    expect(timetable).toContain("formatFestivalEditionTime(entry.startsAt!, timezone)");
     expect(page).not.toContain("toLocaleTimeString(");
     expect(display).toContain("export function formatFestivalEditionTime(");
   });
