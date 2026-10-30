@@ -71,76 +71,17 @@ export const CoverSongDialog = ({ song, bandId, open, onOpenChange }: CoverSongD
     mutationFn: async () => {
       if (!song || !paymentType || !profileId) throw new Error("Missing data");
 
-      const skills = memberSkills || [];
-      const { coverQuality, skillMultiplier } = calculateCoverQuality(song.quality_score, skills);
-      const flatFee = paymentType === "flat_fee" ? calculateCoverFee(song.quality_score) : 0;
-
-      if (paymentType === "flat_fee" && (bandBalance || 0) < flatFee) {
-        throw new Error("Not enough funds");
-      }
-
-      // Fetch original song details for the cover
-      const { data: originalSong } = await supabase
-        .from("songs")
-        .select("title, genre, duration_seconds, duration_display, lyrics")
-        .eq("id", song.id)
-        .single();
-
-      if (!originalSong) throw new Error("Original song not found");
-
-      // Deduct flat fee from band balance
-      if (paymentType === "flat_fee" && flatFee > 0) {
-        const { error: balanceError } = await supabase
-          .from("bands")
-          .update({ band_balance: (bandBalance || 0) - flatFee })
-          .eq("id", bandId);
-        if (balanceError) throw balanceError;
-
-        // Record the earning for original band/artist
-        if (song.band_id) {
-          await supabase.from("band_earnings").insert({
-            band_id: song.band_id,
-            amount: flatFee,
-            source: "cover_license",
-            description: `Cover license fee for "${song.title}"`,
-          });
-        }
-      }
-
-      // Create the song_covers record
-      const { error } = await supabase.from("song_covers").insert({
-        original_song_id: song.id,
-        covering_band_id: bandId,
-        original_band_id: song.band_id,
-        original_user_id: song.user_id,
-        payment_type: paymentType,
-        flat_fee_amount: flatFee,
-        royalty_percentage: paymentType === "royalty_split" ? 50 : 0,
-        cover_quality: coverQuality,
-        skill_multiplier: skillMultiplier,
+      // Authoritative RPC performs all license, fee, royalty credit and song
+      // mutations in one transaction. The browser never chooses the payout
+      // amount, band-earnings source, or final cover quality.
+      const { data, error } = await (supabase as any).rpc("create_band_cover_license_atomic", {
+        p_original_song_id: song.id,
+        p_covering_band_id: bandId,
+        p_profile_id: profileId,
+        p_payment_type: paymentType,
       });
-
       if (error) throw error;
-
-      // Create a new song record in the covering band's repertoire
-      const { error: songError } = await supabase.from("songs").insert({
-        title: `${originalSong.title} (Cover)`,
-        genre: originalSong.genre,
-        quality_score: coverQuality,
-        duration_seconds: originalSong.duration_seconds,
-        duration_display: originalSong.duration_display,
-        lyrics: originalSong.lyrics,
-        band_id: bandId,
-        user_id: profileId,
-        parent_song_id: song.id,
-        ownership_type: "cover",
-        version: "cover",
-        status: "recorded",
-        added_to_repertoire_at: new Date().toISOString(),
-        added_to_repertoire_by: profileId,
-      });
-
-      if (songError) throw songError;
+      return data;
     },
     onSuccess: () => {
       toast({ title: "Song covered!", description: `"${song?.title}" has been added to your band's repertoire. You can now rehearse or record it!` });
