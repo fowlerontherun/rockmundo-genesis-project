@@ -2,6 +2,18 @@ import * as T from 'three';
 import type { VenueProfile } from './venueProfile';
 
 const CLEARANCE = .35;
+export interface LensFootprint { halfWidth: number; halfHeight: number }
+const DEFAULT_LENS: Readonly<LensFootprint> = { halfWidth: CLEARANCE, halfHeight: CLEARANCE };
+
+/** Use the largest possible corrected FOV, so widening a wall-constrained shot
+ * cannot expose an unchecked near-plane edge. A small pad covers numerical drift. */
+export function cameraLensFootprint(near: number, aspect: number, maxFov = 100): LensFootprint {
+  const safeNear = Number.isFinite(near) && near > 0 ? near : .08;
+  const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+  const fov = Number.isFinite(maxFov) ? T.MathUtils.clamp(maxFov, 1, 120) : 100;
+  const halfHeight = safeNear * Math.tan(fov * Math.PI / 360);
+  return { halfWidth: Math.max(CLEARANCE, halfHeight * safeAspect + .05), halfHeight: Math.max(CLEARANCE, halfHeight + .05) };
+}
 export interface CameraBlocker { center: T.Vector3; radius: number }
 interface TriangleEntry { triangle: T.Triangle; bounds: T.Box3; center: T.Vector3 }
 interface CollisionNode { bounds: T.Box3; triangles?: T.Triangle[]; left?: CollisionNode; right?: CollisionNode }
@@ -68,8 +80,8 @@ export class CameraCollisionWorld {
     if (this.tree) visit(this.tree);
     return nearest;
   }
-  clearDistance(target: T.Vector3, lens: T.Vector3) {
-    const key = [...target.toArray(), ...lens.toArray()].join(':');
+  clearDistance(target: T.Vector3, lens: T.Vector3, footprint: Readonly<LensFootprint> = DEFAULT_LENS) {
+    const key = [...target.toArray(), ...lens.toArray(), footprint.halfWidth, footprint.halfHeight].join(':');
     const cached = this.distances.get(key);
     if (cached !== undefined) return cached;
     const delta = lens.clone().sub(target), distance = delta.length();
@@ -79,8 +91,8 @@ export class CameraCollisionWorld {
     if (right.lengthSq() < .001) right.set(1, 0, 0); else right.normalize();
     const up = new T.Vector3().crossVectors(right, forward).normalize();
     let clear = distance;
-    for (const [x, y] of [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-      const offset = right.clone().multiplyScalar(x * CLEARANCE).addScaledVector(up, y * CLEARANCE);
+    for (const [x, y] of [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1], [-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const offset = right.clone().multiplyScalar(x * footprint.halfWidth).addScaledVector(up, y * footprint.halfHeight);
       clear = Math.min(clear, this.hitDistance(target.clone().add(offset), forward, distance));
     }
     if (this.distances.size >= 128) this.distances.clear();
@@ -89,8 +101,9 @@ export class CameraCollisionWorld {
   }
 }
 
-export function constrainCamera(position: T.Vector3, p: VenueProfile): T.Vector3 {
-  const margin = .6;
+export function constrainCamera(position: T.Vector3, p: VenueProfile, footprint: Readonly<LensFootprint> = DEFAULT_LENS): T.Vector3 {
+  const margin = Math.min(Math.max(.6, Math.hypot(footprint.halfWidth, footprint.halfHeight) + .1),
+    p.roomWidth / 4, p.roomDepth / 4, p.roofHeight / 4);
   position.x = T.MathUtils.clamp(position.x, -p.roomWidth / 2 + margin, p.roomWidth / 2 - margin);
   position.z = T.MathUtils.clamp(position.z, .65 - p.stageDepth - 1.4 + margin, p.roomDepth - margin);
   const deck = Math.abs(position.x) < p.stageWidth / 2 + margin && position.z < .65 + margin;
@@ -102,26 +115,27 @@ export function constrainCamera(position: T.Vector3, p: VenueProfile): T.Vector3
 /** Deterministic choice from the requested shot and a few nearby alternatives.
  * There is no last-good-camera state, so a seek reconstructs the same correction. */
 export function safeCameraPose(world: CameraCollisionWorld, p: VenueProfile, desired: T.Vector3, target: T.Vector3,
-  blockers: readonly CameraBlocker[] = []) {
-  const requested = constrainCamera(desired.clone(), p);
+  blockers: readonly CameraBlocker[] = [], footprint: Readonly<LensFootprint> = DEFAULT_LENS) {
+  const lensRadius = Math.hypot(footprint.halfWidth, footprint.halfHeight);
+  const requested = constrainCamera(desired.clone(), p, footprint);
   const candidates = [requested, ...[1.3, 2.6].flatMap(rise => [0, -2, 2].map(side =>
-    constrainCamera(requested.clone().add(new T.Vector3(side, rise, 0)), p)))];
+    constrainCamera(requested.clone().add(new T.Vector3(side, rise, 0)), p, footprint)))];
   const candidatesClear = (point: T.Vector3) => blockers.every(({ center, radius }) => {
     // Keep the lens out of bodies/gear, and keep nearby bystanders out of the
     // centre sightline. The subject itself is intentionally at the ray origin.
-    if (point.distanceTo(center) < radius + CLEARANCE) return false;
+    if (point.distanceTo(center) < radius + lensRadius) return false;
     const line = new T.Line3(target, point), nearest = line.closestPointToPoint(center, true, new T.Vector3());
     return center.distanceTo(target) < radius + .25 || center.distanceTo(point) > 3 || nearest.distanceTo(center) > radius;
   });
   let best = requested, bestScore = -Infinity, foundUsable = false;
   const evaluate = (candidate: T.Vector3) => {
     const distance = candidate.distanceTo(target);
-    const clear = world.clearDistance(target, candidate);
+    const clear = world.clearDistance(target, candidate, footprint);
     const corrected = clear < distance - .001
-      ? target.clone().lerp(candidate, Math.max(0, clear - CLEARANCE) / Math.max(.001, distance)) : candidate;
-    constrainCamera(corrected, p);
+      ? target.clone().lerp(candidate, Math.max(0, clear - lensRadius) / Math.max(.001, distance)) : candidate;
+    constrainCamera(corrected, p, footprint);
     const correctedDistance = corrected.distanceTo(target);
-    const sceneryClear = world.clearDistance(target, corrected) >= correctedDistance - .001;
+    const sceneryClear = world.clearDistance(target, corrected, footprint) >= correctedDistance - .001;
     const bodiesClear = candidatesClear(corrected);
     const usefulDistance = correctedDistance >= 1.6;
     const usable = sceneryClear && bodiesClear && usefulDistance;
@@ -145,7 +159,7 @@ export function safeCameraPose(world: CameraCollisionWorld, p: VenueProfile, des
     for (const rise of [0, 2]) for (const turn of [1, -1, 2, -2, 3, -3, 4]) {
       const angle = yaw + turn * Math.PI / 4;
       evaluate(constrainCamera(new T.Vector3(target.x + Math.sin(angle) * radius,
-        Math.max(requested.y, target.y + rise), target.z + Math.cos(angle) * radius), p));
+        Math.max(requested.y, target.y + rise), target.z + Math.cos(angle) * radius), p, footprint));
     }
   }
   return best;

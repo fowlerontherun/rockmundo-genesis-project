@@ -1,4 +1,4 @@
-import { CameraCollisionWorld, safeCameraPose, type CameraBlocker } from './cameraCollision';
+import { CameraCollisionWorld, safeCameraPose, cameraLensFootprint, type CameraBlocker } from './cameraCollision';
 import { productionLayout, stageLightPositions } from './venueProduction';
 import { crowdMerchChance } from '@/features/player-model/merchWearables';
 import { planVenueLighting, venueBeamCue } from './venueLightShow';
@@ -549,8 +549,9 @@ export class ConcertScene {
           blockers.push({ center, radius: .65 });
         }
       }
+      const lens = cameraLensFootprint(this.camera.near, this.camera.aspect);
       const wantedDistance = this.cameraPos.distanceTo(this.targetPos);
-      this.cameraPos.copy(safeCameraPose(this.cameraCollision, this.venueProfile, this.cameraPos, this.targetPos, blockers));
+      this.cameraPos.copy(safeCameraPose(this.cameraCollision, this.venueProfile, this.cameraPos, this.targetPos, blockers, lens));
       const actualDistance = this.cameraPos.distanceTo(this.targetPos);
       // Preserve the subject's coverage when a wall forces the lens closer,
       // especially on narrow phone displays.

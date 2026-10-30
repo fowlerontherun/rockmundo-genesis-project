@@ -160,7 +160,7 @@ The WebGL smoke test starts a local Vite fixture, loads the production scene, re
 
 ### Ordinary gig camera clearance
 
-Ordinary venue cameras now resolve their final pose against a cached spatial tree of opaque scenery triangles. Wall, roof, stage and prop geometry can shorten or redirect a shot; doorways and proscenium openings remain open. Five parallel rays protect the central sightline and a conservative near-plane footprint. Transparent haze, sky domes, instanced audiences and animated fixtures are excluded from the static tree.
+Ordinary venue cameras now resolve their final pose against a cached spatial tree of opaque scenery triangles. Wall, roof, stage and prop geometry can shorten or redirect a shot; doorways and proscenium openings remain open. Nine parallel rays protect the central sightline and a near-plane footprint sized for the camera aspect ratio and maximum corrected field of view. Transparent haze, sky domes, instanced audiences and animated fixtures are excluded from the static tree.
 
 Room/deck limits and nearby performer/front-row safety bubbles apply after shot composition. The pit lens has a minimum height above front-row heads. When a wall forces a closer lens, the field of view widens (up to 100 degrees) to retain more of the subject on narrow screens. Corrected poses and manual shot changes use direct positioning rather than interpolating through intervening scenery. The correction has no last-good-pose state, preserving replay seeking; TV broadcast camera paths remain separate.
 
@@ -168,7 +168,10 @@ The static tree is built once per scene and freed on disposal. A bounded query c
 
 Checks: `npx vitest run src/features/gig-demo-3d/cameraCollision.test.ts src/features/gig-demo-3d/cameraCollision.venues.test.ts src/features/gig-demo-3d/venueCamera.test.ts src/features/gig-demo-3d/venueCameraAngles.test.ts --maxWorkers=1`.
 
-`npm run test:gig-motion:webgl` additionally renders manual camera angles in a club and a portrait café and checks their scenery sightlines. The geometry suite covers 11 shots on portrait/landscape displays across cafés, bars, theatres, arenas, festival tents and stadiums. These tests verify collision correctness, not an FPS guarantee or visibility of every performer in every composition.
+`npm run test:gig-motion:webgl` additionally renders manual camera angles in a club and a portrait café and checks their scenery sightlines. The geometry suite covers 11 shots on portrait/landscape/ultrawide displays across cafés, bars, theatres, arenas, festival tents and stadiums. These tests verify collision correctness, not an FPS guarantee or visibility of every performer in every composition.
 
 
 When every local camera correction is obstructed or closer than 1.6 metres to the subject, the resolver searches a bounded set of alternative angles around that subject. Clearance outranks preserving the original angle, and the search order is fixed for replay consistency. The static index includes opaque back-face walls, excludes background sky spheres, and honours each geometry's rendered draw range so hidden triangles do not create phantom obstacles.
+
+
+Lens clearance checks now include edge midpoints as well as the centre/corners, preventing thin scenery posts from slipping between those samples. Clearance grows with the near plane, screen aspect ratio and maximum corrected FOV; the same footprint governs scenery queries, body separation and room margins. The bounded collision-query cache includes footprint dimensions, so resizing cannot reuse a result from a narrower lens. Browser smoke coverage includes a 2400×600 ultrawide viewport.
