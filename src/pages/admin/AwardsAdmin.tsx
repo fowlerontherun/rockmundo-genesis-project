@@ -47,7 +47,7 @@ const AwardsAdmin = () => {
       const { data, error } = await (supabase as any)
         .from("award_shows")
         .select("*")
-        .order("show_date", { ascending: false });
+        .order("ceremony_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -67,14 +67,22 @@ const AwardsAdmin = () => {
 
   const createShow = useMutation({
     mutationFn: async (showData: typeof newShow) => {
-      const categories = showData.categories.split(",").map(c => c.trim());
+      const names = [...new Set(showData.categories.split(",").map((category) => category.trim()).filter(Boolean))];
+      if (!showData.show_name.trim() || !showData.venue_name.trim() || !showData.show_date || !names.length) {
+        throw new Error("Provide a name, venue, ceremony date and at least one award category.");
+      }
+      const ceremonyDate = new Date(`${showData.show_date}T20:00:00Z`);
+      if (Number.isNaN(ceremonyDate.getTime())) {
+        throw new Error("Choose a valid ceremony date.");
+      }
       const { data, error } = await (supabase as any)
         .from("award_shows")
         .insert([{
-          show_name: showData.show_name,
-          show_date: showData.show_date,
-          venue_name: showData.venue_name,
-          categories,
+          show_name: showData.show_name.trim(),
+          ceremony_date: ceremonyDate.toISOString(),
+          venue: showData.venue_name.trim(),
+          year: ceremonyDate.getUTCFullYear(),
+          categories: names.map((name) => ({ name })),
           status: "nominations_open",
         }])
         .select()
@@ -87,6 +95,9 @@ const AwardsAdmin = () => {
       toast({ title: "Award Show Created" });
       setDialogOpen(false);
       setNewShow({ show_name: "", show_date: "", venue_name: "", categories: "" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create award show", description: error.message, variant: "destructive" });
     },
   });
 
@@ -122,7 +133,7 @@ const AwardsAdmin = () => {
                 />
               </div>
               <div>
-                <Label>Show Date</Label>
+                <Label>Ceremony Date (20:00 UTC)</Label>
                 <Input
                   type="date"
                   value={newShow.show_date}
@@ -145,7 +156,11 @@ const AwardsAdmin = () => {
                   placeholder="Best Album, Best Song, Best New Artist"
                 />
               </div>
-              <Button onClick={() => createShow.mutate(newShow)} className="w-full">
+              <Button
+                onClick={() => createShow.mutate(newShow)}
+                className="w-full"
+                disabled={createShow.isPending || !newShow.show_name.trim() || !newShow.show_date || !newShow.venue_name.trim() || !newShow.categories.trim()}
+              >
                 Create Show
               </Button>
             </div>
@@ -172,14 +187,15 @@ const AwardsAdmin = () => {
                   </div>
                   <CardDescription>
                     <Calendar className="h-4 w-4 inline mr-2" />
-                    {format(new Date(show.show_date), "PPP")} • {show.venue_name}
+                    {show.ceremony_date ? format(new Date(show.ceremony_date), "PPP") : "Date to be announced"} • {show.venue || "Venue to be announced"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {(show.categories || []).map((cat: string) => (
-                      <Badge key={cat} variant="outline">{cat}</Badge>
-                    ))}
+                    {(show.categories || []).map((cat: string | { name?: string }, index: number) => {
+                      const name = typeof cat === "string" ? cat : (cat.name || `Category ${index + 1}`);
+                      return <Badge key={`${index}-${name}`} variant="outline">{name}</Badge>;
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -207,9 +223,9 @@ const AwardsAdmin = () => {
                   {nominations.map((nom: any) => (
                     <TableRow key={nom.id}>
                       <TableCell>{nom.award_shows?.show_name}</TableCell>
-                      <TableCell>{nom.category}</TableCell>
+                      <TableCell>{nom.category_name}</TableCell>
                       <TableCell>{nom.bands?.name}</TableCell>
-                      <TableCell>{nom.nomination_type}</TableCell>
+                      <TableCell>{nom.nominee_type}</TableCell>
                       <TableCell><Badge>{nom.status}</Badge></TableCell>
                     </TableRow>
                   ))}
