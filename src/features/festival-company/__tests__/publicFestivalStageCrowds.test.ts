@@ -3,6 +3,7 @@ import {
   readPublicFestivalStageCrowds,
   festivalCrowdBandLabels,
   festivalCrowdMoodLabels,
+  filterPublicFestivalStageCrowdsForUniqueStages,
 } from "../domain/publicFestivalStageCrowds";
 
 const launchId = "123e4567-e89b-42d3-a456-426614174000";
@@ -75,6 +76,17 @@ describe("public festival stage crowd snapshots", () => {
       crowdBand: "quiet",
       mood: "calm",
     }]);
+  });
+
+  it("suppresses ambiguous duplicate runtime stage names but retains distinct reports", () => {
+    const side = { ...crowd, stageId: "side-stage", stageName: "Side Stage", mood: "calm" };
+    const reports = readPublicFestivalStageCrowds(payload([crowd, side]), launchId);
+    expect(filterPublicFestivalStageCrowdsForUniqueStages(reports, [
+      { name: " Main Stage " }, { name: "MAIN STAGE" }, { name: "Side Stage" },
+    ])).toEqual([expect.objectContaining({ stageName: "Side Stage" })]);
+    expect(filterPublicFestivalStageCrowdsForUniqueStages(reports, [
+      { name: "Main Stage" }, { name: "Side Stage" },
+    ])).toHaveLength(2);
   });
 
   it("preserves genuinely quiet stage reports rather than treating them as missing", () => {

@@ -8,10 +8,10 @@ export function getFestivalPublicEventPhase(
 ): FestivalPublicEventPhase {
   const starts = Date.parse(startsAt);
   const ends = Date.parse(endsAt);
-  if (!Number.isFinite(starts) || !Number.isFinite(ends) || ends < starts) {
+  if (!Number.isFinite(starts) || !Number.isFinite(ends) || ends <= starts) {
     return "dates_ended"; // Malformed dates must not advertise an upcoming event.
   }
   if (now < starts) return "upcoming";
-  if (now <= ends) return "in_progress";
+  if (now < ends) return "in_progress";
   return "dates_ended";
 }

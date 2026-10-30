@@ -94,3 +94,21 @@ export const festivalCrowdMoodLabels: Record<FestivalCrowdState, string> = {
   frustrated: "Frustrated",
   leaving: "Leaving",
 };
+
+/**
+ * Public stage IDs and runtime stage IDs belong to different namespaces.
+ * Match by name only when it uniquely identifies a runtime stage.
+ */
+export function filterPublicFestivalStageCrowdsForUniqueStages(
+  crowds: readonly PublicFestivalStageCrowd[],
+  stages: readonly { name: string }[],
+): PublicFestivalStageCrowd[] {
+  const nameCounts = new Map<string, number>();
+  for (const stage of stages) {
+    const name = stage.name.trim().toLocaleLowerCase("en-GB");
+    nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
+  }
+  return crowds.filter((crowd) =>
+    nameCounts.get(crowd.stageName.trim().toLocaleLowerCase("en-GB")) === 1,
+  );
+}

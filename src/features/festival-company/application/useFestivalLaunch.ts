@@ -3,6 +3,7 @@ import {useRef} from "react";
 import * as repository from "../data/festivalCompanyRepository";
 import {useActiveProfile} from "@/hooks/useActiveProfile";
 import { FestivalTicketPurchaseRetryKeys } from "./festivalTicketPurchaseRetry";
+import { festivalLaunchInvalidations } from "./festivalCacheInvalidations";
 export const festivalLaunchKey=(id?:string)=>["festival-launch",id] as const;
 export const publicFestivalKey=(slug?:string)=>["public-festival",slug] as const;
 export const festivalDirectoryKey=(filters:Record<string,unknown>={})=>["festival-directory",filters] as const;
@@ -17,7 +18,13 @@ export const useFestivalPlayerTicketSalesBreakdown=(id?:string)=>useQuery({query
 export const useFestivalSalesSummary=(id?:string)=>useQuery({queryKey:["festival-sales-summary",id],enabled:Boolean(id),queryFn:()=>repository.getFestivalTicketSalesSummary(id!),refetchInterval:60_000});
 export const useFestivalSalesSummaryForLaunch=(id?:string,launchId?:string)=>useQuery({queryKey:["festival-sales-summary",id,launchId],enabled:Boolean(id&&launchId),queryFn:()=>repository.getFestivalTicketSalesSummaryForLaunch(id!,launchId!),refetchInterval:60_000});
 export const useFestivalPlayerTicketSalesBreakdownForLaunch=(id?:string,launchId?:string)=>useQuery({queryKey:["festival-player-sales-breakdown",id,launchId],enabled:Boolean(id&&launchId),queryFn:()=>repository.getFestivalPlayerTicketSalesBreakdownForLaunch(id!,launchId!),refetchInterval:60_000});
-const useLaunchMutation=<T,>(fn:(i:T)=>Promise<unknown>)=>{const c=useQueryClient();return useMutation({mutationFn:fn,onSuccess:(_,i)=>{const id=(i as {festivalCompanyId?:string}).festivalCompanyId;void Promise.all([c.invalidateQueries({queryKey:["festival-launch"]}),c.invalidateQueries({queryKey:["festival-sales-summary",id]}),c.invalidateQueries({queryKey:["festival-player-sales-breakdown",id]}),c.invalidateQueries({queryKey:["festival-directory"]}),c.invalidateQueries({queryKey:["public-festival"]}),c.invalidateQueries({queryKey:["public-festival-tickets"]}),c.invalidateQueries({queryKey:["notifications"]}),c.invalidateQueries({queryKey:["mail"]})])}})};
+const useLaunchMutation=<T,>(fn:(i:T)=>Promise<unknown>)=>{
+  const c=useQueryClient();
+  return useMutation({
+    mutationFn:fn,
+    onSuccess:()=>Promise.all(festivalLaunchInvalidations.map(queryKey => c.invalidateQueries({queryKey}))),
+  });
+};
 export const useSaveFestivalPublicProfile=()=>useLaunchMutation(repository.saveFestivalPublicProfile);export const useBeginFestivalLaunchReview=()=>useLaunchMutation(repository.beginFestivalLaunchReview);export const useLaunchFestival=()=>useLaunchMutation(repository.launchFestival);export const useOpenFestivalTicketSales=()=>useLaunchMutation(repository.openFestivalTicketSales);export const usePauseFestivalTicketSales=()=>useLaunchMutation(repository.pauseFestivalTicketSales);export const useResumeFestivalTicketSales=()=>useLaunchMutation(repository.resumeFestivalTicketSales);export const useCloseFestivalTicketSales=()=>useLaunchMutation(repository.closeFestivalTicketSales);export const useIssueFestivalComplimentaryTickets=()=>useLaunchMutation(repository.issueFestivalComplimentaryTickets);export const useCancelLaunchedFestival=()=>useLaunchMutation(repository.cancelLaunchedFestival);
 export const usePurchaseFestivalTickets = () => {
   const { profileId } = useActiveProfile();
