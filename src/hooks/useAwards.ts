@@ -168,6 +168,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       .from("award_nominations")
       .select("*")
       .eq("award_show_id", showId)
+      .eq("status", "shortlisted")
       .order("vote_count", { ascending: false });
 
     if (error) throw error;
@@ -204,7 +205,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
 
       validateNominationSubmission(nomination);
 
-      if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(currentGameYear)) {
+      if (isLifetimeAchievementCategory(nomination.category_name) && !isLifetimeAchievementYear(shows.find((show) => show.id === nomination.award_show_id)?.year ?? currentGameYear)) {
         throw new Error("Lifetime Achievement nominations are only available every 4 in-game years");
       }
 
