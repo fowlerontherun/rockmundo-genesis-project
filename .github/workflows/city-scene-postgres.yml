@@ -82,6 +82,17 @@ jobs:
             psql -X -v ON_ERROR_STOP=1 -f "${migration}"
             echo "::endgroup::"
           done
+      - name: Apply 30 October Scene migrations in creation order
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t scene_additions < <(find supabase/migrations -maxdepth 1 -name '20261030*scene*.sql' -print | LC_ALL=C sort)
+          test "${#scene_additions[@]}" -ge 1
+          for migration in "${scene_additions[@]}"; do
+            echo "::group::Applying ${migration}"
+            psql -X -v ON_ERROR_STOP=1 -f "${migration}"
+            echo "::endgroup::"
+          done
       - name: Verify security, RLS and default-off settings
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_challenges_staging_smoke.sql
       - name: Verify actual cycle targets, objective caps and mural unlocks
@@ -114,6 +125,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_legacy_integration.sql
       - name: Verify World Scene mural map status, privacy, monthly precedence and expiry
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_world_map_integration.sql
+      - name: Verify per-city November readiness, partial launch and service-only ACL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/city_scene_november_city_readiness_integration.sql
       - name: Verify transaction rollback preserved payout safety
         run: |
           psql -X -v ON_ERROR_STOP=1 <<'SQL'
