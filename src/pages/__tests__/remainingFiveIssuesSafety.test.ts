@@ -58,9 +58,9 @@ describe("five open-issue safety improvements", () => {
     expect(auditFestivalSponsorSlots([sponsor("m", "Main sponsor"), ...[1,2,3,4,5].map(n => sponsor(String(n), "Supporting sponsor"))]).ready).toBe(false);
     expect(auditFestivalSponsorSlots([sponsor("m", "Main sponsor"), sponsor("m", "Supporting sponsor")]).duplicateIds).toBe(true);
     expect(auditFestivalSponsorSlots([sponsor("m", "Main sponsor", null)]).missingLogos).toBe(1);
-    const page = source("src/features/festival-company/ui/PublicFestivalPage.tsx");
-    expect(page).toContain("sponsorAudit.mainCount === 0");
-    expect(page).toContain("No main sponsor has been announced");
+    const guide = source("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
+    expect(guide).toContain("auditFestivalSponsorSlots(f.sponsors)");
+    expect(guide).toContain("No main sponsor has been published");
   });
 
   it("#2183 derives campsite add-on guidance only from published ticket products", () => {
@@ -70,9 +70,9 @@ describe("five open-issue safety improvements", () => {
     ]);
     expect(published).toEqual([{ name: "Camp Upgrade", saleStatus: "on_sale" }]);
     expect(getPublishedFestivalCampingTickets([])).toEqual([]);
-    const page = source("src/features/festival-company/ui/PublicFestivalPage.tsx");
-    expect(page).toContain("A camping add-on does not grant admission on its own.");
-    expect(page).toContain("Site facilities are confirmed only by organiser-published information.");
-    expect(page).toContain("No provision or staffing level is promised here.");
+    const guide = source("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
+    expect(guide).toContain("A camping add-on never replaces admission.");
+    expect(guide).toContain("Campground facilities are not implied by camping ticket availability.");
+    expect(guide).toContain("No staffing roster or operational readiness score is published");
   });
 });
