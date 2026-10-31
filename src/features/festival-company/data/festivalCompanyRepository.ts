@@ -358,7 +358,7 @@ export const cancelLaunchedFestival=(i:{festivalCompanyId:string;expectedVersion
 // profile or immutable launch snapshot when updating a subsequent annual edition.
 export type FestivalEditionVisitorGuideSections = Partial<Record<
   "site" | "transport" | "parking" | "camping" | "accessibility" | "foodAndDrink" |
-  "gates" | "curfew" | "contact" | "faq" | "ticketHelp" | "ageGuidance" | "terms" | "refundPolicy", string
+  "gates" | "curfew" | "contact" | "faq" | "ticketHelp" | "ageGuidance" | "terms" | "refundPolicy" | "welfare", string
 >>;
 export interface FestivalGuideEditionOption {
   festivalEditionId: string;
