@@ -25,6 +25,7 @@ const fields: { key: keyof FestivalEditionVisitorGuideSections; title: string; h
   { key: "terms", title: "Entry terms", hint: "Actual approved entry rules, not invented legal promises" },
   { key: "refundPolicy", title: "Refunds", hint: "Only approved policy; do not guarantee eligibility" },
   { key: "faq", title: "Additional FAQs", hint: "Organiser answers for this particular edition" },
+  { key: "welfare", title: "Visitor welfare & medical", hint: "Approved public summary; shown only after this edition's security, medical staffing and supplier readiness is verified" },
   { key: "contact", title: "Contact", hint: "Email, secure HTTPS link or clear organiser contact details" },
 ];
 
