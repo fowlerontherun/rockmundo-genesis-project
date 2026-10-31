@@ -112,6 +112,14 @@ export default function SystemStatusAdmin() {
     setConfirmedLiveGig(false);
   }, [data]);
 
+  // Both release switches can be armed while the authoritative publication
+  // gate still suppresses new Halloween payouts. Never label that state live.
+  const halloweenPayoutBlocked =
+    !!data?.halloween.enabled &&
+    !!data?.halloween.rewards_live &&
+    halloweenPreflight?.database_ready === false;
+  const pumpkinHatUnpublished = halloweenPreflight?.checks?.pumpkin_hat_published === false;
+
   const saveKey = async (key: string, value: any) => {
     const { data: saved, error } = await (supabase as any)
       .from("system_settings")
@@ -320,7 +328,8 @@ export default function SystemStatusAdmin() {
             <CardTitle className="flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-orange-400" /> Halloween 2026 · The Haunted Stage
               <Badge variant="outline" className="ml-2">
-                {halloweenEventPhase(data?.halloween) === "active" ? "Active" :
+                {halloweenPayoutBlocked ? "Rewards blocked" :
+                halloweenEventPhase(data?.halloween) === "active" ? "Active" :
                   halloweenEventPhase(data?.halloween) === "upcoming" ? "Scheduled" :
                   halloweenEnabled ? "Outside event window" : "Not enabled"}
               </Badge>
@@ -333,9 +342,23 @@ export default function SystemStatusAdmin() {
             <div className="rounded-md border p-3 text-sm">
               <p className="flex items-center gap-2 font-medium"><CalendarDays className="h-4 w-4 text-orange-400" /> 24 October – 1 November 2026</p>
               <p className="mt-1 text-muted-foreground">Ends {data?.halloween ? halloweenEndLabel(data.halloween) : "1 November 2026 at 23:59"} (UK time). The event ends automatically even if the switch remains on.</p>
-              <p className="mt-2">Server-side gig rewards: <strong>{data?.halloween.rewards_live ? "Marked ready for rollout" : "Not yet certified"}</strong></p>
+              <p className="mt-2">Server-side gig rewards: <strong>{halloweenPayoutBlocked ? "Blocked by database release gate" : data?.halloween.rewards_live ? "Armed (live payout still requires verification)" : "Not yet certified"}</strong></p>
               <p className="mt-1 text-muted-foreground">Database checks do not verify deployed Edge Function versions or an actual completed gig. These require separate human sign-off.</p>
             </div>
+            {halloweenPayoutBlocked && (
+              <div role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm space-y-2">
+                <p className="font-semibold text-destructive">Halloween payouts are blocked despite both event switches being on.</p>
+                <p>
+                  {pumpkinHatUnpublished
+                    ? "The Pumpkin Hat is not published. Server-side gig-start snapshots, performance bonuses and first-time 500 XP/achievement claims are deliberately suppressed until genuine Avatar V1 and stage/replay visual QA is complete."
+                    : "At least one server-side database readiness check is failing. Review the checks below before claiming the event is live."}
+                </p>
+                <p className="text-muted-foreground">
+                  Publishing the hat later does not retroactively reward gigs that started without an eligible frozen outfit.
+                  If release QA cannot be completed, turn off both Halloween switches and save. Never backfill or fabricate player XP to pass QA.
+                </p>
+              </div>
+            )}
             <div className="space-y-3 rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-sm">Halloween database preflight</p>
