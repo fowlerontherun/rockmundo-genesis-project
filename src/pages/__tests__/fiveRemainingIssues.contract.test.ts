@@ -49,20 +49,21 @@ describe("remaining five-issue hardening regressions", () => {
     expect(displayed[0].id).toBe("brand-one");
     expect(displayed[0].relationshipLabel).toBe("Main sponsor");
     expect(duplicate).toHaveLength(3); // No canonical contract mutation
-    const publicPage = source("src/features/festival-company/ui/PublicFestivalPage.tsx");
-    expect(publicPage).toContain("auditFestivalSponsorSlots(f.sponsors)");
-    expect(publicPage).toContain("Repeated sponsor entries were consolidated");
-    expect(publicPage).toContain("Some partner logos are awaiting publication");
+    const visitorGuide = source("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
+    expect(visitorGuide).toContain("auditFestivalSponsorSlots(f.sponsors)");
+    expect(visitorGuide).toContain("orderFestivalPublicSponsors(f.sponsors)");
+    expect(visitorGuide).toContain("supporting = sponsors.filter((s) => !isMainFestivalSponsor(s)).slice(0, 4)");
   });
 
   it("#2183 provides keyboard-expandable visitor guide sections and confirmed location", () => {
     const page = source("src/features/festival-company/ui/PublicFestivalPage.tsx");
-    expect(page).toContain('open={key === "travel"}');
-    expect(page).toContain('<summary className="cursor-pointer');
-    expect(page).toContain('querySelector("details")?.setAttribute("open", "")');
-    expect(page).toContain("Confirmed festival location: {f.city}, {f.country}");
-    expect(page).toContain("Exact site, parking and transport arrangements are only confirmed");
-    expect(page).toContain("A camping add-on never replaces an admission ticket.");
+    const guide = source("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
+    expect(page).toContain("<FestivalVisitorGuide edition={f}");
+    expect(guide).toContain('<summary className="flex cursor-pointer');
+    expect(guide).toContain('querySelector("details")?.setAttribute("open", "")');
+    expect(guide).toContain("<strong>Confirmed destination:</strong> {f.city}, {f.country}");
+    expect(guide).toContain("Routes, travel times and available parking are not assumed");
+    expect(guide).toContain("A camping add-on never replaces admission.");
   });
 
   it("#4072 manifest is strictly read-only and refuses to assert schema effects", () => {
