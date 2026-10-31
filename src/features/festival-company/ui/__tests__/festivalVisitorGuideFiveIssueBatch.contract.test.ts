@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const page = read("src/features/festival-company/ui/PublicFestivalPage.tsx");
+const guide = read("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
 const helpers = read("src/features/festival-company/ui/festivalPublicDisplay.ts");
 const sponsor = read("src/features/festival-company/ui/SponsorIdentity.tsx");
 const logos = read("supabase/migrations/20260928160000_backfill_canonical_sponsorship_brand_logos.sql");
@@ -38,11 +39,12 @@ describe("public festival visitor-guide regressions", () => {
   });
 
   it("#4070 adds accessible safety and partner guide destinations without fake facilities", () => {
-    expect(page).toContain('id="festival-info-safety"');
-    expect(page).toContain('id="festival-info-sponsors"');
-    expect(page).toContain("medical assistance, welfare facilities, security and lost-property");
-    expect(page).toContain("have not been confirmed for this edition");
-    expect(page).toContain('href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key)');
-    expect(page).toContain("<SponsorIdentity name={sponsor.name} logoReference={sponsor.logoReference} />");
+    expect(page).toContain("<FestivalVisitorGuide");
+    expect(guide).toContain('id="welfare"');
+    expect(guide).toContain('id="partners"');
+    expect(guide).toContain("On-site medical assistance, security, welfare and lost-property");
+    expect(guide).toContain("have not been verified for this edition");
+    expect(guide).toContain('querySelector("details")?.setAttribute("open", "")');
+    expect(guide).toContain("<SponsorIdentity name={main.name} logoReference={main.logoReference} />");
   });
 });
