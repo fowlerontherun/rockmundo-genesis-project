@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FestivalScheduleWorkspace } from "./FestivalScheduleWorkspace";
 
@@ -68,7 +68,7 @@ vi.mock("./FestivalArtistScheduleFinaliser", () => ({
 }));
 
 afterEach(() => {
-  upsertItem.mutate.mockClear();
+  upsertItem.mutate.mockReset();
   reorderStage.mutateAsync.mockClear();
   publish.mutate.mockClear();
   previewTemplate.mutate.mockClear();
@@ -159,4 +159,58 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
       },
     });
   });
+  it("clears the selected day and open inspector when switching editions", async () => {
+    const original = structuredClone(workspace);
+    const { rerender } = render(<FestivalScheduleWorkspace editionId="edition-1" />);
+    fireEvent.mouseDown(screen.getByRole("tab"), { button: 0, ctrlKey: false });
+    fireEvent.click(screen.getAllByRole("button", { name: /Sunset opener/i })[0]);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    try {
+      workspace.edition = { id: "edition-2", title: "Next festival" };
+      workspace.festivalDates = ["2030-07-02"];
+      workspace.scheduleItems = [{ ...original.scheduleItems[0], id: "next-slot", edition_id: "edition-2", festival_date: "2030-07-02", title: "Next festival opener" }];
+      rerender(<FestivalScheduleWorkspace editionId="edition-2" />);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /Next festival opener/i }).length).toBeGreaterThan(0);
+      expect(screen.queryByRole("button", { name: /Sunset opener/i })).not.toBeInTheDocument();
+    } finally { Object.assign(workspace, original); }
+  });
+
+  it("blocks duplicate submissions and preserves the request key after an uncertain failure", async () => {
+    render(<FestivalScheduleWorkspace editionId="edition-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /Manual slot/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+    const [first, callbacks] = upsertItem.mutate.mock.calls[0];
+    expect(within(dialog).getByRole("button", { name: "Saving…" })).toBeDisabled();
+    fireEvent.submit(dialog.querySelector("form")!);
+    expect(upsertItem.mutate).toHaveBeenCalledTimes(1);
+    act(() => { callbacks.onError(new Error("Lost response")); callbacks.onSettled(); });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Check the schedule before retrying");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create" }));
+    expect(upsertItem.mutate).toHaveBeenCalledTimes(2);
+    expect(upsertItem.mutate.mock.calls[1][0]).toEqual(first);
+  });
+
+  it("uses a new request key after confirmed success", async () => {
+    render(<FestivalScheduleWorkspace editionId="edition-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /Manual slot/i }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Create" }));
+    const [first, callbacks] = upsertItem.mutate.mock.calls[0];
+    act(() => { callbacks.onSuccess({}); callbacks.onSettled(); });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Manual slot/i }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Create" }));
+    expect(upsertItem.mutate.mock.calls[1][0].idempotencyKey).not.toBe(first.idempotencyKey);
+  });
+
+  it("does not open manual creation without an editable draft", () => {
+    const draft = workspace.draftRevision;
+    try {
+      workspace.draftRevision = null as unknown as typeof draft;
+      render(<FestivalScheduleWorkspace editionId="edition-1" />);
+      expect(screen.getByRole("button", { name: /Manual slot/i })).toBeDisabled();
+    } finally { workspace.draftRevision = draft; }
+  });
+
 });

@@ -34,7 +34,9 @@ describe("festival running order preview", () => {
   it("warns about overlaps and short changeovers", () => {
     const overlap = slot("overlap", "2030-06-01T17:40:00Z", 30);
     expect(getRunningOrderWarnings([first, overlap])[0].warning).toMatch(/Overlaps next act by 5 min/);
-    expect(getRunningOrderWarnings([first, second])[0].warning).toBeNull();
+    expect(getRunningOrderWarnings([first, second])[0].warning).toMatch(/Only 15 min.*20 min changeover/);
+    const exactGap = slot("exact", "2030-06-01T18:05:00Z", 30);
+    expect(getRunningOrderWarnings([first, exactGap])[0].warning).toBeNull();
     const shortGap = slot("short", "2030-06-01T17:55:00Z", 30);
     expect(getRunningOrderWarnings([first, shortGap])[0].warning).toMatch(/Only 10 min/);
   });
