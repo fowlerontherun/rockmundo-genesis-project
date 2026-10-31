@@ -15,7 +15,7 @@ export interface FestivalVisitorGuide {
   siteStyle: string | null;
   sections: Partial<Record<FestivalVisitorGuideKey, string>>;
   siteMapReference: string | null;
-  verifiedSafety: null;
+  verifiedSafety: { summary: string } | null;
 }
 export function parseFestivalVisitorGuide(v: unknown): FestivalVisitorGuide | null {
   if (v == null) return null; // Older public RPCs remain compatible.
@@ -36,7 +36,13 @@ export function parseFestivalVisitorGuide(v: unknown): FestivalVisitorGuide | nu
     // Only an approved server projection may add these; never accept arbitrary
     // text as an approved map or staffing readiness attestation.
     siteMapReference: null,
-    verifiedSafety: null,
+    verifiedSafety: (() => {
+      const verified = guide.verifiedSafety;
+      if (!verified || typeof verified !== "object" || Array.isArray(verified)) return null;
+      const summary = (verified as Record<string, unknown>).summary;
+      return typeof summary === "string" && summary.trim() && summary.length <= 1200
+        ? { summary: summary.trim() } : null;
+    })(),
   };
 }
 
