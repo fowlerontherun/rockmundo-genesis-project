@@ -55,3 +55,27 @@ export const usePurchaseFestivalTickets = () => {
     },
   });
 };
+
+
+// Edition-specific visitor-guide editing cannot silently mutate another edition.
+export const festivalVisitorGuideEditionsKey = (companyId: string) => ["festival-guide-editions", companyId] as const;
+export const festivalEditionVisitorGuideKey = (companyId: string, editionId: string) =>
+  ["festival-edition-visitor-guide", companyId, editionId] as const;
+export const useFestivalVisitorGuideEditions = (companyId: string) =>
+  useQuery({ queryKey: festivalVisitorGuideEditionsKey(companyId),
+    enabled: Boolean(companyId), queryFn: () => repository.getFestivalVisitorGuideEditions(companyId) });
+export const useFestivalEditionVisitorGuide = (companyId: string, editionId: string) =>
+  useQuery({ queryKey: festivalEditionVisitorGuideKey(companyId, editionId),
+    enabled: Boolean(companyId && editionId),
+    queryFn: () => repository.getFestivalEditionVisitorGuide(companyId, editionId) });
+export const useSaveFestivalEditionVisitorGuide = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: repository.saveFestivalEditionVisitorGuide,
+    onSuccess: (updated, variables) => Promise.all([
+      queryClient.setQueryData(festivalEditionVisitorGuideKey(variables.festivalCompanyId, variables.editionId), updated),
+      queryClient.invalidateQueries({ queryKey: ["public-festival"] }),
+      queryClient.invalidateQueries({ queryKey: ["festival-directory"] }),
+    ]),
+  });
+};
