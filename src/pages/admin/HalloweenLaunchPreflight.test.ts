@@ -42,6 +42,22 @@ describe("Halloween live-event launch protection", () => {
     expect(ui).toContain("if (halloweenRewardsReady && !data.halloween.rewards_live && !confirmedLiveGig)");
   });
 
+  it("does not call an armed-but-unpublished Halloween event fully live", () => {
+    const admin = read("src/pages/admin/SystemStatus.tsx");
+    expect(admin).toContain("halloweenPayoutBlocked");
+    expect(admin).toContain("halloweenPayoutUnverified");
+    expect(admin).toContain('halloweenPayoutUnverified ? "Rewards unverified"');
+    expect(admin).toContain("admin database preflight is unavailable");
+    expect(admin).toContain("halloweenPreflight?.database_ready === false");
+    expect(admin).toContain("pumpkinHatUnpublished");
+    expect(admin).toContain('halloweenPayoutBlocked ? "Rewards blocked"');
+    expect(admin).toContain('halloweenPayoutBlocked ? "Blocked by database release gate"');
+    expect(admin).toContain("Halloween payouts are blocked despite both event switches being on.");
+    expect(admin).toContain("Publishing the hat later does not retroactively reward gigs");
+    expect(admin).toContain("turn off both Halloween switches and save");
+    expect(admin).not.toContain("Marked ready for rollout");
+  });
+
   it("does not mistake DB readiness for deployed function or stage playback sign-off", () => {
     expect(sql).toContain("It cannot certify an Edge Function deployment or a visual smoke test");
     expect(ui).toContain("Database checks do not verify deployed Edge Function versions");
