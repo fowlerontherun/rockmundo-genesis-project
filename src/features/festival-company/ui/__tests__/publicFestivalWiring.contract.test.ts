@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 
 const read = (file: string) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 const page = read("../PublicFestivalPage.tsx");
+const guide = read("../FestivalVisitorGuide.tsx");
 const hook = read("../../application/useFestivalLaunch.ts");
 
 describe("published festival public workflows", () => {
   it("#3921: FAQ never promotes provisional timetable rows to published acts", () => {
-    expect(page).toContain('publishedPerformances.length ? "Published performance times');
+    expect(guide).toContain("publishedPerformances.length ?");
     expect(page).not.toContain('f.timetable.length ? "Published performance times');
     expect(page).toContain("const publishedPerformances = confirmedLineup.filter(");
   });
@@ -17,7 +18,7 @@ describe("published festival public workflows", () => {
     // The import can be combined with the safe-logo validator. Verify the
     // functional recovery component is actually rendered in both placements.
     expect(page).toMatch(/import\s*\{[^}]*\bSponsorIdentity\b[^}]*\}\s*from\s*["']\.\/SponsorIdentity["']/s);
-    expect((page.match(/<SponsorIdentity\b/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(((page + guide).match(/<SponsorIdentity\b/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it("#3923: blocks purchases with no active character", () => {

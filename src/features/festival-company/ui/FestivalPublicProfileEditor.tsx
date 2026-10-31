@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useFestivalLaunchPlan, useSaveFestivalPublicProfile } from "../application/useFestivalLaunch";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
+import { FestivalEditionVisitorGuideEditor } from "./FestivalEditionVisitorGuideEditor";
 
 type ProfileDraft = {
   publicName: string;
@@ -161,6 +162,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Public festival profile</CardTitle>
@@ -260,5 +262,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
         </fieldset>
       </CardContent>
     </Card>
+    <FestivalEditionVisitorGuideEditor festivalCompanyId={festivalCompanyId} />
+    </>
   );
 }
