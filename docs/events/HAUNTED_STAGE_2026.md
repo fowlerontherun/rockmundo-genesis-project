@@ -113,3 +113,15 @@ first XP/achievement settlement.
 masculine and feminine Avatar V1 wardrobe, full gig stage and archived playback,
 then publish via the existing genuine visual QA workflow. Neither a green CI
 result nor both admin switches being enabled proves publication or visual quality.
+
+## Production release audit — 31 October 2026 (read-only)
+
+This is a point-in-time observation, **not** a release approval. The server-side implementation and unique reward claims were introduced by earlier PRs, but the release is still gated by actual Pumpkin Hat publication and genuine gig QA.
+
+- `halloween_2026_event.enabled=true` and `rewards_live=true`; **armed does not mean paying out**.
+- The exact Pumpkin Hat item remains `curated_asset_status='asset_ready'`, not `published`. Its visual validation metadata and ready preview do not substitute for actual masculine/feminine Avatar V1, stage and replay inspection.
+- 322 character inventories own the hat; just 1 currently has it equipped. Ownership alone cannot prove a qualifying outfit was frozen when a gig started.
+- Four gigs started inside the event window (three completed, one still in progress). There are **zero** `halloween_2026_gig_outfits` records and **zero** `halloween_2026_first_rewards` claims. Existing stage visual snapshots are separate from Halloween bonus snapshots.
+- The server publication interlock has correctly prevented new Halloween reward eligibility while the hat is unpublished. **Do not** turn this into a retroactive grant: gigs that started without an eligible frozen Halloween snapshot are never owed a bonus/first claim under the accepted rule.
+
+To complete issue #4179 before the event ends, a human must validate the actual visual appearance and persistence on stage, curate/publish the real item with truthful QA evidence, verify the deployed release, then inspect a genuinely qualifying gig that **starts after** publication with a frozen equipped Pumpkin Hat. Confirm its persisted +5/10/15% roll, score before settlement, once-only 500 XP and Pumpkin Headliner achievement, repeat-worker idempotency and report after refresh. If QA is not ready, disarm both live switches via admin instead of faking claims. Preserve the historical records and leave #4179 open until the genuine reward evidence exists.
