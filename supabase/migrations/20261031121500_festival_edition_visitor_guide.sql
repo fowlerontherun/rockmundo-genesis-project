@@ -1,6 +1,8 @@
 -- #2183: edition-scoped public festival visitor notes.
--- Apply after the legacy festival annual-edition foundation (which is future-dated
--- in this repository). Never rewrite historical launch snapshots.
+-- Deploy against a database where festival_editions_v2 and get_public_festival
+-- are installed. This repository contains inherited 2029-dated migrations;
+-- check applied schema dependencies before staging this forward migration.
+-- Never rewrite historical launch snapshots.
 CREATE TABLE IF NOT EXISTS public.festival_edition_visitor_guides (
   festival_edition_id uuid PRIMARY KEY REFERENCES public.festival_editions_v2(id),
   guide_version integer NOT NULL DEFAULT 1 CHECK (guide_version > 0),
@@ -37,7 +39,12 @@ DECLARE
   guide public.festival_edition_visitor_guides%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL OR actor IS NULL OR
-     NOT public._festival_launch_authorised(p_festival_company_id, actor) THEN
+     NOT (
+       EXISTS (SELECT 1 FROM public.festival_companies company
+               WHERE company.id = p_festival_company_id
+                 AND company.owner_profile_id = actor)
+       OR coalesce(public.has_role(auth.uid(), 'admin'::public.app_role), false)
+     ) THEN
     RAISE EXCEPTION 'festival_visitor_guide_forbidden' USING ERRCODE = 'P0001';
   END IF;
   SELECT * INTO edition FROM public.festival_editions_v2
@@ -78,7 +85,12 @@ DECLARE
   admin_actor boolean := coalesce(public.has_role(auth.uid(), 'admin'::public.app_role), false);
 BEGIN
   IF auth.uid() IS NULL OR actor IS NULL OR
-     NOT public._festival_launch_authorised(p_festival_company_id, actor) THEN
+     NOT (
+       EXISTS (SELECT 1 FROM public.festival_companies company
+               WHERE company.id = p_festival_company_id
+                 AND company.owner_profile_id = actor)
+       OR coalesce(public.has_role(auth.uid(), 'admin'::public.app_role), false)
+     ) THEN
     RAISE EXCEPTION 'festival_visitor_guide_forbidden' USING ERRCODE = 'P0001';
   END IF;
   IF p_idempotency_key IS NULL OR p_expected_version IS NULL OR p_expected_version < 0
@@ -140,15 +152,14 @@ $$;
 
 -- A new public read model supplements the existing authoritative launch
 -- projection. It cannot bypass get_public_festival's publication boundary.
--- Exact edition identity wins; older published payloads without editionId are
--- matched only when the company and local start-date select one edition.
+-- Exact edition identity wins. Older payloads with no edition ID must not
+-- borrow visitor notes from a different annual edition.
 CREATE OR REPLACE FUNCTION public.get_public_festival_guide(p_slug text)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   base jsonb;
   matched_edition uuid;
   site_style text;
-  matched_count integer;
   content jsonb;
 BEGIN
   base := public.get_public_festival(p_slug);
@@ -157,16 +168,6 @@ BEGIN
     SELECT id, site_type INTO matched_edition, site_style
     FROM public.festival_editions_v2
     WHERE id = (base->>'editionId')::uuid;
-  ELSE
-    SELECT count(*), min(edition.id::text)::uuid, min(edition.site_type)
-      INTO matched_count, matched_edition, site_style
-    FROM public.festival_public_editions published
-    JOIN public.festival_launches launch ON launch.id = published.festival_launch_id
-    JOIN public.festival_editions_v2 edition
-      ON edition.festival_company_id = launch.festival_company_id
-      AND edition.starts_on = (published.starts_at AT TIME ZONE published.timezone)::date
-    WHERE published.slug = p_slug;
-    IF matched_count <> 1 THEN matched_edition := NULL; site_style := NULL; END IF;
   END IF;
   SELECT sections INTO content FROM public.festival_edition_visitor_guides
     WHERE festival_edition_id = matched_edition;
