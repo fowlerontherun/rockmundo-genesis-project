@@ -333,7 +333,7 @@ export const beginFestivalLaunchReview=async(i:{festivalCompanyId:string;expecte
 export const launchFestival=async(i:{festivalCompanyId:string;expectedVersion:number;publicProfileVersion:number;idempotencyKey:string})=>{if(!validAction(i))throw new Error("festival_launch_review_required");return parseFestivalLaunch(await launchCall("launch_festival",{p_festival_company_id:i.festivalCompanyId,p_expected_version:i.expectedVersion,p_public_profile_version:i.publicProfileVersion,p_idempotency_key:i.idempotencyKey}))};
 const salesAction=async(name:string,i:{festivalCompanyId:string;expectedVersion:number;idempotencyKey:string;reason?:string})=>{if(!validAction(i))throw new Error("festival_ticket_purchase_stale");return parseFestivalLaunch(await launchCall(name,{p_festival_company_id:i.festivalCompanyId,p_expected_launch_version:i.expectedVersion,...(i.reason?{p_reason:i.reason}:{}),p_idempotency_key:i.idempotencyKey}))};
 export const openFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("open_festival_ticket_sales",i);export const pauseFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("pause_festival_ticket_sales",i);export const resumeFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("resume_festival_ticket_sales",i);export const closeFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("close_festival_ticket_sales",i);
-export const getPublicFestival=async(slug:string)=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");return parsePublicFestival(await launchCall("get_public_festival",{p_slug:slug}))};
+export const getPublicFestival=async(slug:string)=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");return parsePublicFestival(await launchCall("get_public_festival_guide",{p_slug:slug}))};
 export const getPublicFestivalDirectory=async(filters:Record<string,unknown>={})=>{const v=await launchCall("get_public_festival_directory",{p_filters:filters});if(!Array.isArray(v))throw new Error("malformed_public_festival_result");return v.map(parsePublicFestival)};
 export const getPublicFestivalTimetable=async(slug:string)=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");const v=await launchCall("get_public_festival_timetable",{p_slug:slug});if(!Array.isArray(v))throw new Error("malformed_public_festival_result");return v as FestivalPublicTimetableEntry[];}
 export const getPublicFestivalTicketProducts=async(launchId:string)=>{if(!isFestivalUuid(launchId))throw new Error("malformed_festival_ticket_product_result");const v=await launchCall("get_public_festival_ticket_products",{p_festival_launch_id:launchId});if(!Array.isArray(v))throw new Error("malformed_festival_ticket_product_result");return v.map(parseFestivalTicketProduct)};
@@ -345,3 +345,91 @@ export const getFestivalPlayerTicketSalesBreakdown=(festivalCompanyId:string)=>l
 export const getFestivalPlayerTicketSalesBreakdownForLaunch=(festivalCompanyId:string,launchId:string)=>launchCall("get_festival_player_ticket_sales_breakdown_for_launch",{p_festival_company_id:festivalCompanyId,p_festival_launch_id:launchId});
 export const getMyFestivalTickets=async()=>parseFestivalTicketWallet(await launchCall("get_my_festival_tickets"));
 export const cancelLaunchedFestival=(i:{festivalCompanyId:string;expectedVersion:number;reason:string;confirmationToken:string;idempotencyKey:string})=>launchCall("cancel_launched_festival",{p_festival_company_id:i.festivalCompanyId,p_expected_launch_version:i.expectedVersion,p_reason:i.reason,p_confirmation_token:i.confirmationToken,p_idempotency_key:i.idempotencyKey});
+
+
+// #2183: separate, edition-bound public notes. Never write the company-wide
+// profile or immutable launch snapshot when updating a subsequent annual edition.
+export type FestivalEditionVisitorGuideSections = Partial<Record<
+  "site" | "transport" | "parking" | "camping" | "accessibility" | "foodAndDrink" |
+  "gates" | "curfew" | "contact" | "faq" | "ticketHelp" | "ageGuidance" | "terms" | "refundPolicy", string
+>>;
+export interface FestivalGuideEditionOption {
+  festivalEditionId: string;
+  editionYear: number;
+  name: string;
+  status: string;
+  startsOn: string | null;
+  editable: boolean;
+}
+export interface FestivalGuideDraft {
+  editionId: string;
+  version: number;
+  sections: FestivalEditionVisitorGuideSections;
+  editable: boolean;
+}
+async function visitorRpc(name: string, payload: Record<string, unknown>) {
+  const { data, error } = await launchRpc(name, payload);
+  if (error) {
+    const allowed = [
+      "festival_visitor_guide_forbidden", "festival_visitor_guide_not_found",
+      "festival_visitor_guide_stale", "festival_visitor_guide_locked",
+      "festival_visitor_guide_historical_locked", "festival_visitor_guide_invalid",
+      "festival_visitor_guide_idempotency_conflict",
+    ];
+    throw new Error(allowed.find((code) => error.message?.includes(code)) ?? "festival_visitor_guide_unavailable");
+  }
+  return data;
+}
+export async function getFestivalVisitorGuideEditions(festivalCompanyId: string): Promise<FestivalGuideEditionOption[]> {
+  if (!isUuid(festivalCompanyId)) throw new Error("festival_visitor_guide_invalid");
+  const data = await visitorRpc("get_festival_company_editions", { p_festival_company_id: festivalCompanyId });
+  if (!data || typeof data !== "object" || !Array.isArray((data as {editions?:unknown}).editions)) {
+    throw new Error("festival_visitor_guide_unavailable");
+  }
+  return ((data as {editions:unknown[]}).editions).filter((row): row is FestivalGuideEditionOption => {
+    if (!row || typeof row !== "object") return false;
+    const edition = row as Record<string, unknown>;
+    return typeof edition.festivalEditionId === "string" && isUuid(edition.festivalEditionId) &&
+      Number.isInteger(edition.editionYear) && typeof edition.name === "string" &&
+      typeof edition.status === "string" && typeof edition.editable === "boolean";
+  });
+}
+export async function getFestivalEditionVisitorGuide(festivalCompanyId: string, editionId: string): Promise<FestivalGuideDraft> {
+  if (!isUuid(festivalCompanyId) || !isUuid(editionId)) throw new Error("festival_visitor_guide_invalid");
+  const data = await visitorRpc("get_festival_edition_visitor_guide", {
+    p_festival_company_id: festivalCompanyId, p_festival_edition_id: editionId,
+  });
+  if (!data || typeof data !== "object") throw new Error("festival_visitor_guide_unavailable");
+  const raw = data as Record<string, unknown>;
+  if (raw.editionId !== editionId || !Number.isSafeInteger(raw.version) || Number(raw.version) < 0 ||
+      typeof raw.editable !== "boolean" || !raw.sections ||
+      typeof raw.sections !== "object" || Array.isArray(raw.sections)) {
+    throw new Error("festival_visitor_guide_unavailable");
+  }
+  return { editionId, version: Number(raw.version), editable: raw.editable,
+    sections: raw.sections as FestivalEditionVisitorGuideSections };
+}
+export async function saveFestivalEditionVisitorGuide(input: {
+  festivalCompanyId: string; editionId: string; expectedVersion: number;
+  sections: FestivalEditionVisitorGuideSections; idempotencyKey: string; adminOverride?: boolean;
+}): Promise<FestivalGuideDraft> {
+  if (!isUuid(input.festivalCompanyId) || !isUuid(input.editionId) ||
+      !isUuid(input.idempotencyKey) || !Number.isSafeInteger(input.expectedVersion) ||
+      input.expectedVersion < 0) throw new Error("festival_visitor_guide_invalid");
+  const data = await visitorRpc("save_festival_edition_visitor_guide", {
+    p_festival_company_id: input.festivalCompanyId,
+    p_festival_edition_id: input.editionId,
+    p_expected_version: input.expectedVersion,
+    p_sections: input.sections,
+    p_idempotency_key: input.idempotencyKey,
+    p_admin_override: Boolean(input.adminOverride),
+  });
+  if (!data || typeof data !== "object") throw new Error("festival_visitor_guide_unavailable");
+  const result = data as Record<string, unknown>;
+  if (result.editionId !== input.editionId || !Number.isSafeInteger(result.version) ||
+      Number(result.version) !== input.expectedVersion + 1) {
+    throw new Error("festival_visitor_guide_unavailable");
+  }
+  return { editionId: input.editionId, version: Number(result.version),
+    editable: true, sections: result.sections as FestivalEditionVisitorGuideSections };
+}
