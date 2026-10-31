@@ -51,10 +51,10 @@ describe("next five open issue fixes", () => {
     expect(festivalVisitorContactLink("http://example.org")).toBe(null);
     expect(festivalVisitorContactLink("Please contact the organiser")).toBe(null);
     expect(festivalVisitorContactLink("https://user:pass@example.org/contact")).toBe(null);
-    const page = read("src/features/festival-company/ui/PublicFestivalPage.tsx");
-    expect(page).toContain('key !== "camping" || campingPublished');
-    expect(page).toContain("organiserContactLink");
-    expect(page).toContain("Contact the organiser");
+    const guide = read("src/features/festival-company/ui/FestivalVisitorGuide.tsx");
+    expect(guide).toContain("festivalGuideCampingAvailable(f)");
+    expect(guide).toContain("const contactHref = festivalVisitorContactLink(contact.text)");
+    expect(guide).toContain("Contact the organiser");
   });
 
   it("#4072 compares source SQL hashes but never asserts a production migration applied", () => {
