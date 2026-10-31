@@ -45,6 +45,9 @@ describe("Halloween live-event launch protection", () => {
   it("does not call an armed-but-unpublished Halloween event fully live", () => {
     const admin = read("src/pages/admin/SystemStatus.tsx");
     expect(admin).toContain("halloweenPayoutBlocked");
+    expect(admin).toContain("halloweenPayoutUnverified");
+    expect(admin).toContain('halloweenPayoutUnverified ? "Rewards unverified"');
+    expect(admin).toContain("admin database preflight is unavailable");
     expect(admin).toContain("halloweenPreflight?.database_ready === false");
     expect(admin).toContain("pumpkinHatUnpublished");
     expect(admin).toContain('halloweenPayoutBlocked ? "Rewards blocked"');
