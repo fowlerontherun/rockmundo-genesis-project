@@ -79,7 +79,7 @@ DECLARE
   item record;
   allowed_keys text[] := ARRAY[
     'site', 'transport', 'parking', 'camping', 'accessibility', 'foodAndDrink',
-    'gates', 'curfew', 'contact', 'faq', 'ticketHelp', 'ageGuidance', 'terms', 'refundPolicy'
+    'gates', 'curfew', 'contact', 'faq', 'ticketHelp', 'ageGuidance', 'terms', 'refundPolicy', 'welfare'
   ];
   next_version integer;
   admin_actor boolean := coalesce(public.has_role(auth.uid(), 'admin'::public.app_role), false);
@@ -161,6 +161,7 @@ DECLARE
   matched_edition uuid;
   site_style text;
   content jsonb;
+  visitor_welfare text;
 BEGIN
   base := public.get_public_festival(p_slug);
   IF base IS NULL THEN RETURN NULL; END IF;
@@ -171,11 +172,56 @@ BEGIN
   END IF;
   SELECT sections INTO content FROM public.festival_edition_visitor_guides
     WHERE festival_edition_id = matched_edition;
+  -- Publish only explicit organiser-approved visitor-facing wording, and only
+  -- after the SAME annual edition's committed critical staffing and supplier
+  -- coverage has been verified. Do not expose any staff, shifts or risk scores.
+  IF nullif(btrim(content->>'welfare'), '') IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.festival_operations_plans op
+    JOIN public.festival_artist_programmes ap ON ap.id = op.artist_programme_id
+    WHERE ap.festival_edition_id = matched_edition
+      AND op.status = 'ready_for_sponsorship'
+      AND EXISTS (
+        SELECT 1 FROM public.festival_staffing_requirements r
+        WHERE r.festival_operations_plan_id = op.id AND r.role_type = 'medical'
+          AND r.safety_critical
+      )
+      AND EXISTS (
+        SELECT 1 FROM public.festival_staffing_requirements r
+        WHERE r.festival_operations_plan_id = op.id AND r.role_type = 'security'
+          AND r.safety_critical
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.festival_staffing_requirements r
+        WHERE r.festival_operations_plan_id = op.id AND r.safety_critical
+          AND (
+            SELECT count(*) FROM public.festival_staff_assignments assignment
+            WHERE assignment.staffing_requirement_id = r.id
+              AND assignment.festival_operations_plan_id = op.id
+              AND assignment.status IN ('committed', 'active')
+              AND assignment.quality_score >= r.minimum_skill_level
+              AND assignment.starts_at <= (base->>'startsAt')::timestamptz
+              AND assignment.ends_at >= (base->>'endsAt')::timestamptz
+          ) < r.required_count
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.festival_supplier_requirements req
+        WHERE req.festival_operations_plan_id = op.id AND req.safety_critical
+          AND NOT EXISTS (
+            SELECT 1 FROM public.festival_supplier_contracts contract
+            WHERE contract.supplier_requirement_id = req.id
+              AND contract.festival_operations_plan_id = op.id
+              AND contract.status = 'committed'
+          )
+      )
+  ) THEN
+    visitor_welfare := btrim(content->>'welfare');
+  END IF;
   RETURN base || jsonb_build_object('visitorGuide', jsonb_build_object(
     'siteStyle', site_style,
-    'sections', coalesce(content, '{}'::jsonb),
+    'sections', coalesce(content - 'welfare', '{}'::jsonb),
     'siteMapReference', NULL, -- only approved canonical map assets may be published
-    'verifiedSafety', NULL    -- never infer facilities from private staffing rosters
+    'verifiedSafety', CASE WHEN visitor_welfare IS NULL THEN NULL
+      ELSE jsonb_build_object('summary', visitor_welfare) END
   ));
 END;
 $$;
