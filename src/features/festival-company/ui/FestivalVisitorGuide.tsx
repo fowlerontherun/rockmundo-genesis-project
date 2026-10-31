@@ -187,10 +187,12 @@ export function FestivalVisitorGuide({ edition: f, phase, onViewTimetable, onVie
           <Note edition={f} field="foodAndDrink" legacy={f.information.foodAndDrink} />
         </Panel>
         <Panel id="welfare" title="Safety & welfare" subtitle="Medical, security and lost property" icon={<HeartPulse className="h-5 w-5" />}>
-          <Unconfirmed>
+          {f.visitorGuide?.verifiedSafety?.summary ? (
+            <p className="whitespace-pre-line">{f.visitorGuide.verifiedSafety.summary}</p>
+          ) : <Unconfirmed>
             On-site medical assistance, security, welfare and lost-property provision have not been verified for this edition.
             No staffing roster or operational readiness score is published as a visitor-facing guarantee.
-          </Unconfirmed>
+          </Unconfirmed>}
         </Panel>
         <Panel id="faq" title="Frequently asked questions" subtitle="Answers grounded in the published edition" icon={<CircleHelp className="h-5 w-5" />}>
           <details className="border-b py-2">
