@@ -51,13 +51,25 @@ WHERE sh.status='completed' AND NOT EXISTS (
 );
 
 -- The following rows are forensic review material, NOT a payout/reversal plan.
-SELECT x.metadata->>'shift_id' shift_id,count(*) xp_rows,
- array_agg(x.xp_amount ORDER BY x.created_at) xp_amounts,
- (SELECT count(*) FROM public.city_treasury_ledger t WHERE t.type='employment_income_tax'
-  AND t.reference_id::text=x.metadata->>'shift_id') tax_rows
-FROM public.experience_ledger x
-WHERE x.activity_type='work_shift' AND x.metadata ? 'shift_id'
-GROUP BY 1 HAVING count(*)>1 ORDER BY 1;
+-- Aggregate once before correlating tax entries: PostgreSQL disallows references
+-- to ungrouped x.metadata in a grouped query's correlated subquery.
+WITH duplicate_xp AS (
+ SELECT x.metadata->>'shift_id' AS shift_id, count(*) AS xp_rows,
+        array_agg(x.xp_amount ORDER BY x.created_at, x.id) AS xp_amounts
+ FROM public.experience_ledger x
+ WHERE x.activity_type='work_shift' AND x.metadata ? 'shift_id'
+ GROUP BY x.metadata->>'shift_id'
+ HAVING count(*)>1
+)
+SELECT d.shift_id, d.xp_rows, d.xp_amounts, coalesce(t.tax_rows,0) AS tax_rows
+FROM duplicate_xp d
+LEFT JOIN LATERAL (
+ SELECT count(*) AS tax_rows
+ FROM public.city_treasury_ledger c
+ WHERE c.type='employment_income_tax'
+   AND c.reference_id::text=d.shift_id
+) t ON true
+ORDER BY d.shift_id;
 
 SELECT date_trunc('month',sh.clock_in_time) started_month,count(*) orphaned_shifts,
  count(*) FILTER (WHERE EXISTS (

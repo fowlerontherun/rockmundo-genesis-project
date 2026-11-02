@@ -38,6 +38,12 @@ describe("work-shift settlement closure safeguards (#4216)", () => {
   it("limits retrospective investigation to read-only reporting", () => {
     expect(audit).toContain("legacy_duplicate_shift_xp");
     expect(audit).toContain("in_progress_without_matching_active_activity");
+    // The prior grouped query correlated x.metadata directly and was invalid SQL.
+    // Aggregate shift IDs first, then join tax records via the grouped alias.
+    expect(audit).toContain("WITH duplicate_xp AS");
+    expect(audit).toContain("LEFT JOIN LATERAL");
+    expect(audit).toContain("c.reference_id::text=d.shift_id");
+    expect(audit).not.toContain("t.reference_id::text=x.metadata->>'shift_id'");
     expect(audit).not.toMatch(/\b(?:DELETE|UPDATE|INSERT)\s+(?:FROM|INTO|public)/i);
   });
 });
