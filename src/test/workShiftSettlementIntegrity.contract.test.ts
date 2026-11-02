@@ -38,6 +38,6 @@ describe("work-shift settlement closure safeguards (#4216)", () => {
   it("limits retrospective investigation to read-only reporting", () => {
     expect(audit).toContain("legacy_duplicate_shift_xp");
     expect(audit).toContain("in_progress_without_matching_active_activity");
-    expect(audit).not.toMatch(/\\b(?:DELETE|UPDATE|INSERT)\\s+(?:FROM|INTO|public)/i);
+    expect(audit).not.toMatch(/\b(?:DELETE|UPDATE|INSERT)\s+(?:FROM|INTO|public)/i);
   });
 });
