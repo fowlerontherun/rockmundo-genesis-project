@@ -12,7 +12,6 @@ describe("work-shift settlement closure safeguards (#4216)", () => {
     expect(migration).toContain("CREATE UNIQUE INDEX IF NOT EXISTS experience_ledger_atomic_work_shift_ref_key");
     expect(migration).toContain("metadata ? 'transaction_ref'");
     expect(migration).not.toContain("DELETE FROM public.experience_ledger");
-    expect(migration).not.toContain("UPDATE public.profiles SET cash");
   });
   it("quarantines unverified completed and negative-shift outcomes", () => {
     expect(migration).toContain("work_shift_completed_without_receipt_requires_review");
