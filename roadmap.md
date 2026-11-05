@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Fix university completion at the advertised duration, add a one-time course XP bonus, and verify timing/reward tests and version history.
+
 - [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.
 - [x] Weekly band payroll rebuilt on band balance and switched on (1.1.781).
 - [x] Luthiery shop browsing + recruitment slot release applied (1.1.782).
