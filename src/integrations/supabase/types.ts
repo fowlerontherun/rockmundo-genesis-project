@@ -70543,6 +70543,41 @@ export type Database = {
           },
         ]
       }
+      university_course_completions: {
+        Row: {
+          attendance_xp: number
+          bonus_xp: number
+          completed_at: string
+          created_at: string
+          enrollment_id: string
+          profile_id: string
+        }
+        Insert: {
+          attendance_xp: number
+          bonus_xp: number
+          completed_at: string
+          created_at?: string
+          enrollment_id: string
+          profile_id: string
+        }
+        Update: {
+          attendance_xp?: number
+          bonus_xp?: number
+          completed_at?: string
+          created_at?: string
+          enrollment_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_course_completions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: true
+            referencedRelation: "player_university_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       university_courses: {
         Row: {
           base_duration_days: number | null
@@ -78377,6 +78412,10 @@ export type Database = {
         Args: { p_claim_id: string; p_session_id: string }
         Returns: boolean
       }
+      finalize_university_course: {
+        Args: { p_enrollment_id: string }
+        Returns: Json
+      }
       finance_credit_owner:
         | {
             Args: {
@@ -78577,6 +78616,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      finish_due_university_courses: { Args: never; Returns: number }
       finish_song_generation_atomic: {
         Args: {
           p_attempt_id: string
@@ -85748,6 +85788,10 @@ export type Database = {
       university_auto_attendance_due: {
         Args: { p_enrollment_id: string }
         Returns: Json
+      }
+      university_completion_bonus: {
+        Args: { p_attendance_xp: number }
+        Returns: number
       }
       university_visiting_professor_bonus: {
         Args: { p_at?: string; p_skill_slug: string; p_university_id: string }
