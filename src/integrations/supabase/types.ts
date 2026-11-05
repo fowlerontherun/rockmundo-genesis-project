@@ -542,6 +542,47 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_band_grant_receipts: {
+        Row: {
+          administrator_user_id: string
+          band_id: string
+          created_at: string
+          fame: number
+          fans: number
+          id: string
+          money: number
+          reason: string
+        }
+        Insert: {
+          administrator_user_id: string
+          band_id: string
+          created_at?: string
+          fame: number
+          fans: number
+          id: string
+          money: number
+          reason: string
+        }
+        Update: {
+          administrator_user_id?: string
+          band_id?: string
+          created_at?: string
+          fame?: number
+          fans?: number
+          id?: string
+          money?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_band_grant_receipts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_clothing_transfer_audit: {
         Row: {
           action_type: string
@@ -23235,6 +23276,113 @@ export type Database = {
             columns: ["lifecycle_event_id"]
             isOneToOne: false
             referencedRelation: "festival_edition_lifecycle_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_edition_visitor_guide_audit: {
+        Row: {
+          actor_profile_id: string
+          admin_override: boolean
+          created_at: string
+          festival_edition_id: string
+          id: number
+          new_sections: Json
+          new_version: number
+          old_sections: Json
+          old_version: number
+          request_key: string
+        }
+        Insert: {
+          actor_profile_id: string
+          admin_override?: boolean
+          created_at?: string
+          festival_edition_id: string
+          id?: never
+          new_sections: Json
+          new_version: number
+          old_sections: Json
+          old_version: number
+          request_key: string
+        }
+        Update: {
+          actor_profile_id?: string
+          admin_override?: boolean
+          created_at?: string
+          festival_edition_id?: string
+          id?: never
+          new_sections?: Json
+          new_version?: number
+          old_sections?: Json
+          old_version?: number
+          request_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_visitor_guide_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_visitor_guide_audit_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_visitor_guide_audit_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_edition_visitor_guides: {
+        Row: {
+          festival_edition_id: string
+          guide_version: number
+          sections: Json
+          updated_at: string
+          updated_by_profile_id: string | null
+        }
+        Insert: {
+          festival_edition_id: string
+          guide_version?: number
+          sections?: Json
+          updated_at?: string
+          updated_by_profile_id?: string | null
+        }
+        Update: {
+          festival_edition_id?: string
+          guide_version?: number
+          sections?: Json
+          updated_at?: string
+          updated_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_edition_visitor_guides_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: true
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_visitor_guides_updated_by_profile_id_fkey"
+            columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_edition_visitor_guides_updated_by_profile_id_fkey"
+            columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -57902,6 +58050,185 @@ export type Database = {
           },
         ]
       }
+      scene_band_leaderboard_opt_ins: {
+        Row: {
+          band_id: string
+          city_id: string
+          enabled: boolean
+          updated_at: string
+          updated_by_account: string | null
+        }
+        Insert: {
+          band_id: string
+          city_id: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by_account?: string | null
+        }
+        Update: {
+          band_id?: string
+          city_id?: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by_account?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_band_leaderboard_opt_ins_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_band_leaderboard_opt_ins_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_challenge_cycles: {
+        Row: {
+          active_population_snapshot: number
+          art_version: number
+          cadence: string
+          city_id: string
+          created_at: string
+          ends_at: string
+          id: string
+          starts_at: string
+          status: string
+          target_total: number
+          theme_slug: string
+        }
+        Insert: {
+          active_population_snapshot?: number
+          art_version?: number
+          cadence: string
+          city_id: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          starts_at: string
+          status?: string
+          target_total: number
+          theme_slug?: string
+        }
+        Update: {
+          active_population_snapshot?: number
+          art_version?: number
+          cadence?: string
+          city_id?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          status?: string
+          target_total?: number
+          theme_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_challenge_cycles_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_challenge_objectives: {
+        Row: {
+          created_at: string
+          cycle_id: string
+          id: string
+          source_health_snapshot: Json
+          status: string
+          target_points: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_id: string
+          id?: string
+          source_health_snapshot?: Json
+          status?: string
+          target_points: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: string
+          id?: string
+          source_health_snapshot?: Json
+          status?: string
+          target_points?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_challenge_objectives_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "scene_challenge_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_challenge_objectives_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scene_challenge_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_challenge_templates: {
+        Row: {
+          action_type: string
+          art_theme: string
+          cadence: string
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          reward_config: Json
+          slug: string
+          target_weight: number
+          title: string
+          version: number
+        }
+        Insert: {
+          action_type: string
+          art_theme?: string
+          cadence: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          reward_config?: Json
+          slug: string
+          target_weight?: number
+          title: string
+          version?: number
+        }
+        Update: {
+          action_type?: string
+          art_theme?: string
+          cadence?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          reward_config?: Json
+          slug?: string
+          target_weight?: number
+          title?: string
+          version?: number
+        }
+        Relationships: []
+      }
       scene_contact_archetypes: {
         Row: {
           created_at: string
@@ -58023,6 +58350,511 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scene_contributions: {
+        Row: {
+          account_id: string
+          band_id: string | null
+          bonus_reason: string | null
+          city_id: string
+          created_at: string
+          id: string
+          invalidated_at: string | null
+          objective_id: string
+          points: number
+          profile_id: string
+          source_completed_at: string
+          source_event_id: string
+          source_type: string
+        }
+        Insert: {
+          account_id: string
+          band_id?: string | null
+          bonus_reason?: string | null
+          city_id: string
+          created_at?: string
+          id?: string
+          invalidated_at?: string | null
+          objective_id: string
+          points: number
+          profile_id: string
+          source_completed_at: string
+          source_event_id: string
+          source_type: string
+        }
+        Update: {
+          account_id?: string
+          band_id?: string | null
+          bonus_reason?: string | null
+          city_id?: string
+          created_at?: string
+          id?: string
+          invalidated_at?: string | null
+          objective_id?: string
+          points?: number
+          profile_id?: string
+          source_completed_at?: string
+          source_event_id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_contributions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_contributions_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_contributions_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "scene_challenge_objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_contributions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_contributions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_daily_affiliations: {
+        Row: {
+          account_id: string
+          city_id: string
+          created_at: string
+          date_utc: string
+          profile_id: string
+        }
+        Insert: {
+          account_id: string
+          city_id: string
+          created_at?: string
+          date_utc: string
+          profile_id: string
+        }
+        Update: {
+          account_id?: string
+          city_id?: string
+          created_at?: string
+          date_utc?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_daily_affiliations_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_daily_affiliations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_daily_affiliations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_leaderboard_opt_ins: {
+        Row: {
+          account_id: string
+          city_id: string
+          enabled: boolean
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          city_id: string
+          enabled?: boolean
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          city_id?: string
+          enabled?: boolean
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_leaderboard_opt_ins_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_leaderboard_opt_ins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_leaderboard_opt_ins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_milestones: {
+        Row: {
+          announcement_id: string | null
+          art_version: number
+          cycle_id: string
+          percent_threshold: number
+          reached_at: string
+          revoked_at: string | null
+        }
+        Insert: {
+          announcement_id?: string | null
+          art_version: number
+          cycle_id: string
+          percent_threshold: number
+          reached_at?: string
+          revoked_at?: string | null
+        }
+        Update: {
+          announcement_id?: string | null
+          art_version?: number
+          cycle_id?: string
+          percent_threshold?: number
+          reached_at?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_milestones_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "scene_challenge_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_processor_cursors: {
+        Row: {
+          last_applied_at: string
+          last_source_id: string
+          processed_events: number
+          source_key: string
+          updated_at: string
+        }
+        Insert: {
+          last_applied_at: string
+          last_source_id: string
+          processed_events?: number
+          source_key: string
+          updated_at?: string
+        }
+        Update: {
+          last_applied_at?: string
+          last_source_id?: string
+          processed_events?: number
+          source_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_reward_claims: {
+        Row: {
+          account_id: string
+          claimed_at: string | null
+          cycle_id: string
+          entitled_at: string
+          expires_at: string | null
+          grant_reference: string | null
+          id: string
+          profile_id: string
+          reward_amount: number | null
+          reward_key: string
+          reward_kind: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          claimed_at?: string | null
+          cycle_id: string
+          entitled_at?: string
+          expires_at?: string | null
+          grant_reference?: string | null
+          id?: string
+          profile_id: string
+          reward_amount?: number | null
+          reward_key: string
+          reward_kind?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          claimed_at?: string | null
+          cycle_id?: string
+          entitled_at?: string
+          expires_at?: string | null
+          grant_reference?: string | null
+          id?: string
+          profile_id?: string
+          reward_amount?: number | null
+          reward_key?: string
+          reward_kind?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_reward_claims_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "scene_challenge_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_reward_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_reward_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_reward_grant_receipts: {
+        Row: {
+          account_id: string
+          claim_id: string
+          granted_at: string
+          ledger_id: string
+          profile_id: string
+          xp_amount: number
+        }
+        Insert: {
+          account_id: string
+          claim_id: string
+          granted_at?: string
+          ledger_id: string
+          profile_id: string
+          xp_amount: number
+        }
+        Update: {
+          account_id?: string
+          claim_id?: string
+          granted_at?: string
+          ledger_id?: string
+          profile_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_reward_grant_receipts_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "scene_reward_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_reward_grant_receipts_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: true
+            referencedRelation: "experience_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_reward_grant_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_reward_grant_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scene_reward_payout_controls: {
+        Row: {
+          payouts_enabled: boolean
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          payouts_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          payouts_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_reward_policies: {
+        Row: {
+          cadence: string
+          created_at: string
+          enabled: boolean
+          min_personal_points: number
+          requires_city_success: boolean
+          reward_amount: number
+          reward_key: string
+          reward_kind: string
+        }
+        Insert: {
+          cadence: string
+          created_at?: string
+          enabled?: boolean
+          min_personal_points: number
+          requires_city_success?: boolean
+          reward_amount: number
+          reward_key: string
+          reward_kind: string
+        }
+        Update: {
+          cadence?: string
+          created_at?: string
+          enabled?: boolean
+          min_personal_points?: number
+          requires_city_success?: boolean
+          reward_amount?: number
+          reward_key?: string
+          reward_kind?: string
+        }
+        Relationships: []
+      }
+      scene_rollout_controls: {
+        Row: {
+          cycle_generation_enabled: boolean
+          monthly_first_start: string
+          scoring_enabled: boolean
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          cycle_generation_enabled?: boolean
+          monthly_first_start?: string
+          scoring_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          cycle_generation_enabled?: boolean
+          monthly_first_start?: string
+          scoring_enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_source_controls: {
+        Row: {
+          action_type: string
+          enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_source_replay_controls: {
+        Row: {
+          enabled: boolean
+          scan_interval: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          scan_interval?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          scan_interval?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scene_source_replay_cursors: {
+        Row: {
+          contributions_recovered: number
+          cursor_at: string
+          cursor_id: string
+          events_rechecked: number
+          last_sweep_at: string | null
+          next_scan_at: string
+          source_key: string
+          updated_at: string
+        }
+        Insert: {
+          contributions_recovered?: number
+          cursor_at: string
+          cursor_id?: string
+          events_rechecked?: number
+          last_sweep_at?: string | null
+          next_scan_at?: string
+          source_key: string
+          updated_at?: string
+        }
+        Update: {
+          contributions_recovered?: number
+          cursor_at?: string
+          cursor_id?: string
+          events_rechecked?: number
+          last_sweep_at?: string | null
+          next_scan_at?: string
+          source_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       scene_story_catalog: {
         Row: {
@@ -73517,6 +74349,17 @@ export type Database = {
         }
         Returns: string
       }
+      admin_grant_band_support: {
+        Args: {
+          p_band_id: string
+          p_fame: number
+          p_fans: number
+          p_money: number
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       admin_grant_special_xp_atomic: {
         Args: {
           p_amount: number
@@ -73538,6 +74381,10 @@ export type Database = {
         }[]
       }
       admin_modern_festival_editions: { Args: never; Returns: Json }
+      admin_post_radio_play_earning: {
+        Args: { p_play_id: string }
+        Returns: Json
+      }
       admin_preview_festival_seed: {
         Args: { p_country_id?: string; p_strategy?: string; p_year?: number }
         Returns: Json
@@ -74116,6 +74963,64 @@ export type Database = {
       auto_start_scheduled_gigs: { Args: never; Returns: Json }
       auto_verify_accounts: { Args: never; Returns: undefined }
       auto_verify_twaater_accounts: { Args: never; Returns: undefined }
+      award_admin_advance_show: {
+        Args: { p_next_status: string; p_show_id: string }
+        Returns: {
+          attendance_fame_boost: number
+          broadcast_partners: string[] | null
+          categories: Json
+          ceremony_date: string | null
+          city_id: string | null
+          created_at: string | null
+          district: string | null
+          id: string
+          overview: string | null
+          performance_slots: Json | null
+          prestige_level: number
+          rewards: Json | null
+          show_name: string
+          status: string
+          venue: string | null
+          voting_breakdown: Json | null
+          winner_fame_boost: number
+          winner_prize_money: number
+          year: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_shows"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      award_admin_finalize_show: { Args: { p_show_id: string }; Returns: Json }
+      award_admin_preview_results: {
+        Args: { p_show_id: string }
+        Returns: Json
+      }
+      award_admin_review_nomination: {
+        Args: { p_decision: string; p_nomination_id: string }
+        Returns: {
+          award_show_id: string
+          band_id: string | null
+          category_name: string
+          created_at: string | null
+          id: string
+          nominee_id: string
+          nominee_name: string
+          nominee_type: string
+          status: string
+          submission_data: Json | null
+          user_id: string
+          vote_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_nominations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       award_chart_band_bonus_once: {
         Args: {
           p_band_id: string
@@ -75858,6 +76763,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_band_cover_license_atomic: {
+        Args: {
+          p_covering_band_id: string
+          p_original_song_id: string
+          p_payment_type: string
+          p_profile_id: string
+        }
+        Returns: Json
       }
       create_band_objective: {
         Args: {
@@ -77861,6 +78775,27 @@ export type Database = {
         Returns: Json
       }
       get_banking_dashboard: { Args: never; Returns: Json }
+      get_city_scene_band_supporters: {
+        Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_city_scene_board: { Args: { p_city_id: string }; Returns: Json }
+      get_city_scene_leaderboard: {
+        Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_city_scene_legacy: {
+        Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_city_scene_poster_archive: {
+        Args: { p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_city_scene_pulse: {
+        Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
       get_community_mentor_discovery: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -78128,6 +79063,10 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      get_festival_edition_visitor_guide: {
+        Args: { p_festival_company_id: string; p_festival_edition_id: string }
+        Returns: Json
+      }
       get_festival_hall_of_fame: { Args: never; Returns: Json }
       get_festival_history: {
         Args: {
@@ -78308,6 +79247,11 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      get_my_city_scene_activity: {
+        Args: { p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_my_city_scene_progress: { Args: { p_city_id: string }; Returns: Json }
       get_my_community_mentorships: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -78378,6 +79322,10 @@ export type Database = {
         Returns: Json
       }
       get_my_referral_welcome: { Args: { p_profile_id: string }; Returns: Json }
+      get_my_scene_reward_history: {
+        Args: { p_city_id: string; p_limit?: number }
+        Returns: Json
+      }
       get_my_social_band_rivalries: {
         Args: { p_profile_id: string }
         Returns: {
@@ -78576,6 +79524,11 @@ export type Database = {
         Args: { p_edition_id: string }
         Returns: Json
       }
+      get_public_festival_edition_live_status: {
+        Args: { p_slug: string }
+        Returns: Json
+      }
+      get_public_festival_guide: { Args: { p_slug: string }; Returns: Json }
       get_public_festival_ticket_products: {
         Args: { p_festival_launch_id: string }
         Returns: Json
@@ -78930,6 +79883,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      get_world_city_scene_status: { Args: never; Returns: Json }
       gift_underworld_item: {
         Args: { _purchase_id: string; _recipient_profile_id: string }
         Returns: string
@@ -81919,6 +82873,17 @@ export type Database = {
         }
         Returns: Json
       }
+      save_festival_edition_visitor_guide: {
+        Args: {
+          p_admin_override?: boolean
+          p_expected_version: number
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
+          p_sections: Json
+        }
+        Returns: Json
+      }
       save_festival_operations_plan: {
         Args: {
           p_complete?: boolean
@@ -82074,6 +83039,71 @@ export type Database = {
           p_tour_id: string
         }
         Returns: Json
+      }
+      scene_grant_earned_xp: { Args: { p_limit?: number }; Returns: Json }
+      scene_ingest_completed_recording: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      scene_ingest_social_activity: {
+        Args: { p_activity_id: string }
+        Returns: number
+      }
+      scene_ingest_verified_gig: {
+        Args: { p_outcome_id: string }
+        Returns: number
+      }
+      scene_ingest_verified_jam: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      scene_ingest_verified_rehearsal: {
+        Args: { p_rehearsal_id: string }
+        Returns: number
+      }
+      scene_preview_completed_recording_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_preview_verified_gig_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_preview_verified_jam_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_preview_verified_rehearsal_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_process_completed_recording_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_process_verified_gig_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_process_verified_jam_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_process_verified_rehearsal_batch: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      scene_reconcile_cycles: {
+        Args: { p_at?: string; p_city_id?: string }
+        Returns: number
+      }
+      scene_reconcile_milestones: {
+        Args: { p_city_id?: string }
+        Returns: number
+      }
+      scene_reconcile_reward_entitlements: {
+        Args: { p_city_id?: string }
+        Returns: number
       }
       scene_story_is_eligible: {
         Args: { p_profile_id: string; p_story_id: string; p_surface: string }
@@ -82608,6 +83638,14 @@ export type Database = {
           p_regions?: string[]
         }
         Returns: undefined
+      }
+      set_my_scene_band_leaderboard_opt_in: {
+        Args: { p_band_id: string; p_city_id: string; p_enabled: boolean }
+        Returns: boolean
+      }
+      set_my_scene_leaderboard_opt_in: {
+        Args: { p_city_id: string; p_enabled: boolean }
+        Returns: boolean
       }
       set_notification_profile_states: {
         Args: {
