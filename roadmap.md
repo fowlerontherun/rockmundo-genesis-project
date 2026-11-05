@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Fix university completion at the advertised duration, add a one-time course XP bonus, and verify timing/reward tests and version history.
+- [x] Fix university completion at the saved duration and add one-time completion XP: four overdue courses repaired, zero remain overdue, 16 tests pass, version 1.1.800. Signed-in course receipt display remains unverified because external account sessions are unavailable.
 
 - [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.
 - [x] Weekly band payroll rebuilt on band balance and switched on (1.1.781).
