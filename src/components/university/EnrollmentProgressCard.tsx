@@ -27,6 +27,7 @@ interface EnrollmentData {
   status: string;
   days_attended: number;
   total_xp_earned: number;
+  enrolled_at: string;
   scheduled_end_date: string;
   payment_amount: number;
   university_courses: {
@@ -51,9 +52,9 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
 
   // The scheduled completion date incorporates the university's adjusted course duration.
   const remainingFromSchedule = enrollment.scheduled_end_date ? Math.max(0, Math.ceil((new Date(enrollment.scheduled_end_date).getTime() - Date.now()) / 86_400_000)) : null;
-  const totalDays = remainingFromSchedule !== null && Number.isFinite(remainingFromSchedule)
-    ? Math.max(1, enrollment.days_attended + remainingFromSchedule)
-    : enrollment.university_courses.base_duration_days;
+  const scheduledDuration = Math.ceil((new Date(enrollment.scheduled_end_date).getTime() - new Date(enrollment.enrolled_at).getTime()) / 86_400_000);
+  const totalDays = Number.isFinite(scheduledDuration) && scheduledDuration > 0
+    ? scheduledDuration : enrollment.university_courses.base_duration_days;
   const daysAttended = enrollment.days_attended;
   const progressPercentage = enrollment.status === 'completed' ? 100 : totalDays > 0 ? Math.min(100, (daysAttended / totalDays) * 100) : 0;
   const paymentAmount =
@@ -64,7 +65,7 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
   // Validate scheduled_end_date before using it
   const endDate = enrollment.scheduled_end_date ? new Date(enrollment.scheduled_end_date) : null;
   const isValidEndDate = endDate && !isNaN(endDate.getTime());
-  const daysRemaining = isValidEndDate ? differenceInDays(endDate, new Date()) : 0;
+  const daysRemaining = remainingFromSchedule ?? 0;
   const avgXpPerDay = daysAttended > 0 ? Math.round(enrollment.total_xp_earned / daysAttended) : 0;
 
   const getStatusColor = (status: string) => {

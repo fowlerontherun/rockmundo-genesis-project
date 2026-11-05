@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.800",
+    date: "2026-11-05",
+    changes: [
+      { type: "fix", description: "University courses now finish after their saved course duration even if the final day's attendance was already recorded; four overdue courses were repaired." },
+      { type: "feature", description: "Completing a university course awards a one-time bonus of 20% of attendance XP, rounded down, with a completion receipt on the university page." },
+    ],
+  },
+  {
     version: "1.1.799",
     date: "2026-10-27",
     changes: [
