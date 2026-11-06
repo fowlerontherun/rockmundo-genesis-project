@@ -1,5 +1,6 @@
+import { PlayTogetherPicker } from './PlayTogetherPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calendar, Check, Loader2, MapPin, Music2, Plus, Search, Users, X } from 'lucide-react';
+import { Check, Loader2, MapPin, Plus, Search, Users, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -257,7 +258,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   return (
     <Card className="border-primary/20">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Support Band Marketplace</CardTitle>
+        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Play Together</CardTitle>
         <CardDescription>Advertise support availability, respond to offers, or find a support act for your own headline gigs.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -271,11 +272,11 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           <TabsContent value="availability" className="space-y-4">
             <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
               <div className="flex items-center justify-between gap-4 md:col-span-2">
-                <div><Label>Available for support slots</Label><p className="text-sm text-muted-foreground">Only enabled bands appear in support searches.</p></div>
+                <div><Label>Open to support offers</Label><p className="text-sm text-muted-foreground">Only enabled bands appear in support searches.</p></div>
                 <Switch checked={prefs.enabled} onCheckedChange={(enabled) => setPrefs((p) => ({ ...p, enabled }))} />
               </div>
               <div className="flex items-center justify-between"><Label>Single gigs</Label><Switch checked={prefs.single_gigs_enabled} onCheckedChange={(single_gigs_enabled) => setPrefs((p) => ({ ...p, single_gigs_enabled }))} /></div>
-              <div className="flex items-center justify-between"><Label>Tour dates</Label><Switch checked={prefs.tour_enabled} onCheckedChange={(tour_enabled) => setPrefs((p) => ({ ...p, tour_enabled }))} /></div>
+              <div className="flex items-center justify-between"><Label>Open to touring with other bands</Label><Switch checked={prefs.tour_enabled} onCheckedChange={(tour_enabled) => setPrefs((p) => ({ ...p, tour_enabled }))} /></div>
               <div><Label>Minimum headliner fame</Label><Input type="number" min={0} value={prefs.minimum_headliner_fame} onChange={(e) => setPrefs((p) => ({ ...p, minimum_headliner_fame: Number(e.target.value) || 0 }))} /></div>
               <div><Label>Minimum venue capacity</Label><Input type="number" min={0} value={prefs.minimum_venue_capacity} onChange={(e) => setPrefs((p) => ({ ...p, minimum_venue_capacity: Number(e.target.value) || 0 }))} /></div>
               <div className="md:col-span-2"><Button onClick={savePrefs} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save preferences</Button></div>
@@ -371,7 +372,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
             {offers.length === 0 ? <p className="text-sm text-muted-foreground">No support offers yet.</p> : offers.map((offer) => (
               <div key={offer.id} className="rounded-lg border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div><p className="font-semibold">{offer.gig?.headliner?.name ?? 'Headliner'} · {offer.gig?.venue?.name ?? 'Venue'}</p><p className="text-sm text-muted-foreground">{formatDateTime(offer.gig?.scheduled_date)} · 20% artist ticket revenue</p></div>
+                  <div><p className="font-semibold">{offer.gig?.headliner?.name ?? 'Headliner'} · {offer.gig?.venue?.name ?? 'Venue'}</p><p className="text-sm text-muted-foreground">{formatDateTime(offer.gig?.scheduled_date)} · {Math.round(offer.revenue_share * 100)}% artist ticket revenue</p></div>
                   <Badge variant={offer.status === 'accepted' ? 'default' : 'outline'}>{offer.status}</Badge>
                 </div>
                 {offer.status === 'pending' && <div className="mt-3 flex gap-2"><Button size="sm" onClick={() => respond(offer.id, 'accept')} disabled={busyId === offer.id}><Check className="mr-2 h-4 w-4" />Accept</Button><Button size="sm" variant="outline" onClick={() => respond(offer.id, 'decline')} disabled={busyId === offer.id}><X className="mr-2 h-4 w-4" />Decline</Button></div>}
@@ -385,9 +386,10 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
               <Button onClick={searchCandidates} disabled={!selectedGigId || searching}>{searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}Find available bands</Button>
             </div>
             {selectedGigId && !searching && candidates.length === 0 && <p className="text-sm text-muted-foreground">Search to see bands that have this city/date advertised and are conflict-free.</p>}
-            <div className="grid gap-3 md:grid-cols-2">
-              {candidates.map((candidate) => <Card key={candidate.band_id}><CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Music2 className="h-4 w-4" />{candidate.band_name}</CardTitle><CardDescription>Fame {candidate.fame} · Popularity {candidate.popularity}</CardDescription></CardHeader><CardContent><div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" />Available {candidate.available_from} to {candidate.available_until}</div><Button size="sm" onClick={() => inviteCandidate(candidate.band_id)} disabled={busyId === candidate.band_id}>Offer support slot</Button></CardContent></Card>)}
-            </div>
+            <PlayTogetherPicker key={`${bandId}:${selectedGigId}`} bandId={bandId}
+              candidates={candidates.map(candidate => ({ id: candidate.band_id, name: candidate.band_name, fame: candidate.fame,
+                detail: `Available ${candidate.available_from} to ${candidate.available_until}` }))}
+              onSelect={inviteCandidate} disabled={busyId !== null || searching} actionLabel="Offer support slot" />
           </TabsContent>
         </Tabs>
       </CardContent>

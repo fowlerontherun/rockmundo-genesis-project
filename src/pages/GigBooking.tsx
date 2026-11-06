@@ -1,3 +1,4 @@
+import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Sparkles, Star, Ticket, Users, XCircle } from 'lucide-react';
@@ -620,7 +621,7 @@ const GigBooking = () => {
     >
 
       <Tabs defaultValue="book" className="space-y-4">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="book">
             <MapPin className="h-4 w-4 mr-1" />
             Book
@@ -638,7 +639,10 @@ const GigBooking = () => {
             <CheckCircle className="h-4 w-4 mr-1" />
             Gig History
           </TabsTrigger>
+          {band && <TabsTrigger value="play-together">Play Together</TabsTrigger>}
         </TabsList>
+
+        {band && <TabsContent value="play-together"><SupportMarketplacePanel key={band.id} bandId={band.id} /></TabsContent>}
 
         <TabsContent value="book" className="space-y-4">
           {/* Performance Readiness Card */}
