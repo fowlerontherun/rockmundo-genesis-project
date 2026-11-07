@@ -26,3 +26,9 @@ Apply `20261106070014_play_together_discovery.sql` before deploying the client. 
 - `npx vitest run src/features/support-bands/PlayTogetherPicker.test.tsx --maxWorkers=1` exercises filtering, selection, shortlist removal and recommendation-service failure.
 
 The migration is forward-only. It does not change existing bookings or backfill legacy tour support assignments.
+
+## Tour eligibility follow-up
+
+The invitation and acceptance RPCs now derive tour eligibility from the saved gig's `tour_id`. The gig-page support search passes the same context, so a tour-only band can receive and accept tour invitations without enabling single gigs. A band that disables touring between invitation and acceptance is rejected without changing the pending offer or creating schedule entries.
+
+Apply `20261107075018_tour_support_offer_eligibility.sql` to update both RPCs. Validate with `node --test scripts/support-bands/tour-offer-eligibility.test.mjs`; the harness executes the real invitation/acceptance functions with an isolated eligibility matcher to test mode selection and revalidation.

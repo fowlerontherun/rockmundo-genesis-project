@@ -53,6 +53,7 @@ type SupportOfferView = {
 };
 type HeadlinerGig = {
   id: string;
+  tour_id: string | null;
   scheduled_date: string;
   scheduled_end: string | null;
   venue: { id: string; name: string; city_id: string | null; capacity: number | null } | null;
@@ -111,7 +112,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           .order('invited_at', { ascending: false }),
         supabase
           .from('gigs')
-          .select('id,scheduled_date,scheduled_end,venue:venues!gigs_venue_id_fkey(id,name,city_id,capacity)')
+          .select('id,tour_id,scheduled_date,scheduled_end,venue:venues!gigs_venue_id_fkey(id,name,city_id,capacity)')
           .eq('band_id', bandId)
           .in('status', ['scheduled', 'in_progress', 'ready_for_completion'])
           .gte('scheduled_date', new Date().toISOString())
@@ -232,6 +233,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         start: gig.scheduled_date,
         end: gig.scheduled_end ?? new Date(new Date(gig.scheduled_date).getTime() + 3 * 60 * 60 * 1000).toISOString(),
         venueCapacity: gig.venue.capacity ?? 0,
+        forTour: Boolean(gig.tour_id),
       });
       setCandidates(rows);
     } catch (error: unknown) {
