@@ -1,12 +1,16 @@
+import { listBandFriendships, changeBandFriendship } from './friendshipApi';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { PlayTogetherPicker } from './PlayTogetherPicker';
 import { getBandDiscoveryContext, setBandShortlisted } from './discoveryApi';
 vi.mock('./discoveryApi', () => ({ getBandDiscoveryContext: vi.fn(), setBandShortlisted: vi.fn() }));
+vi.mock('./friendshipApi', () => ({ listBandFriendships: vi.fn(), changeBandFriendship: vi.fn() }));
 const candidates = [{ id: 'b', name: 'Label Band', fame: 100, detail: '2/3 dates' }, { id: 'c', name: 'Saved Band', fame: 200, detail: '3/3 dates' }];
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(listBandFriendships).mockResolvedValue([]);
+  vi.mocked(changeBandFriendship).mockResolvedValue(undefined);
   vi.mocked(getBandDiscoveryContext).mockResolvedValue([
     { band_id: 'b', shortlisted: false, labelmate: true },
     { band_id: 'c', shortlisted: true, labelmate: false },
@@ -44,4 +48,20 @@ it('keeps eligible results usable and reports unavailable recommendations', asyn
   fireEvent.change(screen.getByRole('textbox', { name: 'Search available bands' }), { target: { value: 'label' } });
   expect(screen.queryByText('Saved Band')).not.toBeInTheDocument();
   expect(screen.getByText('Label Band')).toBeInTheDocument();
+});
+
+it('filters accepted friends without adding unavailable bands and sends requests separately from bookings', async () => {
+  vi.mocked(listBandFriendships).mockResolvedValue([
+    { band_id: 'b', band_name: 'Label Band', status: 'accepted', incoming: false },
+    { band_id: 'unavailable', band_name: 'Unavailable Friend', status: 'accepted', incoming: false },
+  ]);
+  const onSelect = setup();
+  await screen.findByText('Band friends');
+  fireEvent.click(screen.getByRole('button', { name: 'Friends' }));
+  expect(screen.queryByText('Saved Band')).not.toBeInTheDocument();
+  expect(screen.queryByText('Unavailable Friend')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'All available' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Request friendship' }));
+  await waitFor(() => expect(changeBandFriendship).toHaveBeenCalledWith('a', 'c', 'request'));
+  expect(onSelect).not.toHaveBeenCalled();
 });
