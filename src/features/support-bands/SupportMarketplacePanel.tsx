@@ -1,6 +1,7 @@
 import { respondToTourSupportOffers, type SupportOfferSnapshot } from './groupedOffersApi';
 import { BandFriendsPanel } from './BandFriendsPanel';
 import { PlayTogetherPicker } from './PlayTogetherPicker';
+import { LabelSuggestionsPanel } from './LabelSuggestionsPanel';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, MapPin, Plus, Search, Users, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +82,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const [cities, setCities] = useState<City[]>([]);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [availability, setAvailability] = useState<SupportAvailability[]>([]);
+  const [activeTab, setActiveTab] = useState('availability');
   const [offers, setOffers] = useState<SupportOfferView[]>([]);
   const [gigs, setGigs] = useState<HeadlinerGig[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -293,15 +295,15 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         <CardDescription>Advertise support availability, respond to offers, or find a support act for your own headline gigs.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="availability" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 overflow-visible sm:grid-cols-4">
             <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="headliner">Find Support</TabsTrigger>
-            <TabsTrigger value="friends">Friends</TabsTrigger>
+            <TabsTrigger value="friends">Friends &amp; labels</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="friends"><BandFriendsPanel key={bandId} bandId={bandId} /></TabsContent>
+          <TabsContent value="friends" className="space-y-4"><BandFriendsPanel key={bandId} bandId={bandId} /><LabelSuggestionsPanel key={`label-${bandId}`} bandId={bandId} onFindSupport={() => setActiveTab('headliner')} /></TabsContent>
 
           <TabsContent value="availability" className="space-y-4">
             <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
