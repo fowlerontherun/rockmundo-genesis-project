@@ -1,3 +1,4 @@
+import { BandFriendsPanel } from './BandFriendsPanel';
 import { PlayTogetherPicker } from './PlayTogetherPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, MapPin, Plus, Search, Users, X } from 'lucide-react';
@@ -265,11 +266,14 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="availability" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="headliner">Find Support</TabsTrigger>
+            <TabsTrigger value="friends">Friends</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="friends"><BandFriendsPanel key={bandId} bandId={bandId} /></TabsContent>
 
           <TabsContent value="availability" className="space-y-4">
             <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
