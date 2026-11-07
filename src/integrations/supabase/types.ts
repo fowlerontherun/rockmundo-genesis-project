@@ -73028,6 +73028,15 @@ export type Database = {
       }
     }
     Functions: {
+      get_band_discovery_context: {
+        Args: { p_band_id: string }
+        Returns: { band_id: string; shortlisted: boolean; labelmate: boolean }[]
+      }
+      set_band_shortlisted: {
+        Args: { p_band_id: string; p_target_band_id: string; p_saved: boolean }
+        Returns: undefined
+      }
+
       _apply_game_reward: {
         Args: {
           p_idempotency_key: string

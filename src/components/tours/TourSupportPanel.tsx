@@ -1,9 +1,9 @@
+import { PlayTogetherPicker } from '@/features/support-bands/PlayTogetherPicker';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Loader2, MapPin, Route, Send, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -34,19 +34,19 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
   const [selectedBandId, setSelectedBandId] = useState<string>('');
   const editable = tourStatus === 'scheduled' || tourStatus === 'active';
 
-  const { data: assignments = [], isLoading: loadingAssignments } = useQuery({
+  const { data: assignments = [], isLoading: loadingAssignments, isError: assignmentsError } = useQuery({
     queryKey: ['tour-support-assignments', tourId, headlinerBandId],
     queryFn: () => getTourSupportAssignments({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId,
   });
 
-  const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
+  const { data: candidates = [], isLoading: loadingCandidates, isError: candidatesError } = useQuery({
     queryKey: ['tour-support-candidates', tourId, headlinerBandId],
     queryFn: () => findTourSupportCandidates({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId && editable,
   });
 
-  const { data: showCandidates = [], isLoading: loadingShows } = useQuery({
+  const { data: showCandidates = [], isLoading: loadingShows, isError: showsError } = useQuery({
     queryKey: ['tour-support-show-candidates', tourId, headlinerBandId],
     queryFn: () => findTourSupportShowCandidates({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId && editable,
@@ -87,7 +87,10 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
       setSelectedBandId('');
       await refresh();
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not send the tour support offer'),
+    onError: async () => {
+      toast.error('Some offers may have been sent. Review the refreshed coverage before retrying.');
+      await refresh();
+    },
   });
 
   const cancelAssignment = useMutation({
@@ -102,6 +105,9 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not cancel support slot'),
   });
 
+  if (assignmentsError || (editable && (candidatesError || showsError))) return <Card><CardContent className="p-4" role="alert">
+    Support availability could not be verified. <Button variant="outline" onClick={() => void refresh()}>Retry</Button>
+  </CardContent></Card>;
   if (!editable && assignments.length === 0) return null;
 
   return (
@@ -156,16 +162,10 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
               <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
             ) : (
               <>
-                <Select value={selectedBandId} onValueChange={setSelectedBandId}>
-                  <SelectTrigger><SelectValue placeholder="Choose a support band" /></SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((candidate) => (
-                      <SelectItem key={candidate.support_band_id} value={candidate.support_band_id}>
-                        {candidate.support_band_name} · {candidate.eligible_shows}/{candidate.total_shows} eligible{candidate.full_tour_match ? ' · Full tour match' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} onSelect={setSelectedBandId}
+                  disabled={sendOffers.isPending}
+                  candidates={candidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
+                    fame: candidate.fame, detail: `${candidate.eligible_shows}/${candidate.total_shows} eligible dates${candidate.full_tour_match ? ' · Full tour match' : ''}` }))} />
 
                 {selectedCandidate && (
                   <div className="rounded-lg border p-3 space-y-3">

@@ -15,7 +15,6 @@ import { VenueFilters } from './VenueFilters';
 import { TicketPricingSlider } from './TicketPricingSlider';
 import { StageEquipmentBuilder } from './StageEquipmentBuilder';
 import { TourVehiclePicker } from './TourVehiclePicker';
-import { SupportArtistPicker } from './SupportArtistPicker';
 import { TourBudgetSummary } from './TourBudgetSummary';
 import { TicketOperatorSelector } from '@/components/gig/TicketOperatorSelector';
 import { calculateTotalHaulWeight, getHaulRequirement } from '@/lib/tourStageComponents';
@@ -33,7 +32,9 @@ const EMPTY_ROUTE: string[] = [];
 
 export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComplete, onCancel }: TourWizardProps) {
   const wizard = useTourWizard({ bandId, initialRouteCityIds });
-  const progress = ((wizard.currentStep + 1) / wizard.totalSteps) * 100;
+  const visibleStep = wizard.currentStep >= 8 ? wizard.currentStep : wizard.currentStep + 1;
+  const visibleStepCount = wizard.totalSteps - 1;
+  const progress = (visibleStep / visibleStepCount) * 100;
 
   const handleBook = () => {
     wizard.bookTour(undefined, {
@@ -48,7 +49,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
           <div>
             <CardTitle>Plan Your Tour</CardTitle>
             <CardDescription>
-              Step {wizard.currentStep + 1} of {wizard.totalSteps}: {wizard.stepNames[wizard.currentStep]}
+              Step {visibleStep} of {visibleStepCount}: {wizard.stepNames[wizard.currentStep]}
             </CardDescription>
           </div>
           <Badge variant="outline">{wizard.band?.name || 'Loading...'}</Badge>
@@ -139,7 +140,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
         {wizard.currentStep === 1 && (
           <div className="space-y-4">
             <p className="text-muted-foreground">Select the scope based on your band's fame ({wizard.band?.fame?.toLocaleString() || 0}).</p>
-            <RadioGroup value={wizard.state.scope} onValueChange={(v: any) => wizard.setScope(v)}>
+            <RadioGroup value={wizard.state.scope} onValueChange={(value) => { if (value === 'country' || value === 'continent' || value === 'world') wizard.setScope(value); }}>
               {Object.entries(TOUR_SCOPE_REQUIREMENTS).map(([key, req]) => {
                 const locked = !wizard.scopeAccess[key as keyof typeof wizard.scopeAccess];
                 return (
@@ -299,22 +300,6 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
           />
         )}
 
-        {/* Step 7: Support Artist */}
-        {wizard.currentStep === 7 && wizard.canInviteSupportArtist && (
-          <SupportArtistPicker
-            value={wizard.state.supportBandId}
-            valueName={wizard.state.supportBandName}
-            onChange={(bandId, bandName, share) => wizard.updateState({ 
-              supportBandId: bandId, 
-              supportBandName: bandName,
-              supportRevenueShare: share 
-            })}
-            headlinerBandId={bandId}
-            headlinerFame={wizard.band?.fame || 0}
-            tourDates={wizard.venueMatches.map(v => v.date)}
-          />
-        )}
-
         {/* Step 8: Review */}
         {wizard.currentStep === 8 && (
           <div className="space-y-4">
@@ -322,16 +307,14 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
               <p><strong>Tour:</strong> {wizard.state.name}</p>
               <p><strong>Shows:</strong> {wizard.venueMatches.length} venues</p>
               <p><strong>Countries:</strong> {wizard.state.selectedCountries.join(', ')}</p>
-              {wizard.state.supportBandName && (
-                <p><strong>Support:</strong> {wizard.state.supportBandName}</p>
-              )}
+              <p><strong>Support:</strong> After booking, open this tour’s details to find available bands, shortlist favourites and send support offers. Bands must accept before they are confirmed.</p>
             </div>
             
             <TourBudgetSummary
               estimate={wizard.costEstimate}
               stageSetupTier={wizard.state.stageSetupTier}
-              supportBandName={wizard.state.supportBandName}
-              supportRevenueShare={wizard.state.supportRevenueShare}
+              supportBandName={null}
+              supportRevenueShare={0}
               sponsorName={wizard.state.sponsorName}
               sponsorCash={wizard.state.sponsorCashValue}
               bandBalance={wizard.band?.band_balance || 0}

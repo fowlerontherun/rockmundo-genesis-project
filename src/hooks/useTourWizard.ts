@@ -266,15 +266,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     };
   }, [band?.fame]);
 
-  // Check support artist eligibility (fame > 5000, 5+ shows)
-  const canInviteSupportArtist = useMemo(() => {
-    const fame = band?.fame || 0;
-    const showCount = state.targetShowCount || Math.min(
-      Math.floor((state.durationDays || 30) / (1 + state.minRestDays)),
-      availableVenues?.length || 0
-    );
-    return fame >= 5000 && showCount >= 5;
-  }, [band?.fame, state.targetShowCount, state.durationDays, state.minRestDays, availableVenues?.length]);
+  // Support invitations are managed against booked dates in TourSupportPanel.
+  // A wizard selection must never commit another band's schedule without consent.
+  const canInviteSupportArtist = false;
 
   // Haversine distance helper
   const haversineDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -492,11 +486,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     // Sponsor cash
     const sponsorCashIncome = state.sponsorCashValue;
     
-    // Support artist share
-    const supportArtistShare = state.supportBandId 
-      ? Math.round(estimatedTicketRevenue * state.supportRevenueShare)
-      : 0;
-    
+    // Support is agreed after booking; no unaccepted offer reduces this estimate.
+    const supportArtistShare = 0;
+
     // Member travel costs (placeholder - actual count fetched when booking tour)
     const travelingMemberCount = 1; // Will be calculated from band_members.travels_with_band
     const legCount = Math.max(0, venueMatches.length - 1);
@@ -614,8 +606,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           custom_ticket_price: ticketPrice,
           stage_setup_tier: state.stageSetupTier,
           stage_setup_cost: costEstimate.stageSetupCosts,
-          support_band_id: state.supportBandId,
-          support_revenue_share: state.supportRevenueShare,
+          support_band_id: null,
+          support_revenue_share: 0,
           sponsor_offer_id: state.selectedSponsorOfferId,
           sponsor_cash_value: state.sponsorCashValue,
           sponsor_fame_penalty: state.sponsorFamePenalty,
@@ -705,30 +697,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           console.error('Failed to create band scheduled activities:', e);
         }
 
-        // If support band, create activities for them too
-        if (state.supportBandId) {
-          try {
-            await createBandScheduledActivities({
-              bandId: state.supportBandId,
-              activityType: 'gig',
-              scheduledStart: gigDate,
-              scheduledEnd: gigEnd,
-              title: `Tour (Support): ${state.name} - ${venue?.venueName || 'Show'}`,
-              location: venue?.cityName,
-              linkedGigId: gig.id,
-              metadata: {
-                tourId: tour.id,
-                venueId: gig.venue_id,
-                venueCity: venue?.cityName,
-                isHeadliner: false,
-                headlinerBandId: state.bandId,
-                isTourGig: true,
-              },
-            });
-          } catch (e) {
-            console.error('Failed to create support band scheduled activities:', e);
-          }
-        }
+
       }
 
       // Create travel legs between consecutive venues with real durations

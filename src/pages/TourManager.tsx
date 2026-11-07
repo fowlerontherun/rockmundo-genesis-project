@@ -1184,7 +1184,7 @@ const TourManager = () => {
             <ScrollArea className="max-h-[60vh]">
               <div className="space-y-6 pr-4">
                 {/* New Detail Panel with real stats */}
-                <TourDetailPanel tour={selectedTour} />
+                <TourDetailPanel tour={selectedTour} showSupportManagement={selectedTour.band_id === currentBandId} />
                 {venuesError && <div role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">Tour stops, venues or gig details could not be loaded. <button className="underline" type="button" onClick={() => void retryTourVenues()}>Retry details</button></div>}
 
                 {selectedTour.description && (
