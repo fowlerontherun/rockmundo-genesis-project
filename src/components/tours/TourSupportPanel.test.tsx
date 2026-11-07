@@ -1,0 +1,27 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+import { TourSupportPanel } from './TourSupportPanel';
+import { findTourSupportCandidates, findTourSupportShowCandidates, type TourSupportShowCandidate } from '@/features/support-bands/api';
+import { getTourSupportAssignments, type TourSupportAssignment } from '@/features/support-bands/tourManagementApi';
+import { createTourSupportOffers } from '@/features/support-bands/groupedOffersApi';
+vi.mock('@/features/support-bands/api', () => ({ findTourSupportCandidates: vi.fn(), findTourSupportShowCandidates: vi.fn(), cancelGigSupportOffer: vi.fn() }));
+vi.mock('@/features/support-bands/tourManagementApi', () => ({ getTourSupportAssignments: vi.fn(), cancelConfirmedSupportSlot: vi.fn() }));
+vi.mock('@/features/support-bands/groupedOffersApi', () => ({ createTourSupportOffers: vi.fn() }));
+vi.mock('@/features/support-bands/PlayTogetherPicker', () => ({ PlayTogetherPicker: ({ candidates, onSelect }: { candidates: { id: string; name: string }[]; onSelect: (id: string) => void }) => <>{candidates.map(b => <button key={b.id} onClick={() => onSelect(b.id)}>Choose {b.name}</button>)}</> }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); });
+it.each(['scheduled','active'])('invites bands after booking a %s tour using only future open dates', async status => {
+ const day = (n: number) => new Date(Date.now()+n*86400000).toISOString();
+ const shows: TourSupportShowCandidate[] = [-1,2,3,4].map((n,i) => ({ gig_id: `g${i}`, scheduled_date: day(n), city_id: 'city', venue_id: 'v', support_band_id: 'b', support_band_name: 'Support', fame: 100, popularity: 100, travel_feasible: i!==3 }));
+ vi.mocked(findTourSupportCandidates).mockResolvedValue([{ support_band_id: 'b', support_band_name: 'Support', fame: 100, popularity: 100, eligible_shows: 4, total_shows: 4, full_tour_match: true }]);
+ vi.mocked(findTourSupportShowCandidates).mockResolvedValue(shows);
+ vi.mocked(getTourSupportAssignments).mockResolvedValue(shows.map((show,i): TourSupportAssignment => ({ gig_id: show.gig_id, scheduled_date: show.scheduled_date, scheduled_end: null, venue_id: 'v', venue_name: 'Venue', city_id: 'city', city_name: 'City', support_slot_id: i===2 ? 'existing' : null, support_band_id: i===2 ? 'other' : null, support_band_name: null, support_status: i===2 ? 'accepted' : null, revenue_share: null, invited_at: null, responded_at: null })));
+ vi.mocked(createTourSupportOffers).mockResolvedValue(1);
+ render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}><TourSupportPanel tourId="tour" headlinerBandId="headliner" tourStatus={status} /></QueryClientProvider>);
+ fireEvent.click(await screen.findByRole('button', { name: 'Choose Support' }));
+ expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+ fireEvent.click(screen.getByRole('button', { name: 'Invite to 1 dates' }));
+ await waitFor(() => expect(createTourSupportOffers).toHaveBeenCalledWith('headliner','tour','b',['g1'],expect.any(String)));
+ expect(createTourSupportOffers).toHaveBeenCalledOnce();
+});

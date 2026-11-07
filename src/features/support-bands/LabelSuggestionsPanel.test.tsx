@@ -1,0 +1,46 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, expect, it, vi } from 'vitest';
+import { LabelSuggestionsPanel } from './LabelSuggestionsPanel';
+import { getLabelSuggestionRoster, listLabelSuggestions, respondToLabelSuggestion, suggestLabelPairing, type LabelSuggestion } from './labelSuggestionsApi';
+vi.mock('./labelSuggestionsApi', () => ({ getLabelSuggestionRoster: vi.fn(), listLabelSuggestions: vi.fn(), respondToLabelSuggestion: vi.fn(), suggestLabelPairing: vi.fn() }));
+afterEach(() => { cleanup(); vi.resetAllMocks(); });
+const suggestion: LabelSuggestion = { id: 's', label_id: 'l', label_name: 'Label', headliner_band_id: 'h', support_band_id: 'b', headliner_name: 'Headliner', support_name: 'Support', note: 'Same scene', headliner_response: 'pending', support_response: 'pending', roster_current: true };
+const wrap = (panel: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>{panel}</QueryClientProvider>);
+it('lets a label suggest distinct roster bands and see both responses', async () => {
+ vi.mocked(listLabelSuggestions).mockResolvedValue([suggestion]);
+ vi.mocked(getLabelSuggestionRoster).mockResolvedValue([{ id: 'h', name: 'Headliner' }, { id: 'b', name: 'Support' }]);
+ vi.mocked(suggestLabelPairing).mockResolvedValue('s');
+ wrap(<LabelSuggestionsPanel labelId="l" />);
+ await screen.findByText('Headliner: pending');
+ await screen.findAllByRole('option', { name: 'Headliner' });
+ fireEvent.change(screen.getByLabelText('Suggested headliner'), { target: { value: 'h' } });
+ expect(screen.getByRole('button', { name: 'Suggest pairing' })).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Suggested support band'), { target: { value: 'b' } });
+ fireEvent.change(screen.getByLabelText('Suggestion note'), { target: { value: 'Shared audience' } });
+ fireEvent.click(screen.getByRole('button', { name: 'Suggest pairing' }));
+ await waitFor(() => expect(suggestLabelPairing).toHaveBeenCalledWith('l','h','b','Shared audience'));
+ expect(screen.queryByRole('button', { name: 'Interested & shortlist' })).not.toBeInTheDocument();
+});
+it('records only the current band response and offers date booking after mutual interest', async () => {
+ vi.mocked(listLabelSuggestions).mockResolvedValue([{ ...suggestion, headliner_response: 'interested' }]);
+ vi.mocked(respondToLabelSuggestion).mockResolvedValue(undefined);
+ const onFindSupport = vi.fn();
+ wrap(<LabelSuggestionsPanel bandId="b" onFindSupport={onFindSupport} />);
+ fireEvent.click(await screen.findByRole('button', { name: 'Interested & shortlist' }));
+ await waitFor(() => expect(respondToLabelSuggestion).toHaveBeenCalledWith('s','b','interested'));
+ expect(screen.queryByRole('button', { name: 'Find Support dates' })).not.toBeInTheDocument();
+ cleanup();
+ vi.mocked(listLabelSuggestions).mockResolvedValue([{ ...suggestion, headliner_response: 'interested', support_response: 'interested' }]);
+ wrap(<LabelSuggestionsPanel bandId="h" onFindSupport={onFindSupport} />);
+ fireEvent.click(await screen.findByRole('button', { name: 'Find Support dates' }));
+ expect(onFindSupport).toHaveBeenCalledOnce();
+});
+it('disables interest for an expired roster and displays response failures', async () => {
+ vi.mocked(listLabelSuggestions).mockResolvedValue([{ ...suggestion, roster_current: false }]);
+ vi.mocked(respondToLabelSuggestion).mockRejectedValue(new Error('Changed'));
+ wrap(<LabelSuggestionsPanel bandId="b" onFindSupport={() => {}} />);
+ expect(await screen.findByRole('button', { name: 'Interested & shortlist' })).toBeDisabled();
+ fireEvent.click(screen.getByRole('button', { name: 'Decline suggestion' }));
+ expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm the change');
+});

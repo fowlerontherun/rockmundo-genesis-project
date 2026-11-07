@@ -61,12 +61,17 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
 
   const selectedCoverage = useMemo(() => {
     if (!selectedBandId) return [];
-    return showCandidates.filter((row) => row.support_band_id === selectedBandId && !blockedGigIds.has(row.gig_id));
+    return showCandidates.filter((row) => row.support_band_id === selectedBandId && !blockedGigIds.has(row.gig_id) && row.travel_feasible && new Date(row.scheduled_date).getTime() > Date.now());
   }, [selectedBandId, showCandidates, blockedGigIds]);
 
   const offeredCoverage = selectedCoverage.filter(show => !excludedDates.includes(show.gig_id));
 
-  const selectedCandidate = candidates.find((row) => row.support_band_id === selectedBandId) ?? null;
+  const remainingCandidates = candidates.map(candidate => ({
+    ...candidate,
+    eligible_shows: showCandidates.filter(show => show.support_band_id === candidate.support_band_id && show.travel_feasible && !blockedGigIds.has(show.gig_id) && new Date(show.scheduled_date).getTime() > Date.now()).length,
+  })).filter(candidate => candidate.eligible_shows > 0);
+
+  const selectedCandidate = remainingCandidates.find((row) => row.support_band_id === selectedBandId) ?? null;
 
   const refresh = async () => {
     await Promise.all([
@@ -120,7 +125,7 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" />Tour Support Acts</CardTitle>
-            <CardDescription>Manage support coverage show-by-show. Confirmed support acts receive 20% of artist ticket revenue.</CardDescription>
+            <CardDescription>Invite bands after booking, including while your tour is underway. Choose remaining open dates. Confirmed support acts receive 20% of artist ticket revenue.</CardDescription>
           </div>
           <Badge variant="outline">1 support act per show</Badge>
         </div>
@@ -162,20 +167,19 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
             <h4 className="text-sm font-semibold">Fill open dates</h4>
             {loadingCandidates || loadingShows ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
-            ) : candidates.length === 0 ? (
+            ) : remainingCandidates.length === 0 ? (
               <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
             ) : (
               <>
                 <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} onSelect={id => { setSelectedBandId(id); setExcludedDates([]); }}
                   disabled={sendOffers.isPending}
-                  candidates={candidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
-                    fame: candidate.fame, detail: `${candidate.eligible_shows}/${candidate.total_shows} eligible dates${candidate.full_tour_match ? ' · Full tour match' : ''}` }))} />
+                  candidates={remainingCandidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
+                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates` }))} />
 
                 {selectedCandidate && (
                   <div className="rounded-lg border p-3 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold">{selectedCandidate.support_band_name}</span>
-                      {selectedCandidate.full_tour_match && <Badge>Full-tour match</Badge>}
                       <Badge variant="secondary">Fame {selectedCandidate.fame.toLocaleString()}</Badge>
                       <Badge variant="secondary">Popularity {selectedCandidate.popularity.toLocaleString()}</Badge>
                     </div>
