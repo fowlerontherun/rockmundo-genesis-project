@@ -44,4 +44,10 @@ Apply `20261107075018_tour_support_offer_eligibility.sql` to update both RPCs. V
 
 Apply `20261107152322_band_touring_friendships.sql` before deploying this client. No migration has been applied live by this implementation. Database regression: `node --test scripts/support-bands/friendships.test.mjs`. UI regression: `npx vitest run src/features/support-bands/PlayTogetherPicker.test.tsx src/features/support-bands/BandFriendsPanel.test.tsx --maxWorkers=1`.
 
-Grouped tour offers, band-profile actions, notifications, broader availability and label-initiated proposals remain follow-ups.
+Band-profile actions, notifications, broader availability and label-initiated proposals remain follow-ups.
+
+## Grouped tour dates increment
+
+Tour organisers can deselect dates before inviting a band. The selected dates are sent atomically with retry-safe request keys. Incoming pending offers from the same tour/headliner can be accepted or declined together; individual responses remain available. Acceptance checks the reviewed dates, venues and revenue shares before invoking the existing per-show scheduling workflow. Any failure rolls back the whole response.
+
+Apply `20261107153611_grouped_tour_support_offers.sql` before deploying this client. This is grouping of existing per-show slots, not a new negotiated proposal entity. Band-profile actions, notifications, broader availability and label-initiated proposals remain follow-ups. Database regression: `node --test scripts/support-bands/*.test.mjs`. The grouped test covers authorization, rollback, retry idempotency, stale terms and schedule creation using the real per-show offer RPCs with isolated candidate matchers.
