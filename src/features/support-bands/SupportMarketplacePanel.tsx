@@ -1,3 +1,4 @@
+import { respondToTourSupportOffers, type SupportOfferSnapshot } from './groupedOffersApi';
 import { BandFriendsPanel } from './BandFriendsPanel';
 import { PlayTogetherPicker } from './PlayTogetherPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -48,6 +49,7 @@ type SupportOfferView = {
     scheduled_date: string;
     scheduled_end: string | null;
     band_id: string;
+    tour_id: string | null;
     venue: { id: string; name: string; city_id: string | null } | null;
     headliner: { id: string; name: string } | null;
   } | null;
@@ -108,7 +110,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         supabase.from('cities').select('id,name,country').order('country').order('name'),
         supabase
           .from('gig_support_slots')
-          .select('id,status,revenue_share,invited_at,gig:gigs!gig_support_slots_gig_id_fkey(id,scheduled_date,scheduled_end,band_id,venue:venues!gigs_venue_id_fkey(id,name,city_id),headliner:bands!gigs_band_id_fkey(id,name))')
+          .select('id,status,revenue_share,invited_at,gig:gigs!gig_support_slots_gig_id_fkey(id,scheduled_date,scheduled_end,band_id,tour_id,venue:venues!gigs_venue_id_fkey(id,name,city_id),headliner:bands!gigs_band_id_fkey(id,name))')
           .eq('support_band_id', bandId)
           .order('invited_at', { ascending: false }),
         supabase
@@ -205,6 +207,32 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     } finally { setBusyId(null); }
   };
 
+  const tourGroups = Object.values(offers.reduce<Record<string, SupportOfferView[]>>((groups, offer) => {
+    if (offer.status === 'pending' && offer.gig?.tour_id && offer.gig.venue) {
+      const key = `${offer.gig.tour_id}:${offer.gig.band_id}`;
+      (groups[key] ??= []).push(offer);
+    }
+    return groups;
+  }, {}));
+  const respondToTour = async (group: SupportOfferView[], action: 'accept' | 'decline') => {
+    setBusyId(group[0].id);
+    try {
+      const snapshots: SupportOfferSnapshot[] = group.map(offer => ({
+        slot_id: offer.id, gig_id: offer.gig!.id, tour_id: offer.gig!.tour_id!,
+        scheduled_date: offer.gig!.scheduled_date, scheduled_end: offer.gig!.scheduled_end,
+        venue_id: offer.gig!.venue!.id, revenue_share: offer.revenue_share,
+      }));
+      await respondToTourSupportOffers(snapshots, action);
+      toast({ title: action === 'accept' ? 'Tour dates accepted' : 'Tour dates declined' });
+    } catch {
+      toast({ title: `Could not confirm tour dates ${action === 'accept' ? 'accepted' : 'declined'}`,
+        description: 'Review the refreshed offers before retrying. Dates or availability may have changed.', variant: 'destructive' });
+    } finally {
+      await loadMarketplace();
+      setBusyId(null);
+    }
+  };
+
   const respond = async (offerId: string, action: 'accept' | 'decline') => {
     setBusyId(offerId);
     try {
@@ -266,7 +294,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="availability" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 overflow-visible sm:grid-cols-4">
             <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="headliner">Find Support</TabsTrigger>
@@ -375,13 +403,31 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           </TabsContent>
 
           <TabsContent value="offers" className="space-y-3">
-            {offers.length === 0 ? <p className="text-sm text-muted-foreground">No support offers yet.</p> : offers.map((offer) => (
+            {tourGroups.map(group => (
+              <div key={group[0].gig!.tour_id} className="rounded-lg border p-4">
+                <p className="font-semibold">Tour with {group[0].gig?.headliner?.name ?? 'Headliner'} · {group.length} offered dates</p>
+                <p className="text-sm text-muted-foreground">Review every date below. Accept or decline all pending dates together, or expand the individual date actions.</p>
+                <ul className="my-3 space-y-1 text-sm">{group.map(offer => <li key={offer.id}>{formatDateTime(offer.gig?.scheduled_date)} · {offer.gig?.venue?.name} · {Math.round(offer.revenue_share * 100)}% artist ticket revenue</li>)}</ul>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={busyId !== null} onClick={() => respondToTour(group, 'accept')}>Accept all {group.length} dates</Button>
+                  <Button variant="outline" disabled={busyId !== null} onClick={() => respondToTour(group, 'decline')}>Decline all dates</Button>
+                </div>
+                <details className="mt-3 text-sm"><summary className="cursor-pointer">Respond to individual dates</summary>
+                  {group.map(offer => <div key={offer.id} className="mt-2 flex flex-wrap items-center gap-2">
+                    <span>{formatDateTime(offer.gig?.scheduled_date)} · {offer.gig?.venue?.name}</span>
+                    <Button size="sm" variant="outline" disabled={busyId !== null} onClick={() => respond(offer.id, 'accept')}>Accept date</Button>
+                    <Button size="sm" variant="outline" disabled={busyId !== null} onClick={() => respond(offer.id, 'decline')}>Decline date</Button>
+                  </div>)}
+                </details>
+              </div>
+            ))}
+            {offers.length === 0 ? <p className="text-sm text-muted-foreground">No support offers yet.</p> : offers.filter(offer => !(offer.status === 'pending' && offer.gig?.tour_id && offer.gig.venue)).map((offer) => (
               <div key={offer.id} className="rounded-lg border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div><p className="font-semibold">{offer.gig?.headliner?.name ?? 'Headliner'} · {offer.gig?.venue?.name ?? 'Venue'}</p><p className="text-sm text-muted-foreground">{formatDateTime(offer.gig?.scheduled_date)} · {Math.round(offer.revenue_share * 100)}% artist ticket revenue</p></div>
                   <Badge variant={offer.status === 'accepted' ? 'default' : 'outline'}>{offer.status}</Badge>
                 </div>
-                {offer.status === 'pending' && <div className="mt-3 flex gap-2"><Button size="sm" onClick={() => respond(offer.id, 'accept')} disabled={busyId === offer.id}><Check className="mr-2 h-4 w-4" />Accept</Button><Button size="sm" variant="outline" onClick={() => respond(offer.id, 'decline')} disabled={busyId === offer.id}><X className="mr-2 h-4 w-4" />Decline</Button></div>}
+                {offer.status === 'pending' && <div className="mt-3 flex gap-2"><Button size="sm" onClick={() => respond(offer.id, 'accept')} disabled={busyId !== null}><Check className="mr-2 h-4 w-4" />Accept</Button><Button size="sm" variant="outline" onClick={() => respond(offer.id, 'decline')} disabled={busyId !== null}><X className="mr-2 h-4 w-4" />Decline</Button></div>}
               </div>
             ))}
           </TabsContent>
