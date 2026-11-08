@@ -1,5 +1,7 @@
 # Play Together implementation
 
+Current implementation and live deployment status: see [Play Together completion](play-together-completion.md). The increment notes below describe their original delivery state and are superseded by that completion record.
+
 ## First increment
 
 - Shared searchable candidate cards in gig support discovery and tour support management.

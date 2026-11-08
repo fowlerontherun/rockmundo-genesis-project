@@ -1,5 +1,7 @@
 # Label Play Together suggestions
 
+Current implementation and live deployment status: see [Play Together completion](play-together-completion.md). The increment notes below describe their original delivery state and are superseded by that completion record.
+
 Label owners (including company owners) can recommend a headliner/support pairing from Label Management → Roster. Only active bands with current active contracts appear. Solo artists are excluded. The label can track both responses.
 
 Bands review suggestions under Play Together → Friends & labels. “Interested & shortlist” records only the acting band's interest and adds the other band to its private shortlist in the same transaction. Either band may later decline; this does not remove an existing shortlist entry. Both bands' interest enables a Find Support shortcut for the headliner. Use the Shortlist filter when choosing an eligible support band for a saved gig or tour.

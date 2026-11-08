@@ -24,6 +24,8 @@ type HistoryRow = {
   performance_rating: number;
   ticket_revenue: number;
   support_payment: number;
+  finance_status?: string;
+  member_xp?: number;
   ticket_demand_multiplier: number;
   support_fame_gain: number;
   support_fan_gain: number;
@@ -45,15 +47,20 @@ const money = (value: number) => new Intl.NumberFormat('en-US', { style: 'curren
 export function SupportHistoryPanel({ bandId }: { bandId: string }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [bandNames, setBandNames] = useState<Record<string, string>>({});
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const { data, error } = await (supabase as any).rpc('get_band_support_summary', { p_band_id: bandId });
+      setLoadError(false);
+      const rpc = supabase.rpc.bind(supabase) as unknown as (name: 'get_band_support_summary', args: { p_band_id: string }) => Promise<{ data: Summary | null; error: Error | null }>;
+      const { data, error } = await rpc('get_band_support_summary', { p_band_id: bandId });
       if (!mounted) return;
       if (error) {
+        setLoadError(true);
         setSummary(null);
         setLoading(false);
         return;
@@ -65,14 +72,14 @@ export function SupportHistoryPanel({ bandId }: { bandId: string }) {
         ...(next.headlinerHistory ?? []).flatMap((row) => [row.support_band_id, row.headliner_band_id]),
       ])).filter(Boolean);
       if (ids.length > 0) {
-        const names = await (supabase as any).from('bands').select('id,name').in('id', ids);
-        if (mounted && !names.error) setBandNames(Object.fromEntries((names.data ?? []).map((row: any) => [row.id, row.name])));
+        const names = await supabase.from('bands').select('id,name').in('id', ids);
+        if (mounted && !names.error) setBandNames(Object.fromEntries((names.data ?? []).map((row) => [row.id, row.name])));
       }
       if (mounted) setLoading(false);
     };
     void load();
     return () => { mounted = false; };
-  }, [bandId]);
+  }, [bandId, attempt]);
 
   const reputation = summary?.reputation ?? {};
   const completed = reputation.completed_support_shows ?? 0;
@@ -80,6 +87,7 @@ export function SupportHistoryPanel({ bandId }: { bandId: string }) {
   const successRate = completed > 0 ? Math.round((successful / completed) * 100) : 0;
   const recent = useMemo(() => (summary?.supportHistory ?? []).slice(0, 8), [summary]);
 
+  if (loadError) return <p role="alert">Support results could not be loaded. <button className="underline" onClick={() => setAttempt(value => value+1)}>Retry results</button></p>;
   if (loading) return <Card><CardContent className="flex items-center gap-2 p-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading support history...</CardContent></Card>;
 
   return <Card className="border-primary/20">
@@ -101,13 +109,14 @@ export function SupportHistoryPanel({ bandId }: { bandId: string }) {
           return <div key={row.id} className="rounded-lg border p-4 space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">Supporting {bandNames[row.headliner_band_id] ?? 'Headliner'}</p><p className="text-xs text-muted-foreground">{row.performed_at ? new Date(row.performed_at).toLocaleDateString() : 'Completed show'} · {row.attendance.toLocaleString()} attended</p></div><Badge variant="outline">+{row.reputation_gain} reputation</Badge></div>
             <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-              <div className="rounded bg-muted/40 p-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><Ticket className="h-3.5 w-3.5" />Support payment</span><strong>{money(row.support_payment)}</strong></div>
+              <div className="rounded bg-muted/40 p-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><Ticket className="h-3.5 w-3.5" />{row.finance_status === 'settled' ? 'Support payment paid' : row.finance_status === 'no_revenue' ? 'No ticket revenue' : 'Support payment pending'}</span><strong>{money(row.support_payment)}</strong></div>
               <div className="rounded bg-muted/40 p-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingUp className="h-3.5 w-3.5" />Ticket demand</span><strong>+{boost.toFixed(1)}%</strong></div>
               <div className="rounded bg-muted/40 p-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><Star className="h-3.5 w-3.5" />Performance</span><strong>{Number(row.performance_rating).toFixed(1)}/25</strong></div>
               <div className="rounded bg-muted/40 p-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><Banknote className="h-3.5 w-3.5" />Ticket revenue</span><strong>{money(row.ticket_revenue)}</strong></div>
               <div className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-muted-foreground" />+{row.support_fan_gain} fans</div>
               <div className="flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />+{row.support_fame_gain} fame</div>
               <div className="flex items-center gap-1"><Handshake className="h-3.5 w-3.5 text-muted-foreground" />+{row.relationship_gain} relationship</div>
+              <div className="flex items-center gap-1">+{row.member_xp ?? 0} member XP</div>
               <div className="flex items-center gap-1"><Award className="h-3.5 w-3.5 text-muted-foreground" />+{row.reputation_gain} reputation</div>
             </div>
           </div>;

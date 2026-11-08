@@ -759,7 +759,7 @@ const TourManager = () => {
               </Button>
             )}
           </div>
-          {tour.band_id === currentBandId && <BookedTourSupportDialog tourId={tour.id} bandId={tour.band_id} tourName={tour.name} status={tour.status} />}
+          {tour.band_id === currentBandId && <BookedTourSupportDialog tourId={tour.id} bandId={tour.band_id} tourName={tour.name} status={tour.status} initialSupportBandId={searchParams.get('inviteBand') ?? undefined} />}
         </CardContent>
       </Card>
     );

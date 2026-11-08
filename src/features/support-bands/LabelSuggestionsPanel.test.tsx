@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LabelSuggestionsPanel } from './LabelSuggestionsPanel';
 import { getLabelSuggestionRoster, listLabelSuggestions, respondToLabelSuggestion, suggestLabelPairing, type LabelSuggestion } from './labelSuggestionsApi';
-vi.mock('./labelSuggestionsApi', () => ({ getLabelSuggestionRoster: vi.fn(), listLabelSuggestions: vi.fn(), respondToLabelSuggestion: vi.fn(), suggestLabelPairing: vi.fn() }));
+vi.mock('./labelSuggestionsApi', () => ({ getLabelBookingOptions: vi.fn().mockResolvedValue({ tours: [], gigs: [] }), suggestLabelBookingPairing: vi.fn(), getLabelSuggestionRoster: vi.fn(), listLabelSuggestions: vi.fn(), respondToLabelSuggestion: vi.fn(), suggestLabelPairing: vi.fn() }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 const suggestion: LabelSuggestion = { id: 's', label_id: 'l', label_name: 'Label', headliner_band_id: 'h', support_band_id: 'b', headliner_name: 'Headliner', support_name: 'Support', note: 'Same scene', headliner_response: 'pending', support_response: 'pending', roster_current: true };
 const wrap = (panel: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>{panel}</QueryClientProvider>);

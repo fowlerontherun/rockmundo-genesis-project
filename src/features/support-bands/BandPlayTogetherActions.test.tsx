@@ -1,0 +1,22 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { expect, it, vi } from 'vitest';
+import { BandPlayTogetherActions } from './BandPlayTogetherActions';
+import { setBandShortlisted } from './discoveryApi';
+import { changeBandFriendship } from './friendshipApi';
+vi.mock('@/hooks/usePrimaryBand', () => ({ usePrimaryBand: () => ({ data: { band_id: 'own' } }) }));
+vi.mock('./completionApi', () => ({ playTogetherRpc: vi.fn().mockResolvedValue({ touring: true, single_gigs: false }) }));
+vi.mock('./discoveryApi', () => ({ getBandDiscoveryContext: vi.fn().mockResolvedValue([]), setBandShortlisted: vi.fn() }));
+vi.mock('./friendshipApi', () => ({ listBandFriendships: vi.fn().mockResolvedValue([]), changeBandFriendship: vi.fn() }));
+it('offers private social actions and direct links to gig and booked-tour invitations', async () => {
+ render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><BandPlayTogetherActions targetBandId="target" /></QueryClientProvider>);
+ expect(await screen.findByText('Open to touring')).toBeInTheDocument();
+ await waitFor(() => expect(screen.getByRole('button', { name: 'Shortlist band' })).toBeEnabled());
+ fireEvent.click(screen.getByRole('button', { name: 'Shortlist band' }));
+ await waitFor(() => expect(setBandShortlisted).toHaveBeenCalledWith('own','target',true));
+ await waitFor(() => expect(screen.getByRole('button', { name: 'Request friendship' })).toBeEnabled());
+ fireEvent.click(screen.getByRole('button', { name: 'Request friendship' }));
+ await waitFor(() => expect(changeBandFriendship).toHaveBeenCalledWith('own','target','request'));
+ expect(screen.getByRole('link', { name: 'Invite to a booked tour' })).toHaveAttribute('href','/tour-manager?inviteBand=target');
+ expect(screen.getByRole('link', { name: 'Invite to a gig' })).toHaveAttribute('href',expect.stringContaining('section=headliner&targetBand=target'));
+});

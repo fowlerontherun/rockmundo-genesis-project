@@ -59,6 +59,8 @@ const GigBooking = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [bookingTab, setBookingTab] = useState(searchParams.get('tab') === 'play-together' ? 'play-together' : 'book');
+  useEffect(() => { if (searchParams.get('tab') === 'play-together') setBookingTab('play-together'); }, [searchParams]);
   const requestedCityId = searchParams.get('cityId');
   const requestedCity = searchParams.get('city');
   const requestedCountry = searchParams.get('country');
@@ -620,7 +622,7 @@ const GigBooking = () => {
       }
     >
 
-      <Tabs defaultValue="book" className="space-y-4">
+      <Tabs value={bookingTab} onValueChange={setBookingTab} className="space-y-4">
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="book">
             <MapPin className="h-4 w-4 mr-1" />
@@ -642,7 +644,7 @@ const GigBooking = () => {
           {band && <TabsTrigger value="play-together">Play Together</TabsTrigger>}
         </TabsList>
 
-        {band && <TabsContent value="play-together"><SupportMarketplacePanel key={band.id} bandId={band.id} /></TabsContent>}
+        {band && <TabsContent value="play-together">{searchParams.get('bandId') && searchParams.get('bandId') !== band.id ? <p role="alert">This notification is for another band. Switch to that band’s character before responding.</p> : <SupportMarketplacePanel key={band.id} bandId={band.id} />}</TabsContent>}
 
         <TabsContent value="book" className="space-y-4">
           {/* Performance Readiness Card */}
