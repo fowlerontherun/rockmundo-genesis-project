@@ -112,7 +112,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [failedFestivalLogo, setFailedFestivalLogo] = useState<string | null>(null);
-  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
+  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id, profileId]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError) return <main className="space-y-3 p-8" role="alert"><p>Festival details could not be loaded.</p><Button type="button" variant="outline" onClick={() => void retryPublicFestival()}>Retry festival details</Button></main>;
@@ -330,9 +330,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <span className="block text-xs text-muted-foreground">See published set times</span>
             </button>
             <button type="button" onClick={() => setActiveFestivalTab("tickets")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-              <span className="block text-2xl font-bold">{walletError || walletWaiting ? "—" : myFestivalTickets.length}</span>
+              <span className="block text-2xl font-bold">{!profileId || walletError || walletWaiting ? "—" : myFestivalTickets.length}</span>
               <span className="font-semibold">My tickets</span>
-              <span className="block text-xs text-muted-foreground">{walletError ? "Verification unavailable" : walletWaiting ? "Verifying tickets" : "Open festival wallet"}</span>
+              <span className="block text-xs text-muted-foreground">{!user ? "Sign in to view tickets" : !profileId ? "Select a character" : walletError ? "Verification unavailable" : walletWaiting ? "Verifying tickets" : "Open festival wallet"}</span>
             </button>
           </div>
           <div aria-label="Upcoming performances" className="space-y-2">
