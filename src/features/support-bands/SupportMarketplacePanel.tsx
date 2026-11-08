@@ -1,3 +1,10 @@
+import { useQuery } from '@tanstack/react-query';
+import { ConfirmedSupportSlotsPanel } from './ConfirmedSupportSlotsPanel';
+import { SupportHistoryPanel } from './SupportHistoryPanel';
+import { useSearchParams } from 'react-router-dom';
+import { TouringAvailabilityPanel } from './TouringAvailabilityPanel';
+import { TourProposalsPanel } from './TourProposalsPanel';
+import { listPlayTogetherCities, listTourProposals } from './completionApi';
 import { respondToTourSupportOffers, type SupportOfferSnapshot } from './groupedOffersApi';
 import { BandFriendsPanel } from './BandFriendsPanel';
 import { PlayTogetherPicker } from './PlayTogetherPicker';
@@ -82,6 +89,9 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const [cities, setCities] = useState<City[]>([]);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [availability, setAvailability] = useState<SupportAvailability[]>([]);
+  const [searchParams] = useSearchParams();
+  const proposalState = useQuery({ queryKey: ['support-tour-proposals', bandId], queryFn: () => listTourProposals(bandId) });
+  const proposalSlots = (proposalState.data ?? []).flatMap(proposal => proposal.slot_ids);
   const [activeTab, setActiveTab] = useState('availability');
   const [offers, setOffers] = useState<SupportOfferView[]>([]);
   const [gigs, setGigs] = useState<HeadlinerGig[]>([]);
@@ -103,13 +113,15 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     return cities.filter((city) => `${city.name} ${city.country ?? ''}`.toLowerCase().includes(query));
   }, [cities, citySearch]);
 
+  useEffect(() => { const gigId = searchParams.get('gigId'); if (gigId) setSelectedGigId(gigId); const section = searchParams.get('section'); if (section && ['availability','offers','headliner','friends'].includes(section)) setActiveTab(section); }, [searchParams]);
+
   const loadMarketplace = useCallback(async () => {
     setLoading(true);
     try {
       const [prefRow, availabilityRows, cityResult, offerResult, gigResult] = await Promise.all([
         getSupportPreferences(bandId),
         listSupportAvailability(bandId),
-        supabase.from('cities').select('id,name,country').order('country').order('name'),
+        listPlayTogetherCities(),
         supabase
           .from('gig_support_slots')
           .select('id,status,revenue_share,invited_at,gig:gigs!gig_support_slots_gig_id_fkey(id,scheduled_date,scheduled_end,band_id,tour_id,venue:venues!gigs_venue_id_fkey(id,name,city_id),headliner:bands!gigs_band_id_fkey(id,name))')
@@ -209,7 +221,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     } finally { setBusyId(null); }
   };
 
-  const tourGroups = Object.values(offers.reduce<Record<string, SupportOfferView[]>>((groups, offer) => {
+  const tourGroups = Object.values(offers.filter(offer => proposalState.isSuccess && !proposalSlots.includes(offer.id)).reduce<Record<string, SupportOfferView[]>>((groups, offer) => {
     if (offer.status === 'pending' && offer.gig?.tour_id && offer.gig.venue) {
       const key = `${offer.gig.tour_id}:${offer.gig.band_id}`;
       (groups[key] ??= []).push(offer);
@@ -306,6 +318,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           <TabsContent value="friends" className="space-y-4"><BandFriendsPanel key={bandId} bandId={bandId} /><LabelSuggestionsPanel key={`label-${bandId}`} bandId={bandId} onFindSupport={() => setActiveTab('headliner')} /></TabsContent>
 
           <TabsContent value="availability" className="space-y-4">
+            <TouringAvailabilityPanel key={bandId} bandId={bandId} onSaved={loadMarketplace} countries={[...new Set(cities.map(city => city.country).filter((country): country is string => !!country))].sort()} />
             <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
               <div className="flex items-center justify-between gap-4 md:col-span-2">
                 <div><Label>Open to support offers</Label><p className="text-sm text-muted-foreground">Only enabled bands appear in support searches.</p></div>
@@ -405,6 +418,9 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           </TabsContent>
 
           <TabsContent value="offers" className="space-y-3">
+            <TourProposalsPanel bandId={bandId} />
+            <ConfirmedSupportSlotsPanel key={proposalState.dataUpdatedAt} bandId={bandId} />
+            <details><summary className="cursor-pointer font-semibold">Completed shows, payments and reputation</summary><SupportHistoryPanel bandId={bandId} /></details>
             {tourGroups.map(group => (
               <div key={group[0].gig!.tour_id} className="rounded-lg border p-4">
                 <p className="font-semibold">Tour with {group[0].gig?.headliner?.name ?? 'Headliner'} · {group.length} offered dates</p>
@@ -423,7 +439,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
                 </details>
               </div>
             ))}
-            {offers.length === 0 ? <p className="text-sm text-muted-foreground">No support offers yet.</p> : offers.filter(offer => !(offer.status === 'pending' && offer.gig?.tour_id && offer.gig.venue)).map((offer) => (
+            {offers.length === 0 ? <p className="text-sm text-muted-foreground">No support offers yet.</p> : offers.filter(offer => proposalState.isSuccess && !proposalSlots.includes(offer.id)).filter(offer => !(offer.status === 'pending' && offer.gig?.tour_id && offer.gig.venue)).map((offer) => (
               <div key={offer.id} className="rounded-lg border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div><p className="font-semibold">{offer.gig?.headliner?.name ?? 'Headliner'} · {offer.gig?.venue?.name ?? 'Venue'}</p><p className="text-sm text-muted-foreground">{formatDateTime(offer.gig?.scheduled_date)} · {Math.round(offer.revenue_share * 100)}% artist ticket revenue</p></div>
@@ -441,7 +457,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
             </div>
             {selectedGigId && !searching && candidates.length === 0 && <p className="text-sm text-muted-foreground">Search to see bands that have this city/date advertised and are conflict-free.</p>}
             <PlayTogetherPicker key={`${bandId}:${selectedGigId}`} bandId={bandId}
-              candidates={candidates.map(candidate => ({ id: candidate.band_id, name: candidate.band_name, fame: candidate.fame,
+              selectedId={searchParams.get('targetBand') ?? undefined} candidates={candidates.map(candidate => ({ id: candidate.band_id, name: candidate.band_name, fame: candidate.fame,
                 detail: `Available ${candidate.available_from} to ${candidate.available_until}` }))}
               onSelect={inviteCandidate} disabled={busyId !== null || searching} actionLabel="Offer support slot" />
           </TabsContent>

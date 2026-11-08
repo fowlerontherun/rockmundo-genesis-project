@@ -1,3 +1,4 @@
+import { BandPlayTogetherActions } from '@/features/support-bands/BandPlayTogetherActions';
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -216,6 +217,7 @@ export default function BandProfile() {
 
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
+      <BandPlayTogetherActions key={band.id} targetBandId={band.id} />
       {isRecruitmentLanding && !isMember && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">

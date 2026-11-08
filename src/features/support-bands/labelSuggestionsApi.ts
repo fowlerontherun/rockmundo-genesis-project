@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 export type LabelSuggestion = {
   id: string; label_id: string; label_name: string; headliner_band_id: string; support_band_id: string;
+  tour_id?: string | null; gig_id?: string | null; tour_name?: string | null; invited_dates?: number; confirmed_dates?: number;
   headliner_name: string; support_name: string; note: string; roster_current: boolean;
   headliner_response: 'pending' | 'interested' | 'declined'; support_response: 'pending' | 'interested' | 'declined';
 };
@@ -17,3 +18,7 @@ export const suggestLabelPairing = (labelId: string, headliner: string, support:
   { p_label_id: labelId, p_headliner_band_id: headliner, p_support_band_id: support, p_note: note });
 export const respondToLabelSuggestion = (id: string, bandId: string, response: 'interested' | 'declined') => call<void>('respond_to_label_play_together',
   { p_suggestion_id: id, p_band_id: bandId, p_response: response });
+
+export type LabelBookingOptions = { tours: { id: string; name: string }[]; gigs: { id: string; name: string }[] };
+export const getLabelBookingOptions = (labelId: string, bandId: string) => call<LabelBookingOptions>('label_play_together_booking_options', { p_label_id: labelId, p_headliner_band_id: bandId });
+export const suggestLabelBookingPairing = (labelId: string, headliner: string, support: string, note: string, tourId: string | null, gigId: string | null) => call<string>('suggest_label_pairing_for_booking', { p_label_id: labelId, p_headliner_band_id: headliner, p_support_band_id: support, p_note: note, p_tour_id: tourId, p_gig_id: gigId });

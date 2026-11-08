@@ -1,4 +1,5 @@
-import { createTourSupportOffers } from '@/features/support-bands/groupedOffersApi';
+import { createTourProposal } from '@/features/support-bands/completionApi';
+import { TourProposalsPanel } from '@/features/support-bands/TourProposalsPanel';
 import { PlayTogetherPicker } from '@/features/support-bands/PlayTogetherPicker';
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +22,7 @@ interface TourSupportPanelProps {
   tourId: string;
   headlinerBandId: string;
   tourStatus: string;
+  initialSupportBandId?: string;
 }
 
 const statusVariant = (status: string | null) => {
@@ -29,10 +31,11 @@ const statusVariant = (status: string | null) => {
   return 'outline' as const;
 };
 
-export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSupportPanelProps) {
+export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialSupportBandId }: TourSupportPanelProps) {
   const queryClient = useQueryClient();
-  const [selectedBandId, setSelectedBandId] = useState<string>('');
+  const [selectedBandId, setSelectedBandId] = useState<string>(initialSupportBandId ?? '');
   const [excludedDates, setExcludedDates] = useState<string[]>([]);
+  const [proposalNote, setProposalNote] = useState('');
   const request = useRef<{ key: string; id: string } | null>(null);
   const editable = tourStatus === 'scheduled' || tourStatus === 'active';
 
@@ -78,6 +81,7 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
       queryClient.invalidateQueries({ queryKey: ['tour-support-assignments', tourId] }),
       queryClient.invalidateQueries({ queryKey: ['tour-support-candidates', tourId] }),
       queryClient.invalidateQueries({ queryKey: ['tour-support-show-candidates', tourId] }),
+      queryClient.invalidateQueries({ queryKey: ['support-tour-proposals'] }),
     ]);
   };
 
@@ -87,12 +91,14 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
       const gigIds = offeredCoverage.map(show => show.gig_id).sort();
       const key = JSON.stringify([headlinerBandId, tourId, selectedBandId, gigIds]);
       if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() };
-      return createTourSupportOffers(headlinerBandId, tourId, selectedBandId, gigIds, request.current.id);
+      await createTourProposal(headlinerBandId, tourId, selectedBandId, gigIds, request.current.id, proposalNote);
+      return gigIds.length;
     },
     onSuccess: async (count) => {
-      toast.success(`Support offer sent for ${count} tour show${count === 1 ? '' : 's'}`);
+      toast.success(`Tour proposal sent for ${count} tour show${count === 1 ? '' : 's'}`);
       setSelectedBandId('');
       setExcludedDates([]);
+      setProposalNote('');
       request.current = null;
       await refresh();
     },
@@ -131,6 +137,7 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        <TourProposalsPanel bandId={headlinerBandId} tourId={tourId} />
         <section className="space-y-2">
           <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Tour coverage</h4><span className="text-xs text-muted-foreground">{assignments.filter((a) => a.support_status === 'accepted' || a.support_status === 'completed').length}/{assignments.length} confirmed</span></div>
           {loadingAssignments ? (
@@ -189,10 +196,11 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
                           <label className="flex items-center gap-2"><input type="checkbox" checked={!excludedDates.includes(show.gig_id)} disabled={sendOffers.isPending}
                             onChange={event => setExcludedDates(current => event.target.checked ? current.filter(id => id !== show.gig_id) : [...current, show.gig_id])} />
                             {new Date(show.scheduled_date).toLocaleDateString()}</label>
-                          <Badge variant="outline" className="gap-1"><Route className="h-3 w-3" />Travel OK</Badge>
+                          <Badge variant="outline" className="gap-1"><Route className="h-3 w-3" />Date available</Badge>
                         </div>
                       ))}
                     </div>
+                    <label className="block text-sm">Message to the band (optional)<textarea aria-label="Tour proposal message" maxLength={500} disabled={sendOffers.isPending} className="mt-1 w-full rounded border bg-background p-2" value={proposalNote} onChange={e => setProposalNote(e.target.value)} /></label>
                     <div className="flex items-center justify-between gap-3 border-t pt-3">
                       <p className="text-xs text-muted-foreground">Only currently open, eligible dates are included. Confirmed dates are never overwritten.</p>
                       <Button size="sm" disabled={offeredCoverage.length === 0 || sendOffers.isPending} onClick={() => sendOffers.mutate()}>

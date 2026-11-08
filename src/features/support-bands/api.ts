@@ -30,7 +30,7 @@ export type AvailableSupportBand = {
   band_name: string;
   fame: number;
   popularity: number;
-  availability_id: string;
+  availability_id: string | null;
   available_from: string;
   available_until: string;
 };

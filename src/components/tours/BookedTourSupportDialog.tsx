@@ -4,8 +4,8 @@ import { Users } from 'lucide-react';
 import { TourSupportPanel } from './TourSupportPanel';
 
 /** Entry point for adding support after saved tour gigs have been booked. */
-export function BookedTourSupportDialog({ tourId, bandId, tourName, status }: {
-  tourId: string; bandId: string; tourName: string; status: string;
+export function BookedTourSupportDialog({ tourId, bandId, tourName, status, initialSupportBandId }: {
+  tourId: string; bandId: string; tourName: string; status: string; initialSupportBandId?: string;
 }) {
   if (status !== 'scheduled' && status !== 'active') return null;
   return <Dialog>
@@ -14,7 +14,7 @@ export function BookedTourSupportDialog({ tourId, bandId, tourName, status }: {
       <DialogHeader><DialogTitle>Invite bands · {tourName}</DialogTitle>
         <DialogDescription>Invite support bands to the remaining dates on this booked tour. Select a band and the dates to offer; the band must accept before joining.</DialogDescription>
       </DialogHeader>
-      <TourSupportPanel key={tourId} tourId={tourId} headlinerBandId={bandId} tourStatus={status} />
+      <TourSupportPanel key={tourId} tourId={tourId} headlinerBandId={bandId} tourStatus={status} initialSupportBandId={initialSupportBandId} />
     </DialogContent>
   </Dialog>;
 }
