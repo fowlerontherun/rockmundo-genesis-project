@@ -45,3 +45,28 @@ it('lets the headliner release expired pending dates before the worker runs', as
  await waitFor(() => expect(respondTourProposal).toHaveBeenCalledWith('p','withdraw'));
  expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
 });
+
+it('separates incoming replies, sent proposals and history and lets players recover from empty searches', async () => {
+ const sent = { ...proposal, id: 'sent', tour_id: 'sent-tour', tour_name: 'Outgoing tour', headliner_band_id: 's', support_band_id: 'other' };
+ const archived = { ...proposal, id: 'past', tour_id: 'past-tour', tour_name: 'Declined tour', display_status: 'declined' };
+ vi.mocked(listTourProposals).mockResolvedValue([archived,sent,proposal]); show('s');
+ fireEvent.click(await screen.findByRole('button', { name: /Awaiting your reply/ }));
+ expect(screen.getByRole('heading', { name: 'Summer' })).toBeInTheDocument();
+ expect(screen.queryByRole('heading', { name: 'Outgoing tour' })).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button', { name: /Sent invitations/ }));
+ expect(screen.getByRole('heading', { name: 'Outgoing tour' })).toBeInTheDocument();
+ fireEvent.change(screen.getByRole('textbox', { name: 'Search tour proposals' }), { target: { value: 'missing' } });
+ expect(screen.getByText('No proposals match this view.')).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button', { name: 'Show all proposals' }));
+ expect(screen.getAllByRole('article')).toHaveLength(3);
+ fireEvent.click(screen.getByRole('button', { name: /Past proposals/ }));
+ expect(screen.getByRole('heading', { name: 'Declined tour' })).toBeInTheDocument();
+ expect(screen.queryByRole('heading', { name: 'Summer' })).not.toBeInTheDocument();
+});
+it('does not count an elapsed deadline as needing a reply while the cached state is pending', async () => {
+ vi.mocked(listTourProposals).mockResolvedValue([{ ...proposal, expires_at: '2000-01-01', display_status: 'pending' }]); show('s');
+ const filter = await screen.findByRole('button', { name: /Awaiting your reply/ });
+ expect(filter).toHaveTextContent('0');
+ expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
+ expect(await screen.findByText('The reply deadline has passed. The headliner can send a new invitation.')).toBeInTheDocument();
+});

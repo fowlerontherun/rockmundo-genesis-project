@@ -53,3 +53,11 @@ Proposal cards show the current status of each date, clear status explanations, 
 Regression coverage: `node --test --test-concurrency=1 scripts/support-bands/proposal-authority.test.mjs` tests legacy API bypass attempts, deadline handling, unavailable member locations, private-function execute denial, mixed-batch rollback, competing offers, immediate removal cleanup, scheduled expiry, safe repair of an old partial acceptance, replacement invitations, and legacy API compatibility. The complete lifecycle and settlement harnesses now load this migration too.
 
 Applied directly on 8 November 2026. Live checks confirmed both public legacy guards, private helper execute denial for authenticated clients, the enabled slot-cleanup trigger and no pending slots attached to changed proposals. The existing settlement function digest remains unchanged. The database had no proposal bookings at the time of deployment, so the repair changed no player commitments.
+
+## Player usability follow-up
+
+Play Together now starts with task shortcuts, saved availability status, booking reply counts and pending friendship/label suggestion counts. Availability controls come first; optional limits and city adverts are expandable. Unsaved preferences cannot be discarded by saving another availability form. Tab/section links preserve booking context and support reload and browser Back.
+
+Tour proposals can be searched and filtered into awaiting replies, sent invitations, confirmed tours and history. Incoming decisions appear first, expired cached invitations lose their acceptance action, past itineraries collapse, and responsive date cards replace the wide table. Booked-tour invitations offer select-all/clear controls, named dates and explicit ticket-share terms. Discovery can sort connections first, fame or name; profile links preserve the current booking in another tab and empty filters can be reset.
+
+Validation: 23 targeted UI tests cover reply counting, navigation, saved versus unsaved preferences, load-failure recovery, proposal filtering/deadlines, discovery sorting and date selection. Full TypeScript, targeted ESLint and production build checks run for this pass. Browser visual verification was unavailable because the shared browser could not reach the local preview. This follow-up changes no database objects or booking authority.

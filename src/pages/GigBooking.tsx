@@ -58,9 +58,10 @@ const GigBooking = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [bookingTab, setBookingTab] = useState(searchParams.get('tab') === 'play-together' ? 'play-together' : 'book');
-  useEffect(() => { if (searchParams.get('tab') === 'play-together') setBookingTab('play-together'); }, [searchParams]);
+  useEffect(() => { const requested = searchParams.get('tab'); setBookingTab(requested && ['book','upcoming','history','play-together'].includes(requested) ? requested : 'book'); }, [searchParams]);
+  const changeBookingTab = (tab: string) => { setBookingTab(tab); const next = new URLSearchParams(searchParams); next.set('tab',tab); if (tab !== 'play-together') next.delete('section'); setSearchParams(next); };
   const requestedCityId = searchParams.get('cityId');
   const requestedCity = searchParams.get('city');
   const requestedCountry = searchParams.get('country');
@@ -622,7 +623,7 @@ const GigBooking = () => {
       }
     >
 
-      <Tabs value={bookingTab} onValueChange={setBookingTab} className="space-y-4">
+      <Tabs value={bookingTab} onValueChange={changeBookingTab} className="space-y-4">
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="book">
             <MapPin className="h-4 w-4 mr-1" />

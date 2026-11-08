@@ -1,3 +1,6 @@
+import { PlayTogetherOverview, type PlayTogetherSection } from './PlayTogetherOverview';
+import { listBandFriendships } from './friendshipApi';
+import { listLabelSuggestions } from './labelSuggestionsApi';
 import { useQuery } from '@tanstack/react-query';
 import { ConfirmedSupportSlotsPanel } from './ConfirmedSupportSlotsPanel';
 import { SupportHistoryPanel } from './SupportHistoryPanel';
@@ -88,11 +91,19 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const { toast } = useToast();
   const [cities, setCities] = useState<City[]>([]);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [savedPrefs, setSavedPrefs] = useState(DEFAULT_PREFS);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<SupportAvailability[]>([]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const friendships = useQuery({ queryKey: ['band-friendships', bandId], queryFn: () => listBandFriendships(bandId) });
+  const labels = useQuery({ queryKey: ['label-play-together', { bandId }], queryFn: () => listLabelSuggestions({ bandId }) });
   const proposalState = useQuery({ queryKey: ['support-tour-proposals', bandId], queryFn: () => listTourProposals(bandId) });
   const proposalSlots = (proposalState.data ?? []).flatMap(proposal => proposal.slot_ids);
   const [activeTab, setActiveTab] = useState('availability');
+  const navigateSection = (section: PlayTogetherSection) => {
+    setActiveTab(section);
+    const next = new URLSearchParams(searchParams); next.set('tab','play-together'); next.set('section',section); setSearchParams(next);
+  };
   const [offers, setOffers] = useState<SupportOfferView[]>([]);
   const [gigs, setGigs] = useState<HeadlinerGig[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -103,6 +114,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
   const [candidates, setCandidates] = useState<AvailableSupportBand[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [areaSaving, setAreaSaving] = useState(false);
   const [searching, setSearching] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -113,10 +125,11 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     return cities.filter((city) => `${city.name} ${city.country ?? ''}`.toLowerCase().includes(query));
   }, [cities, citySearch]);
 
-  useEffect(() => { const gigId = searchParams.get('gigId'); if (gigId) setSelectedGigId(gigId); const section = searchParams.get('section'); if (section && ['availability','offers','headliner','friends'].includes(section)) setActiveTab(section); }, [searchParams]);
+  useEffect(() => { const gigId = searchParams.get('gigId'); if (gigId) setSelectedGigId(gigId); const section = searchParams.get('section'); setActiveTab(section && ['availability','offers','headliner','friends'].includes(section) ? section : 'availability'); }, [searchParams]);
 
   const loadMarketplace = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [prefRow, availabilityRows, cityResult, offerResult, gigResult] = await Promise.all([
         getSupportPreferences(bandId),
@@ -141,7 +154,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
       if (gigResult.error) throw gigResult.error;
 
       if (prefRow) {
-        setPrefs({
+        const nextPrefs = {
           enabled: prefRow.enabled,
           single_gigs_enabled: prefRow.single_gigs_enabled,
           tour_enabled: prefRow.tour_enabled,
@@ -150,13 +163,16 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
           minimum_headliner_fame: prefRow.minimum_headliner_fame,
           minimum_venue_capacity: prefRow.minimum_venue_capacity,
           preferred_genres: prefRow.preferred_genres ?? [],
-        });
+        };
+        setPrefs(nextPrefs);
+        setSavedPrefs(nextPrefs);
       }
       setAvailability(availabilityRows);
       setCities((cityResult.data ?? []) as City[]);
       setOffers((offerResult.data ?? []) as SupportOfferView[]);
       setGigs((gigResult.data ?? []) as HeadlinerGig[]);
     } catch (error: unknown) {
+      setLoadError(getErrorMessage(error, 'Could not load support data.'));
       toast({ title: 'Support marketplace unavailable', description: getErrorMessage(error, 'Could not load support data.'), variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -169,6 +185,7 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     setSaving(true);
     try {
       await saveSupportPreferences(bandId, prefs);
+      setSavedPrefs(prefs);
       toast({ title: 'Support preferences saved', description: prefs.enabled ? 'Your band can now appear in eligible support searches.' : 'Your band is no longer advertising support availability.' });
     } catch (error: unknown) {
       toast({ title: 'Could not save preferences', description: getErrorMessage(error, 'Please try again.'), variant: 'destructive' });
@@ -296,9 +313,17 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
     } finally { setBusyId(null); }
   };
 
+  const invitationCount = proposalState.isSuccess ? proposalState.data.filter(proposal => proposal.support_band_id === bandId && proposal.display_status === 'pending' && new Date(proposal.expires_at).getTime() > Date.now()).length
+    + offers.filter(offer => offer.status === 'pending' && !proposalSlots.includes(offer.id) && offer.gig && new Date(offer.gig.scheduled_date).getTime() > Date.now()).length : undefined;
+  const connectionCount = friendships.isSuccess && labels.isSuccess ? friendships.data.filter(friend => friend.incoming && friend.status === 'pending').length
+    + labels.data.filter(suggestion => suggestion.roster_current && (suggestion.headliner_band_id === bandId ? suggestion.headliner_response : suggestion.support_response) === 'pending').length : undefined;
+  const preferencesDirty = JSON.stringify(prefs) !== JSON.stringify(savedPrefs);
+
   if (loading) {
     return <Card><CardContent className="flex items-center gap-2 p-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading support marketplace...</CardContent></Card>;
   }
+
+  if (loadError) return <Card><CardContent className="space-y-3 p-6" role="alert"><p>Play Together could not load your availability and offers.</p><p className="text-sm text-muted-foreground">{loadError}</p><Button onClick={() => void loadMarketplace()}>Retry Play Together</Button></CardContent></Card>;
 
   return (
     <Card className="border-primary/20">
@@ -307,31 +332,36 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
         <CardDescription>Advertise support availability, respond to offers, or find a support act for your own headline gigs.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <PlayTogetherOverview enabled={savedPrefs.enabled} touring={savedPrefs.tour_enabled} singleGigs={savedPrefs.single_gigs_enabled} invitations={invitationCount} connections={connectionCount} onNavigate={navigateSection} />
+        <Tabs value={activeTab} onValueChange={value => navigateSection(value as PlayTogetherSection)} className="space-y-4">
           <TabsList className="grid h-auto w-full grid-cols-2 overflow-visible sm:grid-cols-4">
             <TabsTrigger value="availability">Availability</TabsTrigger>
-            <TabsTrigger value="offers">Offers</TabsTrigger>
+            <TabsTrigger value="offers">Offers{invitationCount !== undefined && invitationCount > 0 && <Badge className="ml-2" variant="secondary">{invitationCount}</Badge>}</TabsTrigger>
             <TabsTrigger value="headliner">Find Support</TabsTrigger>
-            <TabsTrigger value="friends">Friends &amp; labels</TabsTrigger>
+            <TabsTrigger value="friends">Friends &amp; labels{connectionCount !== undefined && connectionCount > 0 && <Badge className="ml-2" variant="secondary">{connectionCount}</Badge>}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="friends" className="space-y-4"><BandFriendsPanel key={bandId} bandId={bandId} /><LabelSuggestionsPanel key={`label-${bandId}`} bandId={bandId} onFindSupport={() => setActiveTab('headliner')} /></TabsContent>
+          <TabsContent value="friends" className="space-y-4"><BandFriendsPanel key={bandId} bandId={bandId} /><LabelSuggestionsPanel key={`label-${bandId}`} bandId={bandId} onFindSupport={() => navigateSection('headliner')} /></TabsContent>
 
           <TabsContent value="availability" className="space-y-4">
-            <TouringAvailabilityPanel key={bandId} bandId={bandId} onSaved={loadMarketplace} countries={[...new Set(cities.map(city => city.country).filter((country): country is string => !!country))].sort()} />
             <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
               <div className="flex items-center justify-between gap-4 md:col-span-2">
-                <div><Label>Open to support offers</Label><p className="text-sm text-muted-foreground">Only enabled bands appear in support searches.</p></div>
-                <Switch checked={prefs.enabled} onCheckedChange={(enabled) => setPrefs((p) => ({ ...p, enabled }))} />
+                <div><Label htmlFor={`support-offers-${bandId}`}>Open to support offers</Label><p className="text-sm text-muted-foreground">Only enabled bands appear in support searches.</p></div>
+                <Switch id={`support-offers-${bandId}`} disabled={saving || areaSaving} checked={prefs.enabled} onCheckedChange={(enabled) => setPrefs((p) => ({ ...p, enabled }))} />
               </div>
-              <div className="flex items-center justify-between"><Label>Single gigs</Label><Switch checked={prefs.single_gigs_enabled} onCheckedChange={(single_gigs_enabled) => setPrefs((p) => ({ ...p, single_gigs_enabled }))} /></div>
-              <div className="flex items-center justify-between"><Label>Open to touring with other bands</Label><Switch checked={prefs.tour_enabled} onCheckedChange={(tour_enabled) => setPrefs((p) => ({ ...p, tour_enabled }))} /></div>
-              <div><Label>Minimum headliner fame</Label><Input type="number" min={0} value={prefs.minimum_headliner_fame} onChange={(e) => setPrefs((p) => ({ ...p, minimum_headliner_fame: Number(e.target.value) || 0 }))} /></div>
-              <div><Label>Minimum venue capacity</Label><Input type="number" min={0} value={prefs.minimum_venue_capacity} onChange={(e) => setPrefs((p) => ({ ...p, minimum_venue_capacity: Number(e.target.value) || 0 }))} /></div>
-              <div className="md:col-span-2"><Button onClick={savePrefs} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save preferences</Button></div>
+              <div className="flex items-center justify-between"><Label htmlFor={`single-gigs-${bandId}`}>Single gigs</Label><Switch id={`single-gigs-${bandId}`} disabled={saving || areaSaving} checked={prefs.single_gigs_enabled} onCheckedChange={(single_gigs_enabled) => setPrefs((p) => ({ ...p, single_gigs_enabled }))} /></div>
+              <div className="flex items-center justify-between"><Label htmlFor={`touring-${bandId}`}>Open to touring with other bands</Label><Switch id={`touring-${bandId}`} disabled={saving || areaSaving} checked={prefs.tour_enabled} onCheckedChange={(tour_enabled) => setPrefs((p) => ({ ...p, tour_enabled }))} /></div>
+              <details className="md:col-span-2"><summary className="cursor-pointer text-sm font-medium">Optional booking limits{(prefs.minimum_headliner_fame > 0 || prefs.minimum_venue_capacity > 0) ? ' · active' : ''}</summary><p className="my-2 text-xs text-muted-foreground">These minimums reduce which headliners and venues can invite you.</p><div className="grid gap-3 md:grid-cols-2">
+                <div><Label htmlFor={`minimum-fame-${bandId}`}>Minimum headliner fame</Label><Input id={`minimum-fame-${bandId}`} disabled={saving || areaSaving} type="number" min={0} value={prefs.minimum_headliner_fame} onChange={(e) => setPrefs((p) => ({ ...p, minimum_headliner_fame: Number(e.target.value) || 0 }))} /></div>
+                <div><Label htmlFor={`minimum-capacity-${bandId}`}>Minimum venue capacity</Label><Input id={`minimum-capacity-${bandId}`} disabled={saving || areaSaving} type="number" min={0} value={prefs.minimum_venue_capacity} onChange={(e) => setPrefs((p) => ({ ...p, minimum_venue_capacity: Number(e.target.value) || 0 }))} /></div>
+              </div></details>
+              <div className="md:col-span-2"><Button onClick={savePrefs} disabled={saving || areaSaving || !preferencesDirty}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save preferences</Button></div>
             </div>
 
-            <div className="space-y-4 rounded-lg border p-4">
+            {preferencesDirty && <p role="status" className="text-sm text-amber-600">You have unsaved preference changes. Save them before other bands can use the new settings.</p>}
+            <TouringAvailabilityPanel key={bandId} bandId={bandId} onSaved={loadMarketplace} disabled={preferencesDirty || saving} onSavingChange={setAreaSaving} countries={[...new Set(cities.map(city => city.country).filter((country): country is string => !!country))].sort()} />
+            <details className="rounded-lg border p-4"><summary className="cursor-pointer font-medium">Advertise specific cities and dates</summary><p className="my-3 text-sm text-muted-foreground">Use these adverts for single gigs or city-specific touring. Country/worldwide touring does not need a city advert.</p>{preferencesDirty && <p className="mb-3 text-sm text-amber-600">Save your preference changes above before changing city adverts.</p>}<fieldset disabled={preferencesDirty || saving || areaSaving} className="space-y-4">
+            <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label>From</Label>
@@ -408,13 +438,14 @@ export function SupportMarketplacePanel({ bandId }: { bandId: string }) {
             </div>
 
             <div className="space-y-2">
-              {availability.length === 0 ? <p className="text-sm text-muted-foreground">No support dates advertised yet.</p> : availability.map((row) => (
+              {availability.length === 0 ? <p className="text-sm text-muted-foreground">No city-specific dates advertised yet.</p> : availability.map((row) => (
                 <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
                   <div className="flex items-center gap-3"><MapPin className="h-4 w-4 text-muted-foreground" /><div><p className="font-medium">{cityNames.get(row.city_id) ?? 'City'}</p><p className="text-sm text-muted-foreground">{row.available_from} to {row.available_until}</p></div></div>
                   <div className="flex items-center gap-2"><Badge variant={row.status === 'active' ? 'default' : 'secondary'}>{row.status}</Badge><Button size="sm" variant="outline" disabled={busyId === row.id} onClick={() => toggleAvailability(row)}>{row.status === 'active' ? 'Pause' : 'Enable'}</Button></div>
                 </div>
               ))}
             </div>
+            </fieldset></details>
           </TabsContent>
 
           <TabsContent value="offers" className="space-y-3">

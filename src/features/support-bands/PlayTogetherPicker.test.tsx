@@ -65,3 +65,17 @@ it('filters accepted friends without adding unavailable bands and sends requests
   await waitFor(() => expect(changeBandFriendship).toHaveBeenCalledWith('a', 'c', 'request'));
   expect(onSelect).not.toHaveBeenCalled();
 });
+
+it('sorts eligible bands and clears a dead-end filter without changing availability', async () => {
+ setup(); await screen.findByText('Same label');
+ fireEvent.change(screen.getByRole('combobox', { name: 'Sort available bands' }), { target: { value: 'fame' } });
+ const profiles = screen.getAllByRole('link', { name: /profile \(opens in a new tab\)/ });
+ expect(profiles[0]).toHaveTextContent('Saved Band');
+ expect(profiles[0]).toHaveAttribute('target','_blank');
+ fireEvent.change(screen.getByRole('textbox', { name: 'Search available bands' }), { target: { value: 'Missing' } });
+ expect(screen.getByText('No available bands match these filters.')).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button', { name: 'Clear band filters' }));
+ expect(screen.getByText('Label Band')).toBeInTheDocument();
+ expect(screen.getByText('Saved Band')).toBeInTheDocument();
+ expect(screen.queryByText('unavailable')).not.toBeInTheDocument();
+});
