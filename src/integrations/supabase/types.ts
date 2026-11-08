@@ -5431,6 +5431,7 @@ export type Database = {
       }
       band_support_preferences: {
         Row: {
+          availability_scope: string
           band_id: string
           created_at: string
           enabled: boolean
@@ -5440,10 +5441,14 @@ export type Database = {
           preferred_genres: string[]
           single_gigs_enabled: boolean
           tour_enabled: boolean
+          touring_countries: string[]
+          touring_from: string | null
+          touring_until: string | null
           travel_enabled: boolean
           updated_at: string
         }
         Insert: {
+          availability_scope?: string
           band_id: string
           created_at?: string
           enabled?: boolean
@@ -5453,10 +5458,14 @@ export type Database = {
           preferred_genres?: string[]
           single_gigs_enabled?: boolean
           tour_enabled?: boolean
+          touring_countries?: string[]
+          touring_from?: string | null
+          touring_until?: string | null
           travel_enabled?: boolean
           updated_at?: string
         }
         Update: {
+          availability_scope?: string
           band_id?: string
           created_at?: string
           enabled?: boolean
@@ -5466,6 +5475,9 @@ export type Database = {
           preferred_genres?: string[]
           single_gigs_enabled?: boolean
           tour_enabled?: boolean
+          touring_countries?: string[]
+          touring_from?: string | null
+          touring_until?: string | null
           travel_enabled?: boolean
           updated_at?: string
         }
@@ -5567,6 +5579,85 @@ export type Database = {
             foreignKeyName: "band_support_reputation_band_id_fkey"
             columns: ["band_id"]
             isOneToOne: true
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_touring_friendships: {
+        Row: {
+          band_high: string
+          band_low: string
+          requested_by_band_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          band_high: string
+          band_low: string
+          requested_by_band_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          band_high?: string
+          band_low?: string
+          requested_by_band_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_touring_friendships_band_high_fkey"
+            columns: ["band_high"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_touring_friendships_band_low_fkey"
+            columns: ["band_low"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_touring_friendships_requested_by_band_id_fkey"
+            columns: ["requested_by_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_touring_shortlist: {
+        Row: {
+          band_id: string
+          created_at: string
+          target_band_id: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          target_band_id: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          target_band_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_touring_shortlist_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_touring_shortlist_target_band_id_fkey"
+            columns: ["target_band_id"]
+            isOneToOne: false
             referencedRelation: "bands"
             referencedColumns: ["id"]
           },
@@ -38242,6 +38333,84 @@ export type Database = {
         }
         Relationships: []
       }
+      label_play_together_suggestions: {
+        Row: {
+          created_at: string
+          gig_id: string | null
+          headliner_band_id: string
+          headliner_response: string
+          id: string
+          label_id: string
+          note: string
+          support_band_id: string
+          support_response: string
+          tour_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gig_id?: string | null
+          headliner_band_id: string
+          headliner_response?: string
+          id?: string
+          label_id: string
+          note?: string
+          support_band_id: string
+          support_response?: string
+          tour_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gig_id?: string | null
+          headliner_band_id?: string
+          headliner_response?: string
+          id?: string
+          label_id?: string
+          note?: string
+          support_band_id?: string
+          support_response?: string
+          tour_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_play_together_suggestions_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_play_together_suggestions_headliner_band_id_fkey"
+            columns: ["headliner_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_play_together_suggestions_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_play_together_suggestions_support_band_id_fkey"
+            columns: ["support_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_play_together_suggestions_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_promotion_campaigns: {
         Row: {
           budget: number
@@ -46055,6 +46224,24 @@ export type Database = {
           key?: string
           name?: string
           reputation_tendencies?: Json
+        }
+        Relationships: []
+      }
+      play_together_notification_receipts: {
+        Row: {
+          created_at: string
+          event_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -65489,6 +65676,126 @@ export type Database = {
           },
         ]
       }
+      support_member_xp_receipts: {
+        Row: {
+          created_at: string
+          ledger_id: string | null
+          profile_id: string
+          support_slot_id: string
+          xp_amount: number
+        }
+        Insert: {
+          created_at?: string
+          ledger_id?: string | null
+          profile_id: string
+          support_slot_id: string
+          xp_amount: number
+        }
+        Update: {
+          created_at?: string
+          ledger_id?: string | null
+          profile_id?: string
+          support_slot_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_member_xp_receipts_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "experience_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_member_xp_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_member_xp_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_member_xp_receipts_support_slot_id_fkey"
+            columns: ["support_slot_id"]
+            isOneToOne: false
+            referencedRelation: "gig_support_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tour_proposals: {
+        Row: {
+          created_at: string
+          expires_at: string
+          headliner_band_id: string
+          id: string
+          itinerary: Json
+          note: string
+          request_id: string
+          slot_ids: string[]
+          status: string
+          support_band_id: string
+          tour_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          headliner_band_id: string
+          id?: string
+          itinerary: Json
+          note?: string
+          request_id: string
+          slot_ids: string[]
+          status?: string
+          support_band_id: string
+          tour_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          headliner_band_id?: string
+          id?: string
+          itinerary?: Json
+          note?: string
+          request_id?: string
+          slot_ids?: string[]
+          status?: string
+          support_band_id?: string
+          tour_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tour_proposals_headliner_band_id_fkey"
+            columns: ["headliner_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tour_proposals_support_band_id_fkey"
+            columns: ["support_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tour_proposals_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           description: string | null
@@ -73028,15 +73335,6 @@ export type Database = {
       }
     }
     Functions: {
-      get_band_discovery_context: {
-        Args: { p_band_id: string }
-        Returns: { band_id: string; shortlisted: boolean; labelmate: boolean }[]
-      }
-      set_band_shortlisted: {
-        Args: { p_band_id: string; p_target_band_id: string; p_saved: boolean }
-        Returns: undefined
-      }
-
       _apply_game_reward: {
         Args: {
           p_idempotency_key: string
@@ -76131,6 +76429,10 @@ export type Database = {
         Args: { p_profile_id: string; p_request_id?: string; p_tour_id: string }
         Returns: Json
       }
+      change_band_friendship: {
+        Args: { p_action: string; p_band_id: string; p_target_band_id: string }
+        Returns: undefined
+      }
       charge_band_release_cost: {
         Args: {
           p_amount_minor: number
@@ -77449,6 +77751,27 @@ export type Database = {
         }
         Returns: string
       }
+      create_support_tour_proposal: {
+        Args: {
+          p_gig_ids: string[]
+          p_headliner_band_id: string
+          p_note?: string
+          p_request_id: string
+          p_support_band_id: string
+          p_tour_id: string
+        }
+        Returns: string
+      }
+      create_tour_support_offers: {
+        Args: {
+          p_gig_ids: string[]
+          p_headliner_band_id: string
+          p_request_id: string
+          p_support_band_id: string
+          p_tour_id: string
+        }
+        Returns: number
+      }
       create_twaater_poll_with_options: {
         Args: {
           p_expires_at: string
@@ -77874,6 +78197,7 @@ export type Database = {
       }
       expire_stale_music_video_preparations: { Args: never; Returns: Json }
       expire_stale_pr_offers: { Args: never; Returns: number }
+      expire_support_tour_proposals: { Args: never; Returns: number }
       fail_clothing_preview_job: {
         Args: { p_error: string; p_job_id: string; p_retry?: boolean }
         Returns: undefined
@@ -78772,6 +79096,14 @@ export type Database = {
         Args: { p_band_id: string; p_country: string }
         Returns: number
       }
+      get_band_discovery_context: {
+        Args: { p_band_id: string }
+        Returns: {
+          band_id: string
+          labelmate: boolean
+          shortlisted: boolean
+        }[]
+      }
       get_band_equipped_clothing_performance_bonus: {
         Args: { p_band_id: string }
         Returns: {
@@ -78785,6 +79117,10 @@ export type Database = {
         Returns: Json
       }
       get_band_operation_permissions: {
+        Args: { p_band_id: string }
+        Returns: Json
+      }
+      get_band_play_together_status: {
         Args: { p_band_id: string }
         Returns: Json
       }
@@ -79278,6 +79614,10 @@ export type Database = {
         Returns: Json
       }
       get_label_management_stats: {
+        Args: { p_label_id: string }
+        Returns: Json
+      }
+      get_label_play_together_roster: {
         Args: { p_label_id: string }
         Returns: Json
       }
@@ -80326,6 +80666,10 @@ export type Database = {
         Args: { p_next_level: number }
         Returns: number
       }
+      label_play_together_booking_options: {
+        Args: { p_headliner_band_id: string; p_label_id: string }
+        Returns: Json
+      }
       label_release_artist_contract_atomic: {
         Args: { p_contract_id: string }
         Returns: Json
@@ -80369,6 +80713,15 @@ export type Database = {
       link_label_to_company: {
         Args: { p_company_id: string; p_label_id: string }
         Returns: undefined
+      }
+      list_band_friendships: {
+        Args: { p_band_id: string }
+        Returns: {
+          band_id: string
+          band_name: string
+          incoming: boolean
+          status: string
+        }[]
       }
       list_conversations: {
         Args: {
@@ -80435,6 +80788,10 @@ export type Database = {
           status: string
         }[]
       }
+      list_label_play_together: {
+        Args: { p_band_id?: string; p_label_id?: string }
+        Returns: Json
+      }
       list_manageable_job_vacancies: {
         Args: { actor_profile_id?: string }
         Returns: {
@@ -80459,6 +80816,10 @@ export type Database = {
           p_page_limit?: number
           p_search_query?: string
         }
+        Returns: Json
+      }
+      list_support_tour_proposals: {
+        Args: { p_band_id: string }
         Returns: Json
       }
       list_transferable_equipment: {
@@ -80745,6 +81106,16 @@ export type Database = {
       }
       notify_blind_box_live: { Args: never; Returns: number }
       notify_gig_absent_members: { Args: never; Returns: Json }
+      notify_play_together_band: {
+        Args: {
+          p_band: string
+          p_key: string
+          p_message: string
+          p_section?: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       offer_company_vacancy_to_player: {
         Args: {
           p_message?: string
@@ -82463,6 +82834,10 @@ export type Database = {
         Args: { p_accept: boolean; p_profile_id: string; p_rivalry_id: string }
         Returns: Json
       }
+      respond_support_tour_proposal: {
+        Args: { p_action: string; p_id: string }
+        Returns: string
+      }
       respond_to_bug_report: {
         Args: { p_message: string; p_report_id: string; p_status?: string }
         Returns: {
@@ -82554,6 +82929,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_to_label_play_together: {
+        Args: { p_band_id: string; p_response: string; p_suggestion_id: string }
+        Returns: undefined
+      }
       respond_to_music_collaboration_contract: {
         Args: {
           p_accept: boolean
@@ -82624,6 +83003,10 @@ export type Database = {
           p_royalty_percentage?: number
         }
         Returns: Json
+      }
+      respond_to_tour_support_offers: {
+        Args: { p_action: string; p_offers: Json }
+        Returns: number
       }
       restock_cooking_city_markets: {
         Args: { p_max_rows?: number }
@@ -83540,6 +83923,10 @@ export type Database = {
         Args: { p_band_id: string; p_required: boolean }
         Returns: boolean
       }
+      set_band_shortlisted: {
+        Args: { p_band_id: string; p_saved: boolean; p_target_band_id: string }
+        Returns: undefined
+      }
       set_band_support_preferences: {
         Args: {
           p_band_id: string
@@ -83553,6 +83940,7 @@ export type Database = {
           p_travel_enabled?: boolean
         }
         Returns: {
+          availability_scope: string
           band_id: string
           created_at: string
           enabled: boolean
@@ -83562,6 +83950,9 @@ export type Database = {
           preferred_genres: string[]
           single_gigs_enabled: boolean
           tour_enabled: boolean
+          touring_countries: string[]
+          touring_from: string | null
+          touring_until: string | null
           travel_enabled: boolean
           updated_at: string
         }
@@ -83733,6 +84124,18 @@ export type Database = {
           ownership_id: string
           selected_variant_key: string
         }[]
+      }
+      set_support_touring_scope: {
+        Args: {
+          p_band_id: string
+          p_countries: string[]
+          p_from: string
+          p_max_minutes: number
+          p_scope: string
+          p_travel: boolean
+          p_until: string
+        }
+        Returns: undefined
       }
       set_university_course_fee: {
         Args: {
@@ -84488,6 +84891,26 @@ export type Database = {
       submit_random_event_choice: {
         Args: { p_choice: string; p_player_event_id: string }
         Returns: Json
+      }
+      suggest_label_pairing_for_booking: {
+        Args: {
+          p_gig_id: string
+          p_headliner_band_id: string
+          p_label_id: string
+          p_note: string
+          p_support_band_id: string
+          p_tour_id: string
+        }
+        Returns: string
+      }
+      suggest_label_play_together: {
+        Args: {
+          p_headliner_band_id: string
+          p_label_id: string
+          p_note: string
+          p_support_band_id: string
+        }
+        Returns: string
       }
       support_fan_gain_for_gig: {
         Args: { p_attendance: number; p_band_id: string; p_rating?: number }
@@ -86190,6 +86613,10 @@ export type Database = {
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
+      }
+      validate_support_route: {
+        Args: { p_band_id: string; p_gig_ids: string[] }
+        Returns: undefined
       }
       verify_internal_cron_secret: {
         Args: { p_secret: string }
