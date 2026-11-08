@@ -1,3 +1,4 @@
+import { festivalReadRefresh } from "./festivalReadRefresh";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as repository from "../data/festivalCompanyRepository";
@@ -18,6 +19,7 @@ export const festivalArtistOpportunitiesKey = [
 export const useFestivalArtistOpportunities = () => {
   const { profileId } = useActiveProfile();
   return useQuery({
+    ...festivalReadRefresh,
     queryKey: [...festivalArtistOpportunitiesKey, profileId],
     queryFn: repository.getMyFestivalArtistOpportunities,
     enabled: Boolean(profileId),

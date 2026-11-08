@@ -1,3 +1,4 @@
+import { festivalReadRefresh } from "./festivalReadRefresh";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {useRef} from "react";
 import * as repository from "../data/festivalCompanyRepository";
@@ -9,11 +10,11 @@ export const publicFestivalKey=(slug?:string)=>["public-festival",slug] as const
 export const festivalDirectoryKey=(filters:Record<string,unknown>={})=>["festival-directory",filters] as const;
 export const festivalTicketWalletKey=["festival-ticket-wallet"] as const;
 export const useFestivalLaunchPlan=(id?:string)=>useQuery({queryKey:festivalLaunchKey(id),enabled:Boolean(id),queryFn:()=>repository.getFestivalLaunchPlan(id!)});
-export const usePublicFestival=(slug?:string)=>useQuery({queryKey:publicFestivalKey(slug),enabled:Boolean(slug),queryFn:()=>repository.getPublicFestival(slug!),refetchInterval:60_000});
-export const usePublicFestivalDirectory=(filters:Record<string,unknown>={})=>useQuery({queryKey:festivalDirectoryKey(filters),queryFn:()=>repository.getPublicFestivalDirectory(filters),refetchInterval:60_000});
-export const usePublicFestivalTimetable=(slug?:string)=>useQuery({queryKey:["public-festival-timetable",slug],enabled:Boolean(slug),queryFn:()=>repository.getPublicFestivalTimetable(slug!)});
-export const usePublicFestivalTicketProducts=(launchId?:string)=>useQuery({queryKey:["public-festival-tickets",launchId],enabled:Boolean(launchId),queryFn:()=>repository.getPublicFestivalTicketProducts(launchId!)});
-export const useMyFestivalTickets=(enabled=true)=>{const {profileId}=useActiveProfile();return useQuery({queryKey:[...festivalTicketWalletKey,profileId],queryFn:repository.getMyFestivalTickets,enabled:enabled&&Boolean(profileId)});};
+export const usePublicFestival=(slug?:string)=>useQuery({...festivalReadRefresh,queryKey:publicFestivalKey(slug),enabled:Boolean(slug),queryFn:()=>repository.getPublicFestival(slug!),refetchInterval:60_000});
+export const usePublicFestivalDirectory=(filters:Record<string,unknown>={})=>useQuery({...festivalReadRefresh,queryKey:festivalDirectoryKey(filters),queryFn:()=>repository.getPublicFestivalDirectory(filters),refetchInterval:60_000});
+export const usePublicFestivalTimetable=(slug?:string)=>useQuery({...festivalReadRefresh,queryKey:["public-festival-timetable",slug],enabled:Boolean(slug),queryFn:()=>repository.getPublicFestivalTimetable(slug!)});
+export const usePublicFestivalTicketProducts=(launchId?:string)=>useQuery({...festivalReadRefresh,queryKey:["public-festival-tickets",launchId],enabled:Boolean(launchId),queryFn:()=>repository.getPublicFestivalTicketProducts(launchId!)});
+export const useMyFestivalTickets=(enabled=true)=>{const {profileId}=useActiveProfile();return useQuery({...festivalReadRefresh,queryKey:[...festivalTicketWalletKey,profileId],queryFn:repository.getMyFestivalTickets,enabled:enabled&&Boolean(profileId)});};
 export const useFestivalPlayerTicketSalesBreakdown=(id?:string)=>useQuery({queryKey:["festival-player-sales-breakdown",id],enabled:Boolean(id),queryFn:()=>repository.getFestivalPlayerTicketSalesBreakdown(id!),refetchInterval:60_000});
 export const useFestivalSalesSummary=(id?:string)=>useQuery({queryKey:["festival-sales-summary",id],enabled:Boolean(id),queryFn:()=>repository.getFestivalTicketSalesSummary(id!),refetchInterval:60_000});
 export const useFestivalSalesSummaryForLaunch=(id?:string,launchId?:string)=>useQuery({queryKey:["festival-sales-summary",id,launchId],enabled:Boolean(id&&launchId),queryFn:()=>repository.getFestivalTicketSalesSummaryForLaunch(id!,launchId!),refetchInterval:60_000});
