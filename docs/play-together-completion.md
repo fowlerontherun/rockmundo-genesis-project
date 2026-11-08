@@ -39,3 +39,17 @@ Security advisors were checked before/after deployment. Internal receipt tables 
 ## Scope
 
 This completes the one-headliner/one-support booking flow described in the review. Co-headlining, multiple support acts and negotiated fees remain separate gameplay expansions. Physical travel remains a player action with its existing costs and rules. Live verification is a schema/authentication smoke check; the full gameplay lifecycle is exercised with isolated fixture bands and mocked external finance transport, not real player bookings.
+
+## Proposal authority follow-up
+
+The review of #4762 identified two lifecycle gaps: closing an altered proposal left its remaining pending slots blocked, and the public per-show response API could accept proposal dates independently of the itinerary deadline and route check.
+
+The forward-only `20261108090805_tour_proposal_response_authority.sql` moves per-show and batch execution for saved proposals into private, non-client-executable functions. Public legacy response APIs reject proposal-owned slots, including mixed batches, regardless of notification-suppression settings. The public proposal response retains all permission, deadline, itinerary and route checks. Ordinary standalone gigs and legacy tour batches keep their existing response APIs.
+
+Removing or expiring a pending date now closes its proposal and releases remaining pending slots immediately. This also applies when acceptance of a competing proposal expires a conflicting date. The current response is scoped by proposal identity so legitimate multi-date acceptance, decline and withdrawal remain atomic. Expiry processing marks the proposal expired before releasing its slots, avoiding a false changed notification. A data repair releases pending slots from previously changed proposals while preserving accepted dates and their member schedules. The response fallback also handles missing slot rows.
+
+Proposal cards show the current status of each date, clear status explanations, start/end times in the player's timezone, and a headliner action to release expired dates before the expiry worker runs.
+
+Regression coverage: `node --test --test-concurrency=1 scripts/support-bands/proposal-authority.test.mjs` tests legacy API bypass attempts, deadline handling, unavailable member locations, private-function execute denial, mixed-batch rollback, competing offers, immediate removal cleanup, scheduled expiry, safe repair of an old partial acceptance, replacement invitations, and legacy API compatibility. The complete lifecycle and settlement harnesses now load this migration too.
+
+Applied directly on 8 November 2026. Live checks confirmed both public legacy guards, private helper execute denial for authenticated clients, the enabled slot-cleanup trigger and no pending slots attached to changed proposals. The existing settlement function digest remains unchanged. The database had no proposal bookings at the time of deployment, so the repair changed no player commitments.

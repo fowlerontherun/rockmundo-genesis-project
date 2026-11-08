@@ -61,6 +61,7 @@ test('complete lifecycle: broad opt-in, proposals, travel, notification, changes
     const repairs=await readdir(new URL('../../supabase/migrations/',import.meta.url));
     const lock=repairs.find(name=>name.endsWith('_play_together_slot_authority_repair.sql'));
     assert.ok(lock); await db.exec(await readFile(new URL('../../supabase/migrations/'+lock,import.meta.url),'utf8'));
+    await db.exec(await readFile(new URL('../../supabase/migrations/20261108090805_tour_proposal_response_authority.sql',import.meta.url),'utf8'));
     const actor=async n=>db.exec(`SET ROLE authenticated; SET test.actor='${id(n)}'`);
     const scope=(kind,countries=[],from=null,until=null)=>db.query('SELECT set_support_touring_scope($1,$2,$3,$4,$5,true,1000)',[id(2),kind,countries,from,until]);
     const candidates=async city=>(await db.query("SELECT * FROM find_available_support_bands($1,$2,now()+interval '2 days',now()+interval '2 days 3 hours',true,500)",[id(1),id(city)])).rows;

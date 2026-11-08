@@ -77,6 +77,7 @@ test('support settlement pays and progresses exactly once across finance retry, 
     // Restore the guarded summary added by the completion migration.
     const lifecycle=await readFile(new URL('../../supabase/migrations/20261107235708_play_together_complete_lifecycle.sql',import.meta.url),'utf8');
     await db.exec(lifecycle.slice(lifecycle.indexOf('CREATE OR REPLACE FUNCTION public.get_band_support_summary')));
+    await db.exec(await readFile(new URL('../../supabase/migrations/20261108090805_tour_proposal_response_authority.sql',import.meta.url),'utf8'));
     await db.exec(`SET ROLE authenticated; SET test.actor='${id(2)}'; SELECT set_support_touring_scope('${id(2)}','worldwide','{}',null,null,true,1000);
       SET test.actor='${id(1)}'`);
     const proposal=(await db.query('SELECT create_support_tour_proposal($1,$2,$3,$4,$5,$6) AS id',[id(1),id(9),id(2),[id(5)],id(50),'Join'])).rows[0].id;

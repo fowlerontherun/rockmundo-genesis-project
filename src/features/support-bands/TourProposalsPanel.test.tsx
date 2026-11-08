@@ -13,17 +13,35 @@ it('shows itinerary terms and sends one decision for the whole proposal', async 
  fireEvent.click(screen.getByRole('button', { name: 'Accept itinerary' }));
  await waitFor(() => expect(respondTourProposal).toHaveBeenCalledWith('p','accept'));
  expect(respondTourProposal).toHaveBeenCalledOnce();
- expect(await screen.findByRole('status')).toHaveTextContent('accepted');
+ expect(await screen.findByRole('status')).toHaveTextContent('Confirmed');
 });
 it('allows withdrawal only from the headliner view and prevents expired acceptance', async () => {
  vi.mocked(listTourProposals).mockResolvedValue([proposal]); show('h');
  expect(await screen.findByRole('button', { name: 'Withdraw proposal' })).toBeInTheDocument();
  expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
  cleanup(); vi.mocked(listTourProposals).mockResolvedValue([{ ...proposal, display_status: 'expired' }]); show('s');
- await screen.findByText('expired'); expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
+ await screen.findAllByText('Expired'); expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
 });
 it('shows a recoverable error after route revalidation fails', async () => {
  vi.mocked(listTourProposals).mockResolvedValue([proposal]); vi.mocked(respondTourProposal).mockRejectedValue(new Error('support_route_unreachable')); show('s');
  fireEvent.click(await screen.findByRole('button', { name: 'Accept itinerary' }));
  expect(await screen.findByRole('alert')).toHaveTextContent('travel may have changed');
+});
+
+it('shows which dates remain confirmed after an itinerary changes', async () => {
+ const second = { ...proposal.itinerary[0], slot_id: 'kept', gig_id: 'kept-gig' };
+ vi.mocked(listTourProposals).mockResolvedValue([{ ...proposal, display_status: 'changed', slot_ids: ['slot','kept'], slot_statuses: { slot: 'cancelled', kept: 'accepted' }, itinerary: [...proposal.itinerary, second] }]);
+ show('s');
+ expect(await screen.findByText('Dates changed')).toBeInTheDocument();
+ expect(screen.getByText('Cancelled')).toBeInTheDocument();
+ expect(screen.getByText('Confirmed')).toBeInTheDocument();
+ expect(screen.getByText(/Remaining pending dates have been released/)).toBeInTheDocument();
+ expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
+});
+it('lets the headliner release expired pending dates before the worker runs', async () => {
+ vi.mocked(listTourProposals).mockResolvedValue([{ ...proposal, display_status: 'expired', slot_statuses: { slot: 'pending' } }]);
+ vi.mocked(respondTourProposal).mockResolvedValue('expired'); show('h');
+ fireEvent.click(await screen.findByRole('button', { name: 'Release expired dates' }));
+ await waitFor(() => expect(respondTourProposal).toHaveBeenCalledWith('p','withdraw'));
+ expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
 });
