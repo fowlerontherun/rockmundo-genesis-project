@@ -20,6 +20,7 @@ WITH objects(object_name,kind) AS (
     ('festival_runtime_stage_crowds','table'),
     ('get_festival_edition_runtime_control_room(uuid,uuid)','function'),
     ('get_public_festival(text)','function'),
+    ('get_public_festival_edition_live_status(text)','function'),
     ('get_public_festival_live_status(text)','function'),
     ('get_public_festival_live_experience(text)','function')
 ),
@@ -38,6 +39,7 @@ assessment AS (
       'festival_runtime_configuration_versions','festival_runtime_evidence',
       'festival_stages','get_festival_edition_runtime_control_room(uuid,uuid)'
     )) AS canonical_edition_runtime_ready,
+    bool_and(present) FILTER (WHERE object_name = 'get_public_festival_edition_live_status(text)') AS canonical_public_projection_present,
     bool_and(present) FILTER (WHERE object_name IN (
       'festival_public_editions','festival_runtime_sessions',
       'festival_runtime_days','festival_runtime_stages',
@@ -58,13 +60,17 @@ SELECT jsonb_build_object(
   'checkedAt', clock_timestamp(),
   'catalogue', (SELECT jsonb_agg(jsonb_build_object('object',object_name,'kind',kind,'present',present) ORDER BY object_name) FROM inventory),
   'canonicalEditionRuntimeReady', a.canonical_edition_runtime_ready,
+  'canonicalPublicProjectionPresent', a.canonical_public_projection_present,
   'launchScopedRuntimeReady', a.legacy_launch_runtime_ready,
   'launchScopedDayCrowdPatchPermitted', a.can_apply_launch_scoped_day_crowd_patch,
   'migrationHistoryCount', (SELECT count(*) FROM supabase_migrations.schema_migrations),
   'latestMigrationVersion', (SELECT max(version) FROM supabase_migrations.schema_migrations),
   'decision', CASE
     WHEN a.canonical_edition_runtime_ready AND NOT a.legacy_launch_runtime_ready
-      THEN 'BLOCK launch-scoped patch. Reuse existing canonical annual-edition runtime and design a privacy-safe public projection.'
+      THEN CASE WHEN a.canonical_public_projection_present
+        THEN 'BLOCK launch-scoped patch. Reuse existing canonical annual-edition runtime and public projection; verify identity, privacy and freshness before extending it.'
+        ELSE 'BLOCK launch-scoped patch. Reuse existing canonical annual-edition runtime and design a privacy-safe public projection.'
+      END
     WHEN a.legacy_launch_runtime_ready
       THEN 'Launch-scoped objects present; require security/grant audit and disposable test harness before patch.'
     ELSE 'BLOCK deployment. Inspect schema/history drift and resolve prerequisites before applying changes.'
