@@ -1,3 +1,4 @@
+-- Legacy standout_player_id stores a user account ID, not a character profile ID.
 -- Phase 9: Post-gig consequences and live reputation.
 CREATE TABLE IF NOT EXISTS public.gig_post_processing (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,7 +78,7 @@ CREATE TABLE IF NOT EXISTS public.gig_media_reviews (
   positive_points jsonb NOT NULL DEFAULT '[]'::jsonb,
   negative_points jsonb NOT NULL DEFAULT '[]'::jsonb,
   standout_song_id uuid REFERENCES public.songs(id) ON DELETE SET NULL,
-  standout_player_id uuid REFERENCES public.profiles(user_id) ON DELETE SET NULL,
+  standout_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   crowd_response text,
   production_comment text,
   incident_reference jsonb,
