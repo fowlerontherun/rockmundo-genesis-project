@@ -1,3 +1,4 @@
+-- Account actor IDs refer to auth.users; multiple profiles can share one user.
 -- Gig Preparation Phase 6: server-driven live gig timeline and tactical decisions.
 CREATE TABLE IF NOT EXISTS public.gig_live_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -112,7 +113,7 @@ CREATE TABLE IF NOT EXISTS public.gig_live_setlist_changes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL REFERENCES public.gig_live_sessions(id) ON DELETE CASCADE,
   change_type text NOT NULL CHECK (change_type IN ('skip','swap','replace','move_favourite','add_encore','remove_encore','shorten_set')),
-  requested_by_player_id uuid REFERENCES public.profiles(user_id) ON DELETE SET NULL,
+  requested_by_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   change_source text NOT NULL CHECK (change_source IN ('player','automatic_fallback','system')),
   before_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
   after_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
