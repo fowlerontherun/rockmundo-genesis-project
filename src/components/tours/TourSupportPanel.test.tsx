@@ -22,7 +22,12 @@ it.each(['scheduled','active'])('invites bands after booking a %s tour using onl
  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}><TourSupportPanel tourId="tour" headlinerBandId="headliner" tourStatus={status} /></QueryClientProvider>);
  fireEvent.click(await screen.findByRole('button', { name: 'Choose Support' }));
  expect(screen.getAllByRole('checkbox')).toHaveLength(1);
- fireEvent.click(screen.getByRole('button', { name: 'Invite to 1 dates' }));
+ expect(screen.getByText('1 of 1 open dates selected')).toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button', { name: 'Clear date selection' }));
+ expect(screen.getByRole('button', { name: 'Invite to 0 dates' })).toBeDisabled();
+ expect(createTourProposal).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button', { name: 'Select all dates' }));
+ fireEvent.click(screen.getByRole('button', { name: 'Invite to 1 date' }));
  await waitFor(() => expect(createTourProposal).toHaveBeenCalledWith('headliner','tour','b',['g1'],expect.any(String),''));
  expect(createTourProposal).toHaveBeenCalledOnce();
 });

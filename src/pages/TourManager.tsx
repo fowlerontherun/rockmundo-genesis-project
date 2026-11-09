@@ -1,3 +1,4 @@
+import { TourSupportInviteShortcut } from '@/components/tours/TourSupportInviteShortcut';
 import { BookedTourSupportDialog } from '@/components/tours/BookedTourSupportDialog';
 import { TourPoster } from '@/components/game-art/TourPoster';
 import WorldAtlas from "@/components/map/WorldAtlas";
@@ -151,9 +152,11 @@ const OTHER_TOURS_PER_PAGE = 10;
 const TourManager = () => {
   const [searchParams] = useSearchParams();
   const requestedCityId = searchParams.get("cityId");
+  const inviteBandId = searchParams.get("inviteBand");
+  const inviteTourId = searchParams.get("tour") ?? undefined;
   const creatingTourPoster = searchParams.get("shareCreate") === "tour";
   const { profileId } = useActiveProfile();
-  const { data: primaryBand } = usePrimaryBand();
+  const { data: primaryBand, isLoading: loadingPrimaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.band_id ?? primaryBand?.bands?.id;
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
@@ -759,7 +762,7 @@ const TourManager = () => {
               </Button>
             )}
           </div>
-          {tour.band_id === currentBandId && <BookedTourSupportDialog tourId={tour.id} bandId={tour.band_id} tourName={tour.name} status={tour.status} initialSupportBandId={searchParams.get('inviteBand') ?? undefined} />}
+          {tour.band_id === currentBandId && <BookedTourSupportDialog tourId={tour.id} bandId={tour.band_id} tourName={tour.name} status={tour.status} />}
         </CardContent>
       </Card>
     );
@@ -799,6 +802,23 @@ const TourManager = () => {
         </Button>
       }
     >
+      {inviteBandId && (
+        <div className="mb-4">
+          {loadingPrimaryBand || loadingMyTours ? (
+            <p role="status" className="text-sm text-muted-foreground">Loading booked tours…</p>
+          ) : myToursError ? (
+            <div role="alert" className="space-y-2">
+              <p>Booked tours could not be loaded.</p>
+              <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry booked tours</Button>
+            </div>
+          ) : currentBandId ? (
+            <TourSupportInviteShortcut key={`${currentBandId}:${inviteBandId}:${inviteTourId ?? ''}`}
+              bandId={currentBandId} targetBandId={inviteBandId} requestedTourId={inviteTourId} tours={myTours} />
+          ) : (
+            <p role="status" className="text-sm">Select a character with a band to invite tour support.</p>
+          )}
+        </div>
+      )}
       {creatingTourPoster && (
         <Card className="mb-4 border-primary/30 bg-primary/5">
           <CardHeader className="pb-2">

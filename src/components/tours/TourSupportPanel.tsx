@@ -137,6 +137,63 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        {editable && (
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold">Fill open dates</h4>
+            {loadingAssignments || loadingCandidates || loadingShows ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
+            ) : remainingCandidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
+            ) : (
+              <>
+                {initialSupportBandId && selectedBandId === initialSupportBandId && !selectedCandidate && (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    The band from your link is unavailable for the open dates on this tour. You can choose another band below.
+                  </p>
+                )}
+                {selectedCandidate && (
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{selectedCandidate.support_band_name}</span>
+                      <Badge variant="secondary">Fame {selectedCandidate.fame.toLocaleString()}</Badge>
+                      <Badge variant="secondary">Popularity {selectedCandidate.popularity.toLocaleString()}</Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium" aria-live="polite">{offeredCoverage.length} of {selectedCoverage.length} open dates selected</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={sendOffers.isPending || offeredCoverage.length === selectedCoverage.length} onClick={() => setExcludedDates([])}>Select all dates</Button><Button size="sm" variant="outline" disabled={sendOffers.isPending || !offeredCoverage.length} onClick={() => setExcludedDates(selectedCoverage.map(show => show.gig_id))}>Clear date selection</Button></div></div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {selectedCoverage.map((show) => (
+                        <div key={show.gig_id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                          <label className="flex min-w-0 flex-1 items-start gap-2"><input type="checkbox" checked={!excludedDates.includes(show.gig_id)} disabled={sendOffers.isPending}
+                            onChange={event => setExcludedDates(current => event.target.checked ? current.filter(id => id !== show.gig_id) : [...current, show.gig_id])} />
+                            <span className="min-w-0 break-words"><span className="block">{new Date(show.scheduled_date).toLocaleString()}</span><span className="block text-xs text-muted-foreground">{assignments.find(row => row.gig_id === show.gig_id)?.city_name ?? 'City'} · {assignments.find(row => row.gig_id === show.gig_id)?.venue_name ?? 'Venue'}</span></span></label>
+                          <Badge variant="outline" className="hidden shrink-0 gap-1 sm:inline-flex"><Route className="h-3 w-3" />Date available</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="block text-sm">Message to the band (optional)<textarea aria-label="Tour proposal message" maxLength={500} disabled={sendOffers.isPending} className="mt-1 w-full rounded border bg-background p-2" value={proposalNote} onChange={e => setProposalNote(e.target.value)} /></label>
+                    <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">Support receives 20% of artist ticket revenue per confirmed date. The invited band reviews and accepts the itinerary.</p>
+                      <Button size="sm" disabled={offeredCoverage.length === 0 || sendOffers.isPending} onClick={() => sendOffers.mutate()}>
+                        {sendOffers.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Invite to {offeredCoverage.length} {offeredCoverage.length === 1 ? 'date' : 'dates'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <details open={!selectedCandidate}>
+                  <summary className="cursor-pointer py-2 text-sm font-medium">{selectedCandidate ? 'Choose a different band' : 'Browse available bands'}</summary>
+                  <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} preferredId={initialSupportBandId} onSelect={id => {
+                  if (id === selectedBandId) return;
+                  setSelectedBandId(id);
+                  setExcludedDates([]);
+                }}
+                  disabled={sendOffers.isPending}
+                  candidates={remainingCandidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
+                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates` }))} />
+                </details>
+              </>
+            )}
+          </section>
+        )}
         <TourProposalsPanel bandId={headlinerBandId} tourId={tourId} />
         <section className="space-y-2">
           <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Tour coverage</h4><span className="text-xs text-muted-foreground">{assignments.filter((a) => a.support_status === 'accepted' || a.support_status === 'completed').length}/{assignments.length} confirmed</span></div>
@@ -169,51 +226,6 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
           )}
         </section>
 
-        {editable && (
-          <section className="space-y-3 border-t pt-4">
-            <h4 className="text-sm font-semibold">Fill open dates</h4>
-            {loadingCandidates || loadingShows ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
-            ) : remainingCandidates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
-            ) : (
-              <>
-                <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} onSelect={id => { setSelectedBandId(id); setExcludedDates([]); }}
-                  disabled={sendOffers.isPending}
-                  candidates={remainingCandidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
-                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates` }))} />
-
-                {selectedCandidate && (
-                  <div className="rounded-lg border p-3 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{selectedCandidate.support_band_name}</span>
-                      <Badge variant="secondary">Fame {selectedCandidate.fame.toLocaleString()}</Badge>
-                      <Badge variant="secondary">Popularity {selectedCandidate.popularity.toLocaleString()}</Badge>
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {selectedCoverage.map((show) => (
-                        <div key={show.gig_id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
-                          <label className="flex items-center gap-2"><input type="checkbox" checked={!excludedDates.includes(show.gig_id)} disabled={sendOffers.isPending}
-                            onChange={event => setExcludedDates(current => event.target.checked ? current.filter(id => id !== show.gig_id) : [...current, show.gig_id])} />
-                            {new Date(show.scheduled_date).toLocaleDateString()}</label>
-                          <Badge variant="outline" className="gap-1"><Route className="h-3 w-3" />Date available</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    <label className="block text-sm">Message to the band (optional)<textarea aria-label="Tour proposal message" maxLength={500} disabled={sendOffers.isPending} className="mt-1 w-full rounded border bg-background p-2" value={proposalNote} onChange={e => setProposalNote(e.target.value)} /></label>
-                    <div className="flex items-center justify-between gap-3 border-t pt-3">
-                      <p className="text-xs text-muted-foreground">Only currently open, eligible dates are included. Confirmed dates are never overwritten.</p>
-                      <Button size="sm" disabled={offeredCoverage.length === 0 || sendOffers.isPending} onClick={() => sendOffers.mutate()}>
-                        {sendOffers.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Invite to {offeredCoverage.length} dates
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-        )}
       </CardContent>
     </Card>
   );

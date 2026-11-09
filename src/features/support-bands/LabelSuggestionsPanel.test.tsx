@@ -35,6 +35,7 @@ it('records only the current band response and offers date booking after mutual 
  wrap(<LabelSuggestionsPanel bandId="h" onFindSupport={onFindSupport} />);
  fireEvent.click(await screen.findByRole('button', { name: 'Find Support dates' }));
  expect(onFindSupport).toHaveBeenCalledOnce();
+ expect(onFindSupport).toHaveBeenCalledWith('b');
 });
 it('disables interest for an expired roster and displays response failures', async () => {
  vi.mocked(listLabelSuggestions).mockResolvedValue([{ ...suggestion, roster_current: false }]);
@@ -43,4 +44,15 @@ it('disables interest for an expired roster and displays response failures', asy
  expect(await screen.findByRole('button', { name: 'Interested & shortlist' })).toBeDisabled();
  fireEvent.click(screen.getByRole('button', { name: 'Decline suggestion' }));
  expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm the change');
+});
+
+it('gives the headliner the linked booking action and tells support who sends the invitation', async () => {
+ vi.mocked(listLabelSuggestions).mockResolvedValue([{ ...suggestion, tour_id: 'tour-2', tour_name: 'Northern Tour' }]);
+ const headliner = wrap(<LabelSuggestionsPanel bandId="h" onFindSupport={() => {}} />);
+ const booking = await screen.findByRole('link', { name: 'Review support for Northern Tour' });
+ expect(booking).toHaveAttribute('href', '/tour-manager?tour=tour-2&inviteBand=b');
+ headliner.unmount();
+ wrap(<LabelSuggestionsPanel bandId="b" onFindSupport={() => {}} />);
+ expect(await screen.findByText('Northern Tour · The headliner sends the booking invitation.')).toBeInTheDocument();
+ expect(screen.queryByRole('link', { name: /Northern Tour/ })).not.toBeInTheDocument();
 });
