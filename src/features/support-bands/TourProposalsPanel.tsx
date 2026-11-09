@@ -36,7 +36,7 @@ function Itinerary({ proposal, state }: { proposal: TourProposal; state: string 
     </li>;
   })}</ol>;
 }
-export function TourProposalsPanel({ bandId, tourId }: { bandId: string; tourId?: string }) {
+export function TourProposalsPanel({ bandId, tourId, proposalId }: { bandId: string; tourId?: string; proposalId?: string }) {
   const client = useQueryClient();
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -54,13 +54,14 @@ export function TourProposalsPanel({ bandId, tourId }: { bandId: string; tourId?
     return state !== 'pending' && (state !== 'accepted' || !upcoming(p, now));
   };
   const priority = (p: TourProposal) => matches(p, 'reply') ? 0 : matches(p, 'sent') ? 1 : matches(p, 'confirmed') ? 2 : 3;
-  const visible = scoped.filter(p => matches(p, filter)).filter(p => [p.tour_name, p.headliner_name, p.support_name, ...p.itinerary.flatMap(date => [date.city_name, date.venue_name])].join(' ').toLowerCase().includes(search.trim().toLowerCase()))
+  const filtered = scoped.filter(p => matches(p, filter)).filter(p => [p.tour_name, p.headliner_name, p.support_name, ...p.itinerary.flatMap(date => [date.city_name, date.venue_name])].join(' ').toLowerCase().includes(search.trim().toLowerCase()))
     .sort((a,b) => priority(a)-priority(b) || (priority(a)<2 ? new Date(a.expires_at).getTime()-new Date(b.expires_at).getTime() : 0));
+  const visible = proposalId ? scoped.filter(proposal => proposal.id === proposalId) : filtered;
   return <section className="space-y-3">
     <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">Tour proposals</h3><Button size="sm" variant="outline" disabled={proposals.isFetching} onClick={() => void proposals.refetch()}>Refresh proposals</Button></div>
     {proposals.isPending && <p>Loading proposals…</p>}
     {proposals.isError && <p role="alert">Proposals could not be loaded. <Button onClick={() => void proposals.refetch()}>Retry proposals</Button></p>}
-    {scoped.length > 0 && <>
+    {!proposalId && scoped.length > 0 && <>
       <div className="flex flex-wrap gap-2" aria-label="Filter tour proposals">{filters.map(item => <Button key={item.id} size="sm" variant={filter === item.id ? 'default' : 'outline'} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label} <span className="ml-1 rounded bg-background/20 px-1.5 tabular-nums">{scoped.filter(p => matches(p,item.id)).length}</span></Button>)}</div>
       <Input aria-label="Search tour proposals" placeholder="Search by band, tour, city or venue…" value={search} onChange={event => setSearch(event.target.value)} />
     </>}
@@ -68,7 +69,7 @@ export function TourProposalsPanel({ bandId, tourId }: { bandId: string; tourId?
     {response.isSuccess && <p role="status">Proposal status: {stateLabels[response.data] ?? response.data}</p>}
     {visible.map(p => {
       const state = effectiveState(p,now);
-      const expanded = state === 'pending' || (state === 'accepted' && upcoming(p,now));
+      const expanded = !!proposalId || state === 'pending' || (state === 'accepted' && upcoming(p,now));
       const hoursLeft = Math.ceil((new Date(p.expires_at).getTime()-now)/3600000);
       return <article key={p.id} className="min-w-0 space-y-3 rounded-xl border p-4">
         <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><h4 className="break-words font-semibold">{p.tour_name}</h4><p className="break-words text-sm text-muted-foreground">{p.headliner_name} with {p.support_name} · {p.itinerary.length} {p.itinerary.length === 1 ? 'date' : 'dates'}</p></div><Badge variant={state === 'accepted' ? 'default' : 'outline'}>{stateLabels[state] ?? state}</Badge></div>
@@ -87,7 +88,10 @@ export function TourProposalsPanel({ bandId, tourId }: { bandId: string; tourId?
         </div>
       </article>;
     })}
-    {proposals.isSuccess && !scoped.length && <p className="text-sm text-muted-foreground">No tour proposals yet. Invite a band from a booked tour, or mark your band open to touring to be discovered.</p>}
-    {proposals.isSuccess && scoped.length > 0 && !visible.length && <div className="rounded-lg border border-dashed p-4 text-sm"><p>No proposals match this view.</p><Button variant="outline" className="mt-2" onClick={() => { setFilter('all'); setSearch(''); }}>Show all proposals</Button></div>}
+    {proposals.isSuccess && proposalId && !visible.length && (
+      <p role="status" className="text-sm text-muted-foreground">This proposal is no longer in this band’s recent proposals. Use Back to all invitations to review other offers.</p>
+    )}
+    {proposals.isSuccess && !proposalId && !scoped.length && <p className="text-sm text-muted-foreground">No tour proposals yet. Invite a band from a booked tour, or mark your band open to touring to be discovered.</p>}
+    {proposals.isSuccess && !proposalId && scoped.length > 0 && !visible.length && <div className="rounded-lg border border-dashed p-4 text-sm"><p>No proposals match this view.</p><Button variant="outline" className="mt-2" onClick={() => { setFilter('all'); setSearch(''); }}>Show all proposals</Button></div>}
   </section>;
 }

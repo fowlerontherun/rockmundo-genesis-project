@@ -6,7 +6,7 @@ import { listTourProposals, respondTourProposal, type TourProposal } from './com
 vi.mock('./completionApi', () => ({ listTourProposals: vi.fn(), respondTourProposal: vi.fn() }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 const proposal: TourProposal = { id: 'p', tour_id: 't', tour_name: 'Summer', headliner_band_id: 'h', support_band_id: 's', headliner_name: 'Headliner', support_name: 'Support', display_status: 'pending', slot_ids: ['slot'], expires_at: '2030-01-01', note: 'Come along', itinerary: [{ slot_id: 'slot', gig_id: 'gig', scheduled_date: '2030-01-02T18:00Z', scheduled_end: null, venue_name: 'Venue', city_name: 'City', revenue_share: .2, travel_minutes_from_previous: 60 }] };
-const show = (bandId: string) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><TourProposalsPanel bandId={bandId} /></QueryClientProvider>);
+const show = (bandId: string, proposalId?: string) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><TourProposalsPanel bandId={bandId} proposalId={proposalId} /></QueryClientProvider>);
 it('shows itinerary terms and sends one decision for the whole proposal', async () => {
  vi.mocked(listTourProposals).mockResolvedValue([proposal]); vi.mocked(respondTourProposal).mockResolvedValue('accepted');
  show('s'); expect(await screen.findByText('20% ticket revenue')).toBeInTheDocument(); expect(screen.getByText('Plan arrival')).toBeInTheDocument();
@@ -69,4 +69,23 @@ it('does not count an elapsed deadline as needing a reply while the cached state
  expect(filter).toHaveTextContent('0');
  expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
  expect(await screen.findByText('The reply deadline has passed. The headliner can send a new invitation.')).toBeInTheDocument();
+});
+
+it('opens the linked expired itinerary without showing a response for a different pending tour', async () => {
+ const expired = { ...proposal, id: 'expired', tour_name: 'Winter', display_status: 'expired' };
+ vi.mocked(listTourProposals).mockResolvedValue([proposal, expired]);
+ show('s', 'expired');
+
+ expect(await screen.findByRole('heading', { name: 'Winter' })).toBeInTheDocument();
+ expect(screen.getByRole('list', { name: 'Proposed tour dates' })).toBeVisible();
+ expect(screen.queryByRole('heading', { name: 'Summer' })).not.toBeInTheDocument();
+ expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
+});
+
+it('gives an unavailable proposal message when the linked invitation is outside the current list', async () => {
+ vi.mocked(listTourProposals).mockResolvedValue([proposal]);
+ show('s', 'missing');
+
+ expect(await screen.findByRole('status')).toHaveTextContent('recent proposals');
+ expect(screen.queryByRole('button', { name: 'Accept itinerary' })).not.toBeInTheDocument();
 });

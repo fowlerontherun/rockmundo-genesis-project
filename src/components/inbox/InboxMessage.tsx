@@ -43,11 +43,32 @@ const categoryConfig: Record<InboxCategory, { icon: typeof Dice5; colorClass: st
   system: { icon: Bell, colorClass: "text-muted-foreground bg-muted", label: "System" },
 };
 
+function getNavigationAction(message: InboxMessageType) {
+  const route = message.action_data?.route;
+  if (message.action_type !== "navigate" || typeof route !== "string" || !route) return null;
+
+  // Existing Play Together notifications already store the proposal ID in the event key.
+  const eventKey = message.metadata?.event_key;
+  const proposalId = typeof eventKey === "string"
+    ? /^support_tour_proposals:([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}):/i.exec(eventKey)?.[1]
+    : undefined;
+  if (proposalId && route.startsWith("/gig-booking?")) {
+    const params = new URLSearchParams(route.slice("/gig-booking?".length));
+    if (params.get("tab") === "play-together" && params.get("section") === "offers" && params.get("bandId")) {
+      params.set("proposalId", proposalId.toLowerCase());
+      return { route: `/gig-booking?${params}`, label: "Review tour proposal" };
+    }
+  }
+
+  return { route, label: "View Details" };
+}
+
 export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: InboxMessageProps) {
   const navigate = useNavigate();
   const { respondToInvitation } = useCollaborationInvites();
   const resolveAbsence = useGigAbsenceDecision();
 
+  const navigationAction = getNavigationAction(message);
   const config = categoryConfig[message.category];
   const Icon = config.icon;
 
@@ -60,9 +81,7 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
   const handleAction = () => {
     handleClick();
     
-    if (message.action_type === 'navigate' && message.action_data?.route) {
-      navigate(message.action_data.route as string);
-    }
+    if (navigationAction) navigate(navigationAction.route);
   };
 
   const collaborationId =
@@ -156,7 +175,7 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
 
             {/* Actions */}
             <div className="flex items-center gap-2 mt-3">
-              {message.action_type === 'navigate' && message.action_data?.route && (
+              {navigationAction && (
                 <Button 
                   size="sm" 
                   variant="default"
@@ -166,7 +185,7 @@ export function InboxMessage({ message, onMarkAsRead, onArchive, onDelete }: Inb
                   }}
                   className="h-7 text-xs"
                 >
-                  View Details
+                  {navigationAction.label}
                   <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               )}

@@ -1,3 +1,4 @@
+import { TourProposalsPanel } from '@/features/support-bands/TourProposalsPanel';
 import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -59,9 +60,25 @@ const GigBooking = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedBandId = searchParams.get('bandId');
+  const linkedProposalId = searchParams.get('section') === 'offers' ? searchParams.get('proposalId') : null;
+  const showAllInvitations = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('proposalId');
+    setSearchParams(next, { replace: true });
+  };
   const [bookingTab, setBookingTab] = useState(searchParams.get('tab') === 'play-together' ? 'play-together' : 'book');
   useEffect(() => { const requested = searchParams.get('tab'); setBookingTab(requested && ['book','upcoming','history','play-together'].includes(requested) ? requested : 'book'); }, [searchParams]);
-  const changeBookingTab = (tab: string) => { setBookingTab(tab); const next = new URLSearchParams(searchParams); next.set('tab',tab); if (tab !== 'play-together') next.delete('section'); setSearchParams(next); };
+  const changeBookingTab = (tab: string) => {
+    setBookingTab(tab);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    if (tab !== 'play-together') {
+      next.delete('section');
+      next.delete('proposalId');
+    }
+    setSearchParams(next);
+  };
   const requestedCityId = searchParams.get('cityId');
   const requestedCity = searchParams.get('city');
   const requestedCountry = searchParams.get('country');
@@ -642,10 +659,23 @@ const GigBooking = () => {
             <CheckCircle className="h-4 w-4 mr-1" />
             Gig History
           </TabsTrigger>
-          {band && <TabsTrigger value="play-together">Play Together</TabsTrigger>}
+          {(band || requestedBandId) && <TabsTrigger value="play-together">Play Together</TabsTrigger>}
         </TabsList>
 
-        {band && <TabsContent value="play-together">{searchParams.get('bandId') && searchParams.get('bandId') !== band.id ? <p role="alert">This notification is for another band. Switch to that band’s character before responding.</p> : <SupportMarketplacePanel key={band.id} bandId={band.id} />}</TabsContent>}
+        {(band || requestedBandId) && (
+          <TabsContent value="play-together">
+            {requestedBandId && requestedBandId !== band?.id ? (
+              <p role="alert">This notification is for another band. Switch to that band’s character before responding.</p>
+            ) : band && (
+              linkedProposalId ? (
+                <div className="space-y-4">
+                  <Button variant="outline" onClick={showAllInvitations}>Back to all invitations</Button>
+                  <TourProposalsPanel key={`${band.id}:${linkedProposalId}`} bandId={band.id} proposalId={linkedProposalId} />
+                </div>
+              ) : <SupportMarketplacePanel key={band.id} bandId={band.id} />
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="book" className="space-y-4">
           {/* Performance Readiness Card */}
