@@ -155,3 +155,67 @@ test('unknown profile user FK fails closed before any FK or uniqueness mutation'
     await db.close();
   }
 });
+
+
+test('July–September account-id FKs remain valid after profile uniqueness removal', async () => {
+  const migrationFiles = [
+    ['20260711223000_gig_live_timeline.sql', [
+      'requested_by_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL',
+    ]],
+    ['20260712090000_post_gig_consequences_live_reputation.sql', [
+      'standout_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL',
+    ]],
+    ['20260921090000_create_production_sessions_tables.sql', [
+      'user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE',
+      'engineer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL',
+    ]],
+  ];
+  for (const [filename, expectedClauses] of migrationFiles) {
+    const sql = readFileSync(
+      new URL(`../../supabase/migrations/${filename}`, import.meta.url),
+      'utf8',
+    );
+    for (const expected of expectedClauses) {
+      assert.ok(sql.includes(expected), `${filename}: missing ${expected}`);
+    }
+    assert.doesNotMatch(sql, /REFERENCES\s+(?:public\.)?profiles\s*\(user_id\)/i,
+      `${filename}: cannot reference nonunique profiles.user_id`);
+  }
+
+  const db = await fixture();
+  try {
+    await db.exec(retarget);
+    await db.exec('ALTER TABLE public.profiles DROP CONSTRAINT profiles_user_id_key;');
+    // Real account-level FKs must work after the character-slot cutover,
+    // even for a user that has not created its first profile yet.
+    await db.exec(`
+      CREATE TABLE public.replay_gig_setlist (
+        actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL
+      );
+      CREATE TABLE public.replay_gig_reviews (
+        standout_id uuid REFERENCES auth.users(id) ON DELETE SET NULL
+      );
+      CREATE TABLE public.replay_recording (
+        user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+        engineer_id uuid REFERENCES auth.users(id) ON DELETE SET NULL
+      );
+      INSERT INTO public.replay_gig_setlist(actor_id)
+        VALUES ('00000000-0000-4000-8000-000000000002');
+      INSERT INTO public.replay_gig_reviews(standout_id)
+        VALUES ('00000000-0000-4000-8000-000000000002');
+      INSERT INTO public.replay_recording(user_id,engineer_id)
+        VALUES ('00000000-0000-4000-8000-000000000002',
+                '00000000-0000-4000-8000-000000000001');
+    `);
+    const { rows } = await db.query(`
+      SELECT count(*)::int AS count FROM public.replay_recording
+    `);
+    assert.equal(rows[0].count, 1);
+    await assert.rejects(db.exec(`
+      INSERT INTO public.replay_recording(user_id)
+        VALUES ('00000000-0000-4000-8000-000000000099')
+    `), /foreign key/i);
+  } finally {
+    await db.close();
+  }
+});
