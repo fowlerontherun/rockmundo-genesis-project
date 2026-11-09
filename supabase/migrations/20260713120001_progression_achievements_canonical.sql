@@ -45,6 +45,36 @@ UPDATE public.achievements SET tier = CASE lower(coalesce(rarity,'common'))
   ELSE 'bronze'::public.achievement_tier END
 WHERE tier IS NULL;
 UPDATE public.achievements SET icon_key = coalesce(icon_key, icon, 'award') WHERE icon_key IS NULL;
+-- Historic achievements can share a name but have different achievement
+-- criteria (for example two "Road Warrior" milestones). Slugifying only the
+-- display name makes them collide. Preserve every achievement id, linked
+-- completion and the earliest canonical slug. Disambiguate later duplicates
+-- with their stable id, rather than deleting/merging earned achievements.
+WITH ranked_slug_collisions AS (
+  SELECT id, slug,
+    row_number() OVER (PARTITION BY slug ORDER BY created_at NULLS LAST, id) AS ordinal
+  FROM public.achievements
+  WHERE slug IS NOT NULL
+)
+UPDATE public.achievements AS a
+SET slug = left(r.slug, 70) || '-' || substr(replace(a.id::text, '-', ''), 1, 12)
+FROM ranked_slug_collisions AS r
+WHERE a.id = r.id AND r.ordinal > 1;
+
+-- Detect any exceptional collision before attempting a unique index.
+DO $achievement_slug_preflight$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.achievements
+    WHERE slug IS NOT NULL
+    GROUP BY slug HAVING count(*) > 1
+  ) THEN
+    RAISE EXCEPTION 'Achievement slug collision remains after deterministic disambiguation'
+      USING ERRCODE = '23505';
+  END IF;
+END;
+$achievement_slug_preflight$;
+
 CREATE UNIQUE INDEX IF NOT EXISTS achievements_slug_unique ON public.achievements(slug);
 ALTER TABLE public.achievements ADD CONSTRAINT achievements_category_canonical CHECK (category IN ('onboarding','skills','attributes','role','songwriting','recording','gigs','touring','mastery','teaching','social','band','professional','longevity','collection','challenge','performance','creative','chart','financial','regional','general','business','milestone')) NOT VALID;
 ALTER TABLE public.achievements ADD CONSTRAINT achievements_repeat_limit_safe CHECK (is_repeatable = false OR (repeat_limit IS NOT NULL AND repeat_limit BETWEEN 1 AND 25)) NOT VALID;
