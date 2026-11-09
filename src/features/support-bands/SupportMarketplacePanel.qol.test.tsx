@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SupportMarketplacePanel } from './SupportMarketplacePanel';
-import { getSupportPreferences, listSupportAvailability, saveSupportPreferences } from './api';
+import { createGigSupportOffer, findAvailableSupportBands, getSupportPreferences, listSupportAvailability, saveSupportPreferences, type AvailableSupportBand } from './api';
 import { listPlayTogetherCities, listTourProposals, type TourProposal } from './completionApi';
 import { listBandFriendships } from './friendshipApi';
 import { listLabelSuggestions } from './labelSuggestionsApi';
@@ -16,7 +16,10 @@ vi.mock('./TouringAvailabilityPanel', () => ({ TouringAvailabilityPanel: ({ disa
 vi.mock('./TourProposalsPanel', () => ({ TourProposalsPanel: () => <div>Proposals view</div> }));
 vi.mock('./BandFriendsPanel', () => ({ BandFriendsPanel: () => <div>Friends view</div> }));
 vi.mock('./LabelSuggestionsPanel', () => ({ LabelSuggestionsPanel: () => <div>Labels view</div> }));
-vi.mock('./PlayTogetherPicker', () => ({ PlayTogetherPicker: () => null }));
+vi.mock('./PlayTogetherPicker', () => ({
+ PlayTogetherPicker: ({ candidates, onSelect, disabled }: { candidates: { id: string; name: string }[]; onSelect: (id: string) => void; disabled: boolean }) =>
+  candidates.map(candidate => <button key={candidate.id} disabled={disabled} onClick={() => onSelect(candidate.id)}>Invite {candidate.name}</button>),
+}));
 vi.mock('./ConfirmedSupportSlotsPanel', () => ({ ConfirmedSupportSlotsPanel: () => null }));
 vi.mock('./SupportHistoryPanel', () => ({ SupportHistoryPanel: () => null }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: (table: string) => {
@@ -24,7 +27,10 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: { from: (table: str
   { id: 'legacy', status: 'pending', gig: { scheduled_date: '2030-01-01' } },
   { id: 'owned', status: 'pending', gig: { scheduled_date: '2030-01-01' } },
   { id: 'past', status: 'pending', gig: { scheduled_date: '2000-01-01' } },
- ] : [];
+ ] : [
+  { id: 'first', scheduled_date: '2030-02-01', venue: { name: 'First venue', city_id: 'first-city', capacity: 400 } },
+  { id: 'second', scheduled_date: '2030-03-01', venue: { name: 'Second venue', city_id: 'second-city', capacity: 500 } },
+ ];
  const builder = { select: () => builder, eq: () => builder, in: () => builder, gte: () => builder, order: () => builder,
   then: (resolve: (value: { data: typeof data; error: null }) => unknown) => Promise.resolve(resolve({ data, error: null })) };
  return builder;
@@ -40,8 +46,16 @@ beforeEach(() => {
  vi.mocked(listBandFriendships).mockResolvedValue([{ band_id: 'b', band_name: 'B', status: 'pending', incoming: true }]);
  vi.mocked(listLabelSuggestions).mockResolvedValue([{ id: 'label', label_id: 'l', label_name: 'L', headliner_band_id: 'a', support_band_id: 'b', headliner_name: 'A', support_name: 'B', note: '', roster_current: true, headliner_response: 'pending', support_response: 'interested' }]);
 });
-function Probe() { const location = useLocation(); const navigate = useNavigate(); return <><output aria-label="Current route">{location.search}</output><button onClick={() => navigate(-1)}>Go back</button></>; }
-function setup() { return render(<MemoryRouter initialEntries={['/gig-booking?tab=play-together&section=availability&bandId=a&targetBand=b']}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><SupportMarketplacePanel bandId="a" /><Probe /></QueryClientProvider></MemoryRouter>); }
+function Probe() {
+ const location = useLocation();
+ const navigate = useNavigate();
+ return <>
+  <output aria-label="Current route">{location.search}</output>
+  <button onClick={() => navigate(-1)}>Go back</button>
+  <button onClick={() => navigate('?tab=play-together&section=headliner&gigId=second&targetBand=b')}>Open second gig</button>
+ </>;
+}
+function setup(route = '/gig-booking?tab=play-together&section=availability&bandId=a&targetBand=b') { return render(<MemoryRouter initialEntries={[route]}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><SupportMarketplacePanel bandId="a" /><Probe /></QueryClientProvider></MemoryRouter>); }
 it('counts only actionable incoming bookings and preserves invite context when navigating and going back', async () => {
  setup();
  const overview = await screen.findByRole('region', { name: 'Play Together shortcuts' });
@@ -73,4 +87,28 @@ it('shows retry instead of false empty offers when the initial data load fails',
  vi.mocked(getSupportPreferences).mockResolvedValue(prefs);
  fireEvent.click(screen.getByRole('button', { name: 'Retry Play Together' }));
  expect(await screen.findByRole('switch', { name: 'Open to support offers' })).toBeInTheDocument();
+});
+
+it('loads a linked gig automatically and keeps late matches attached to their original date', async () => {
+ const candidate = (id: string, name: string): AvailableSupportBand => ({
+  band_id: id, band_name: name, fame: 200, popularity: 50, availability_id: null,
+  available_from: '2030-01-01', available_until: '2030-04-01',
+ });
+ let resolveFirst: (bands: AvailableSupportBand[]) => void = () => {};
+ const firstMatches = new Promise<AvailableSupportBand[]>(resolve => { resolveFirst = resolve; });
+ vi.mocked(findAvailableSupportBands).mockImplementation(({ cityId }) =>
+  cityId === 'first-city' ? firstMatches : Promise.resolve([candidate('c', 'Second band')]),
+ );
+ setup('/gig-booking?tab=play-together&section=headliner&gigId=first&targetBand=b');
+
+ await waitFor(() => expect(findAvailableSupportBands).toHaveBeenCalledWith(expect.objectContaining({ cityId: 'first-city' })));
+ fireEvent.click(screen.getByRole('button', { name: 'Open second gig' }));
+ await screen.findByRole('button', { name: 'Invite Second band' });
+ resolveFirst([candidate('b', 'First band')]);
+ expect(screen.queryByRole('button', { name: 'Invite First band' })).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button', { name: 'Invite Second band' }));
+ await waitFor(() => expect(createGigSupportOffer).toHaveBeenCalledWith({ gigId: 'second', supportBandId: 'c' }));
+
+ fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+ expect(await screen.findByRole('button', { name: 'Invite First band' })).toBeInTheDocument();
 });

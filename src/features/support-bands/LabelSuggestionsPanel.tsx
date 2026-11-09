@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getLabelBookingOptions, suggestLabelBookingPairing, getLabelSuggestionRoster, listLabelSuggestions, respondToLabelSuggestion, suggestLabelPairing } from './labelSuggestionsApi';
 
-type Props = { labelId: string; bandId?: never; onFindSupport?: never } | { bandId: string; labelId?: never; onFindSupport: () => void };
+type Props = { labelId: string; bandId?: never; onFindSupport?: never } | { bandId: string; labelId?: never; onFindSupport: (supportBandId: string) => void };
 export function LabelSuggestionsPanel(props: Props) {
   const client = useQueryClient();
   const [headliner, setHeadliner] = useState('');
@@ -60,11 +60,20 @@ export function LabelSuggestionsPanel(props: Props) {
     {change.isError && <p role="alert">Could not confirm the change. Refresh and review the current roster and responses before retrying. <Button onClick={() => { void suggestions.refetch(); if (props.labelId) void roster.refetch(); }}>Refresh</Button></p>}
     {suggestions.data?.length === 0 && <p className="text-sm text-muted-foreground">No suggestions yet.</p>}
     {suggestions.data?.map(suggestion => {
-      const ownResponse = props.bandId === suggestion.headliner_band_id ? suggestion.headliner_response : suggestion.support_response;
+      const isHeadliner = props.bandId === suggestion.headliner_band_id;
+      const ownResponse = isHeadliner ? suggestion.headliner_response : suggestion.support_response;
+      const bookingName = suggestion.tour_name ?? (suggestion.tour_id ? 'Suggested tour' : 'Suggested gig');
+      const bookingLink = suggestion.tour_id
+        ? `/tour-manager?tour=${suggestion.tour_id}&inviteBand=${suggestion.support_band_id}`
+        : `/gig-booking?tab=play-together&section=headliner&gigId=${suggestion.gig_id}&targetBand=${suggestion.support_band_id}`;
       return <div key={suggestion.id} className="space-y-2 rounded-lg border p-3">
         <p className="font-medium">{suggestion.headliner_name} with support from {suggestion.support_name}</p>
         <p className="text-sm text-muted-foreground">Suggested by {suggestion.label_name}</p>
-        {(suggestion.tour_id || suggestion.gig_id) && <a className="text-sm underline" href={suggestion.tour_id ? `/tour-manager?tour=${suggestion.tour_id}&inviteBand=${suggestion.support_band_id}` : `/gig-booking?tab=play-together&section=headliner&gigId=${suggestion.gig_id}&targetBand=${suggestion.support_band_id}`}>{suggestion.tour_name ?? 'Open suggested booking'}</a>}
+        {(suggestion.tour_id || suggestion.gig_id) && (
+          isHeadliner && suggestion.roster_current
+            ? <a className="text-sm underline" href={bookingLink}>Review support for {bookingName}</a>
+            : <p className="text-sm text-muted-foreground">{bookingName}{props.bandId && !isHeadliner ? ' · The headliner sends the booking invitation.' : ''}</p>
+        )}
         <p className="text-sm">{suggestion.invited_dates ?? 0} dates invited · {suggestion.confirmed_dates ?? 0} dates confirmed</p>
         {suggestion.note && <p className="whitespace-pre-wrap text-sm">{suggestion.note}</p>}
         <div className="flex flex-wrap gap-2"><Badge variant="outline">Headliner: {suggestion.headliner_response}</Badge><Badge variant="outline">Support: {suggestion.support_response}</Badge></div>
@@ -72,7 +81,7 @@ export function LabelSuggestionsPanel(props: Props) {
         {props.bandId && <div className="flex flex-wrap gap-2">
           <Button disabled={change.isPending || !suggestion.roster_current || ownResponse === 'interested'} onClick={() => change.mutate({ id: suggestion.id, response: 'interested' })}>Interested &amp; shortlist</Button>
           <Button variant="outline" disabled={change.isPending || ownResponse === 'declined'} onClick={() => change.mutate({ id: suggestion.id, response: 'declined' })}>Decline suggestion</Button>
-          {props.bandId === suggestion.headliner_band_id && suggestion.roster_current && suggestion.headliner_response === 'interested' && suggestion.support_response === 'interested' && <Button variant="secondary" onClick={props.onFindSupport}>Find Support dates</Button>}
+          {isHeadliner && !suggestion.tour_id && !suggestion.gig_id && suggestion.roster_current && suggestion.headliner_response === 'interested' && suggestion.support_response === 'interested' && <Button variant="secondary" onClick={() => props.onFindSupport?.(suggestion.support_band_id)}>Find Support dates</Button>}
         </div>}
       </div>;
     })}

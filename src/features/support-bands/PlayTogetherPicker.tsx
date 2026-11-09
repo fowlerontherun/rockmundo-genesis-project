@@ -10,11 +10,12 @@ export type PlayTogetherCandidate = { id: string; name: string; fame: number; de
 type Filter = 'all' | 'shortlist' | 'labelmates' | 'friends';
 
 /** Candidates must come from the authoritative gig/tour eligibility query. */
-export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, disabled = false, actionLabel = 'Select band' }: {
+export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, preferredId, disabled = false, actionLabel = 'Select band' }: {
   bandId: string;
   candidates: PlayTogetherCandidate[];
   onSelect: (id: string) => void;
   selectedId?: string;
+  preferredId?: string;
   disabled?: boolean;
   actionLabel?: string;
 }) {
@@ -37,6 +38,7 @@ export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, d
   const visible = candidates.filter(band => band.name.toLowerCase().includes(search.trim().toLowerCase()))
     .filter(band => filter === 'all' || (filter === 'friends' ? friendshipById.get(band.id)?.status === 'accepted' : filter === 'shortlist' ? byId.get(band.id)?.shortlisted : byId.get(band.id)?.labelmate))
     .sort((a, b) => {
+      if (sort === 'recommended' && (a.id === preferredId || b.id === preferredId)) return Number(b.id === preferredId) - Number(a.id === preferredId);
       if (sort === 'fame') return b.fame-a.fame || a.name.localeCompare(b.name);
       if (sort === 'name') return a.name.localeCompare(b.name);
       const score = (id: string) => Number(!!byId.get(id)?.shortlisted)*4 + Number(friendshipById.get(id)?.status === 'accepted')*2 + Number(!!byId.get(id)?.labelmate);
@@ -61,7 +63,7 @@ export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, d
         const relation = byId.get(band.id);
         const friend = friendshipById.get(band.id);
         return <div key={band.id} className="space-y-3 rounded-lg border p-3">
-          <div className="font-semibold"><a className="underline-offset-4 hover:underline" href={`/band/${band.id}`} target="_blank" rel="noreferrer" aria-label={`View ${band.name} profile (opens in a new tab)`}>{band.name}</a> {relation?.labelmate && <Badge variant="secondary">Same label</Badge>}</div>
+          <div className="font-semibold"><a className="underline-offset-4 hover:underline" href={`/band/${band.id}`} target="_blank" rel="noreferrer" aria-label={`View ${band.name} profile (opens in a new tab)`}>{band.name}</a> {band.id === preferredId && <Badge variant="outline">Band from your link</Badge>} {relation?.labelmate && <Badge variant="secondary">Same label</Badge>}</div>
           <p className="text-sm text-muted-foreground">Fame {band.fame.toLocaleString()} · {band.detail}</p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={disabled} aria-pressed={selectedId === band.id} onClick={() => onSelect(band.id)}>{selectedId === band.id ? 'Selected' : actionLabel}</Button>
