@@ -48,8 +48,7 @@ BEGIN
          AND username = 'postgres'
          AND active IS TRUE
          AND schedule = '0 10 * * 6'
-         AND btrim(command) ~* '^SELECT[[:space:]]+public[.]process_weekly_band_payroll[(][)][[:space:]]*;?[[:space:]]*
-         AND command !~* 'bearer[[:space:]]+|eyJ[A-Za-z0-9_-]{20,}'
+         AND btrim(command) ~* '^SELECT[[:space:]]+public[.]process_weekly_band_payroll[(][)][[:space:]]*;?[[:space:]]*[[:space:]]+|eyJ[A-Za-z0-9_-]{20,}'
      ) THEN
     RAISE EXCEPTION 'Payroll scheduler identity or routing differs from reviewed baseline'
       USING ERRCODE = '55000';
