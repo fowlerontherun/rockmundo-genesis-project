@@ -49,7 +49,7 @@ UPDATE public.achievements SET icon_key = coalesce(icon_key, icon, 'award') WHER
 -- criteria (for example two "Road Warrior" milestones). Slugifying only the
 -- display name makes them collide. Preserve every achievement id, linked
 -- completion and the earliest canonical slug. Disambiguate later duplicates
--- with their stable id, rather than deleting/merging earned achievements.
+-- with their full stable UUID (not an unsafe shared prefix), rather than deleting/merging earned achievements.
 WITH ranked_slug_collisions AS (
   SELECT id, slug,
     row_number() OVER (PARTITION BY slug ORDER BY created_at NULLS LAST, id) AS ordinal
@@ -57,7 +57,7 @@ WITH ranked_slug_collisions AS (
   WHERE slug IS NOT NULL
 )
 UPDATE public.achievements AS a
-SET slug = left(r.slug, 70) || '-' || substr(replace(a.id::text, '-', ''), 1, 12)
+SET slug = left(r.slug, 70) || '-' || replace(a.id::text, '-', '')
 FROM ranked_slug_collisions AS r
 WHERE a.id = r.id AND r.ordinal > 1;
 
