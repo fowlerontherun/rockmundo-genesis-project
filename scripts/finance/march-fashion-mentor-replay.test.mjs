@@ -7,6 +7,7 @@ const migration = name =>
   readFileSync(new URL(`../../supabase/migrations/${name}`, import.meta.url), 'utf8');
 
 const mentorTable = migration('20250921113440_create_education_mentors_table.sql');
+const octoberMentorEvolution = migration('20251012072950_88cd5401-59df-4d99-8a34-cd4a10739395.sql');
 const januaryOverhaul = migration('20260129091720_4ae7982a-a3d5-49d0-ad0a-68820ab41cef.sql');
 const march = migration('20260308133646_d51526b9-536b-4b2c-a99e-0ac48012d7d7.sql');
 
@@ -21,6 +22,11 @@ test('March fashion seeds replay against the original mentor constraints', async
     mentorTable,
     /CREATE TABLE IF NOT EXISTS public\.education_mentors\s*\([\s\S]*?\n\);/,
     'September mentor table',
+  );
+  const statusColumn = extract(
+    octoberMentorEvolution,
+    /ALTER TABLE public\.education_mentors\s+ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;/,
+    'October 2025 mentor active status column',
   );
   const cityColumns = extract(
     januaryOverhaul,
@@ -62,6 +68,9 @@ test('March fashion seeds replay against the original mentor constraints', async
       );
     `);
     await db.exec(createMentors);
+    // Replay the actual October 2025 schema evolution, not an invented column:
+    // March 2026 explicitly inserts into education_mentors.is_active.
+    await db.exec(statusColumn);
     await db.exec(cityColumns);
     await db.exec(`INSERT INTO public.cities (name) VALUES
       ('London'), ('Paris'), ('Milan'), ('Tokyo'), ('New York'),
@@ -87,19 +96,21 @@ test('March fashion seeds replay against the original mentor constraints', async
       count(*) FILTER (WHERE name <> 'Legacy mentor' AND cooldown_hours = 168)::integer AS valid_cooldowns,
       count(*) FILTER (WHERE name <> 'Legacy mentor' AND bonus_description = specialty)::integer AS valid_bonuses,
       count(*) FILTER (WHERE name <> 'Legacy mentor' AND required_skill_value IN (200,500))::integer AS valid_requirements,
-      count(*) FILTER (WHERE name <> 'Legacy mentor' AND city_id IS NOT NULL)::integer AS located
+      count(*) FILTER (WHERE name <> 'Legacy mentor' AND city_id IS NOT NULL)::integer AS located,
+      count(*) FILTER (WHERE name <> 'Legacy mentor' AND is_active IS TRUE)::integer AS active_seeds
       FROM public.education_mentors`);
     assert.deepEqual(counts[0], {
       total: 9, new_mentors: 8, valid_cooldowns: 8,
       valid_bonuses: 8, valid_requirements: 8, located: 8,
+      active_seeds: 8,
     });
 
     const { rows: master } = await db.query(`SELECT difficulty, required_skill_value, cooldown_hours
       FROM public.education_mentors WHERE name = 'Naomi Fierce'`);
     assert.deepEqual(master, [{ difficulty: 'master', required_skill_value: 500, cooldown_hours: 168 }]);
-    const { rows: legacy } = await db.query(`SELECT cooldown_hours, bonus_description, difficulty
+    const { rows: legacy } = await db.query(`SELECT cooldown_hours, bonus_description, difficulty, is_active
       FROM public.education_mentors WHERE name = 'Legacy mentor'`);
-    assert.deepEqual(legacy, [{ cooldown_hours: 24, bonus_description: 'Classic training', difficulty: 'beginner' }]);
+    assert.deepEqual(legacy, [{ cooldown_hours: 24, bonus_description: 'Classic training', difficulty: 'beginner', is_active: true }]);
     const { rows: books } = await db.query('SELECT count(*)::integer AS count FROM public.skill_books');
     const { rows: courses } = await db.query('SELECT count(*)::integer AS count FROM public.university_courses');
     assert.ok(books[0].count >= 15, 'Keep historical fashion/modeling books');
