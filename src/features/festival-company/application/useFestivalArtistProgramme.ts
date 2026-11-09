@@ -1,3 +1,4 @@
+import { festivalReadRefresh } from "./festivalReadRefresh";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getFestivalArtistProgramme,
@@ -36,6 +37,7 @@ export const useFestivalArtistProgramme = (
       : enabled;
 
   return useQuery({
+    ...festivalReadRefresh,
     queryKey: festivalArtistProgrammeQueryKey(
       festivalCompanyId,
       festivalEditionId,
@@ -78,7 +80,7 @@ export const useSaveFestivalArtistProgramme = () => {
         ),
         data,
       );
-      void Promise.all(
+      return Promise.all(
         [
           ["festival-company-setup"],
           ["public-festival"],
@@ -90,7 +92,7 @@ export const useSaveFestivalArtistProgramme = () => {
             data.festivalCompanyId,
             input.festivalEditionId ?? "company",
           ],
-          ["festival-opportunities"],
+          ["festival-artist-opportunities"],
           ["festival-company-editions", data.festivalCompanyId],
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
       );
