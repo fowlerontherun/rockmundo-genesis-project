@@ -90,11 +90,19 @@ test('the backfill references only scalar columns initialized at this stage', ()
 test('missing historical wellness tables restore schema and seed eight activity rows', async () => {
   const catalogDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.wellness_activity_catalog\s*\([\s\S]*?\n\);/i)?.[0];
   const ailmentsDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.player_ailments\s*\([\s\S]*?\n\);/i)?.[0];
+  const logDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.wellness_activity_log\s*\([\s\S]*?\n\);/i)?.[0];
+  const lifestyle = readFileSync(new URL(
+    '../../supabase/migrations/20260712143000_wellness_lifestyle_habits.sql',
+    import.meta.url,
+  ), 'utf8');
+  const logExpansion = lifestyle.match(/alter table public\.wellness_activity_log\s+add column if not exists idempotency_key[\s\S]*?;/i)?.[0];
   const catalogExpansion = source.match(/alter table public\.wellness_activity_catalog\s+add column if not exists unlock_tier[\s\S]*?;/i)?.[0];
   const ailmentExpansion = source.match(/alter table public\.player_ailments\s+add column if not exists expected_recovery_at[\s\S]*?;/i)?.[0];
   const activitySeed = source.match(/insert into public\.wellness_activity_catalog\s+[\s\S]*?on conflict \(slug\) do update set[\s\S]*?;/i)?.[0];
   assert.ok(catalogDDL, 'Recreate the catalog baseline on a clean database');
   assert.ok(ailmentsDDL, 'Recreate the ailment baseline on a clean database');
+  assert.ok(logDDL, 'Recreate the activity log baseline on a clean database');
+  assert.ok(logExpansion, 'The next lifestyle migration extends the log');
   assert.ok(catalogExpansion);
   assert.ok(ailmentExpansion);
   assert.ok(activitySeed);
@@ -111,6 +119,8 @@ test('missing historical wellness tables restore schema and seed eight activity 
   try {
     await db.exec(catalogDDL);
     await db.exec(ailmentsDDL);
+    await db.exec(logDDL);
+    await db.exec(logExpansion);
     await db.exec(catalogExpansion);
     await db.exec(ailmentExpansion);
     await db.exec(activitySeed);
@@ -142,6 +152,24 @@ test('missing historical wellness tables restore schema and seed eight activity 
       'SELECT count(*)::int AS count FROM public.player_ailments',
     );
     assert.equal(ailments[0].count,1);
+
+    const { rows: activity } = await db.query(`
+      SELECT id,slug,category FROM public.wellness_activity_catalog
+      ORDER BY slug LIMIT 1
+    `);
+    await db.query(`
+      INSERT INTO public.wellness_activity_log
+        (user_id,profile_id,catalog_id,catalog_slug,category,cooldown_until,idempotency_key)
+      VALUES
+        ('00000000-0000-4000-8000-000000000001',
+         '00000000-0000-4000-8000-000000000011',
+         $1,$2,$3,now(),'wellness-replay-1')
+    `, [activity[0].id,activity[0].slug,activity[0].category]);
+    const { rows: logCount } = await db.query(
+      'SELECT count(*)::int AS count FROM public.wellness_activity_log',
+    );
+    assert.equal(logCount[0].count,1);
+
     await assert.rejects(db.exec(`
       INSERT INTO public.player_ailments
         (user_id,profile_id,slug,name)
@@ -158,6 +186,9 @@ test('missing historical wellness tables restore schema and seed eight activity 
 test('restored wellness tables are RLS-protected before player access', () => {
   assert.match(source, /ALTER TABLE public\.wellness_activity_catalog ENABLE ROW LEVEL SECURITY/i);
   assert.match(source, /ALTER TABLE public\.player_ailments ENABLE ROW LEVEL SECURITY/i);
+  assert.match(source, /ALTER TABLE public\.wellness_activity_log ENABLE ROW LEVEL SECURITY/i);
+  assert.match(source, /CREATE POLICY "wellness_log own select"/);
+  assert.match(source, /CREATE POLICY "wellness_log own insert"/);
   assert.match(source, /CREATE POLICY "wellness_catalog readable"/);
   assert.match(source, /CREATE POLICY "ailments own all"/);
   assert.match(source, /FOR ALL TO authenticated USING \(\(SELECT auth\.uid\(\)\) = user_id\) WITH CHECK/);
