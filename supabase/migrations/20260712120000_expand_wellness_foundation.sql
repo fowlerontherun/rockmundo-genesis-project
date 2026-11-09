@@ -1,6 +1,12 @@
 -- Expanded wellness foundation: safe additive schema and balance seeds.
 
+-- Earlier schema snapshots can lack these two legacy wellness scalars,
+-- although the bootstrap UPDATE and later July wellness RPCs read them.
+-- Recreate missing columns with the live defaults; never overwrite existing
+-- player mood/stress values or drop existing constraints.
 alter table public.profiles
+  add column if not exists mood integer not null default 70,
+  add column if not exists stress integer not null default 30,
   add column if not exists physical_health integer not null default 80 check (physical_health between 0 and 100),
   add column if not exists happiness integer not null default 72 check (happiness between 0 and 100),
   add column if not exists fatigue integer not null default 35 check (fatigue between 0 and 100),
