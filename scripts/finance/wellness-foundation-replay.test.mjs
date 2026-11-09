@@ -90,8 +90,8 @@ test('the backfill references only scalar columns initialized at this stage', ()
 test('missing historical wellness tables restore schema and seed eight activity rows', async () => {
   const catalogDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.wellness_activity_catalog\s*\([\s\S]*?\n\);/i)?.[0];
   const ailmentsDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.player_ailments\s*\([\s\S]*?\n\);/i)?.[0];
-  const catalogExpansion = source.match(/alter table public\.wellness_activity_catalog\s+[\s\S]*?;/i)?.[0];
-  const ailmentExpansion = source.match(/alter table public\.player_ailments\s+[\s\S]*?;/i)?.[0];
+  const catalogExpansion = source.match(/alter table public\.wellness_activity_catalog\s+add column if not exists unlock_tier[\s\S]*?;/i)?.[0];
+  const ailmentExpansion = source.match(/alter table public\.player_ailments\s+add column if not exists expected_recovery_at[\s\S]*?;/i)?.[0];
   const activitySeed = source.match(/insert into public\.wellness_activity_catalog\s+[\s\S]*?on conflict \(slug\) do update set[\s\S]*?;/i)?.[0];
   assert.ok(catalogDDL, 'Recreate the catalog baseline on a clean database');
   assert.ok(ailmentsDDL, 'Recreate the ailment baseline on a clean database');
