@@ -85,3 +85,80 @@ test('the backfill references only scalar columns initialized at this stage', ()
   assert.match(seedProfileWellness, /coalesce\(mood,\s*happiness,\s*72\)/i);
   assert.match(seedProfileWellness, /coalesce\(stress,\s*28\)/i);
 });
+
+
+test('missing historical wellness tables restore schema and seed eight activity rows', async () => {
+  const catalogDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.wellness_activity_catalog\s*\([\s\S]*?\n\);/i)?.[0];
+  const ailmentsDDL = source.match(/CREATE TABLE IF NOT EXISTS public\.player_ailments\s*\([\s\S]*?\n\);/i)?.[0];
+  const catalogExpansion = source.match(/alter table public\.wellness_activity_catalog\s+[\s\S]*?;/i)?.[0];
+  const ailmentExpansion = source.match(/alter table public\.player_ailments\s+[\s\S]*?;/i)?.[0];
+  const activitySeed = source.match(/insert into public\.wellness_activity_catalog\s+[\s\S]*?on conflict \(slug\) do update set[\s\S]*?;/i)?.[0];
+  assert.ok(catalogDDL, 'Recreate the catalog baseline on a clean database');
+  assert.ok(ailmentsDDL, 'Recreate the ailment baseline on a clean database');
+  assert.ok(catalogExpansion);
+  assert.ok(ailmentExpansion);
+  assert.ok(activitySeed);
+
+  const db = await setup(`
+    CREATE SCHEMA auth;
+    CREATE TABLE auth.users (id uuid PRIMARY KEY);
+    CREATE TABLE public.profiles (id uuid PRIMARY KEY);
+    INSERT INTO auth.users (id)
+      VALUES ('00000000-0000-4000-8000-000000000001');
+    INSERT INTO public.profiles (id)
+      VALUES ('00000000-0000-4000-8000-000000000011');
+  `);
+  try {
+    await db.exec(catalogDDL);
+    await db.exec(ailmentsDDL);
+    await db.exec(catalogExpansion);
+    await db.exec(ailmentExpansion);
+    await db.exec(activitySeed);
+
+    const { rows: activityCount } = await db.query(`
+      SELECT count(*)::int AS count,
+        count(*) FILTER (WHERE is_active)::int AS enabled
+      FROM public.wellness_activity_catalog
+    `);
+    assert.deepEqual(activityCount[0], { count:8, enabled:8 });
+
+    // Seeding is repeatable and a live catalog value is not destroyed by
+    // CREATE TABLE IF NOT EXISTS (e.g. existing admin-tuned activities).
+    await db.exec(catalogDDL);
+    await db.exec(activitySeed);
+    const { rows: repeated } = await db.query(
+      'SELECT count(*)::int AS count FROM public.wellness_activity_catalog',
+    );
+    assert.equal(repeated[0].count,8);
+    await db.exec(`
+      INSERT INTO public.player_ailments
+        (user_id,profile_id,slug,name)
+      VALUES
+        ('00000000-0000-4000-8000-000000000001',
+         '00000000-0000-4000-8000-000000000011',
+         'cold','Cold');
+    `);
+    const { rows: ailments } = await db.query(
+      'SELECT count(*)::int AS count FROM public.player_ailments',
+    );
+    assert.equal(ailments[0].count,1);
+    await assert.rejects(db.exec(`
+      INSERT INTO public.player_ailments
+        (user_id,profile_id,slug,name)
+      VALUES
+        ('00000000-0000-4000-8000-000000000099',
+         '00000000-0000-4000-8000-000000000011',
+         'cold','Cold');
+    `), /foreign key/i);
+  } finally {
+    await db.close();
+  }
+});
+
+test('restored wellness tables are RLS-protected before player access', () => {
+  assert.match(source, /ALTER TABLE public\.wellness_activity_catalog ENABLE ROW LEVEL SECURITY/i);
+  assert.match(source, /ALTER TABLE public\.player_ailments ENABLE ROW LEVEL SECURITY/i);
+  assert.match(source, /CREATE POLICY "wellness_catalog readable"/);
+  assert.match(source, /CREATE POLICY "ailments own all"/);
+  assert.match(source, /FOR ALL TO authenticated USING \(\(SELECT auth\.uid\(\)\) = user_id\) WITH CHECK/);
+});
