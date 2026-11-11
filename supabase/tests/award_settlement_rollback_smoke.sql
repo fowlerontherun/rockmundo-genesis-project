@@ -53,7 +53,7 @@ BEGIN
       show_name,year,ceremony_date,status,categories,
       winner_fame_boost,winner_prize_money
     ) VALUES (
-      'ROLLBACK TEST - award settlement',2026,now()-interval '1 day','live',
+      'ROLLBACK TEST - award settlement',2026,now()+interval '1 day','nominations_open',
       '[{"name":"Test Best Band"},{"name":"Test Unawarded"}]'::jsonb,25,100
     ) RETURNING id INTO show_id;
 
@@ -74,11 +74,16 @@ BEGIN
       'shortlisted'
     ) RETURNING id INTO other_nom;
 
+    UPDATE public.award_shows SET status='voting_open' WHERE id=show_id;
+
     INSERT INTO public.award_votes(nomination_id,voter_type,voter_id,weight)
     VALUES
       (lead_nom,'player',gen_random_uuid(),1),
       (lead_nom,'player',gen_random_uuid(),1),
       (other_nom,'player',gen_random_uuid(),1);
+
+    UPDATE public.award_shows SET status='live', ceremony_date=now()-interval '1 day'
+      WHERE id=show_id;
 
     preview:=public.award_admin_preview_results(show_id);
     IF NOT COALESCE((preview->>'ready')::boolean,false)
