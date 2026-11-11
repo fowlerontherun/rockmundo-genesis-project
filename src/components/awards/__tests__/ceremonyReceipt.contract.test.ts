@@ -29,6 +29,9 @@ describe("award ceremony receipt and phase contracts", () => {
     expect(ceremony).toContain('setCurrentPhase("after_party")');
     expect(ceremony).toContain('currentPhase === "after_party"');
     expect(ceremony).toContain("Official winners appear in Awards History");
-    expect(ceremony).toContain("await onBookPerformance(slot.label, slot.stage)");
+    expect(ceremony).toContain("Performance slots are confirmed through invitations");
+    expect(ceremony).not.toContain("onBookPerformance");
+    expect(page).toContain('ceremonyShow?.status === "completed"');
+    expect(page).toContain("publishedResults.filter((win) => win.award_show_id === ceremonyShow.id)");
   });
 });

@@ -71,7 +71,7 @@ export interface AwardWin {
   won_at: string;
 }
 
-export const useAwards = (userId?: string, bandId?: string) => {
+export const useAwards = (userId?: string, bandId?: string, watchCeremony = false) => {
   const queryClient = useQueryClient();
 
 
@@ -81,6 +81,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
   // Fetch all award shows
   const { data: shows = [], isLoading: showsLoading } = useQuery({
     queryKey: ["award-shows"],
+    refetchInterval: watchCeremony ? 15_000 : false,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("award_shows")
@@ -119,6 +120,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
 
   const { data: wins = [], isLoading: winsLoading } = useQuery({
     queryKey: ["award-wins", userId, bandId],
+    refetchInterval: watchCeremony ? 15_000 : false,
     queryFn: async () => {
       if (!userId) return [];
       const { data: authData, error: authError } = await supabase.auth.getUser();
