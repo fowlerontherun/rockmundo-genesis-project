@@ -1,46 +1,32 @@
-/**
- * Browser decoded duration of an existing MP3, not a filesize/bitrate guess.
- * VBR or streaming media can report Infinity at loadedmetadata and only
- * settle on a later durationchange. Never classify that as a short recording.
- * Audits are abortable when the admin changes song pages or leaves the view.
- */
+import { readBoundedGeneratedAudio } from "../../supabase/functions/_shared/boundedAudioDownload";
+import { getMp3DurationSeconds, MIN_GENERATED_MP3_SECONDS } from "../../supabase/functions/_shared/mp3Duration";
+
+/** Verify complete stored MP3 frames using the same parser as the webhook. */
 export async function readAudioDuration(
   url: string, timeoutMs = 12000, signal?: AbortSignal,
 ): Promise<number | null> {
   if (signal?.aborted) return null;
-  return new Promise(resolve => {
-    const audio = new Audio();
-    audio.preload = "metadata";
-    let settled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const loaded = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) finish(audio.duration);
-    };
-    const failed = () => finish(null);
-    const finish = (duration: number | null) => {
-      if (settled) return;
-      settled = true;
-      if (timer !== undefined) clearTimeout(timer);
-      audio.removeEventListener("loadedmetadata", loaded);
-      audio.removeEventListener("durationchange", loaded);
-      audio.removeEventListener("loadeddata", loaded);
-      audio.removeEventListener("error", failed);
-      signal?.removeEventListener("abort", failed);
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
-      resolve(duration);
-    };
-    audio.addEventListener("loadedmetadata", loaded);
-    audio.addEventListener("durationchange", loaded);
-    audio.addEventListener("loadeddata", loaded);
-    audio.addEventListener("error", failed);
-    signal?.addEventListener("abort", failed, { once: true });
-    timer = setTimeout(failed, timeoutMs);
-    if (signal?.aborted) { failed(); return; }
-    audio.src = url;
-    audio.load();
-  });
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const timer = setTimeout(abort, timeoutMs);
+  signal?.addEventListener("abort", abort, { once: true });
+  try {
+    const response = await fetch(url, { signal: controller.signal, credentials: "omit" });
+    const bytes = await readBoundedGeneratedAudio(response);
+    return controller.signal.aborted ? null : getMp3DurationSeconds(bytes);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
+  }
+}
+
+export function audioGenerationMinimumStatus(
+  actualSeconds: number | null,
+): "UNVERIFIABLE" | "BELOW_MINIMUM" | "MEETS_MINIMUM" {
+  if (actualSeconds === null || !Number.isFinite(actualSeconds) || actualSeconds <= 0) return "UNVERIFIABLE";
+  return actualSeconds < MIN_GENERATED_MP3_SECONDS ? "BELOW_MINIMUM" : "MEETS_MINIMUM";
 }
 
 export function isGeneratedAudioShort(actualSeconds: number, expectedSeconds: number | null): boolean {
@@ -68,7 +54,7 @@ export function formatAudioDuration(seconds: number | null): string {
 
 
 /**
- * Produce a review-only report from *decoded browser durations*, never from
+ * Produce a review-only report from verified MP3 frame durations, never from
  * estimated MP3 filesize. Keep song IDs for targeted operator review.
  * No audio is modified and this does not start paid regeneration.
  */
@@ -83,12 +69,12 @@ export function buildAudioDurationReviewCsv(
     const safe = /^[=+@\-\t\r]/.test(plain.trimStart()) ? "'" + plain : plain;
     return '"' + safe.replace(/"/g, '""') + '"';
   };
-  const lines = [["song_id","title","planned_seconds","decoded_audio_seconds","status"].map(cell).join(",")];
+  const lines = [["song_id","title","planned_seconds","mp3_frame_seconds","planned_length_status","generation_minimum_status"].map(cell).join(",")];
   for (const song of songs) {
     if (!Object.prototype.hasOwnProperty.call(audited, song.id)) continue;
     const actual = audited[song.id];
     const status = audioDurationReviewStatus(actual ?? null, song.duration_seconds);
-    lines.push([song.id,song.title,song.duration_seconds,actual,status].map(cell).join(","));
+    lines.push([song.id,song.title,song.duration_seconds,actual,status,audioGenerationMinimumStatus(actual ?? null)].map(cell).join(","));
   }
   return lines.join("\r\n") + "\r\n";
 }

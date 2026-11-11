@@ -25,11 +25,11 @@ describe("remaining five-issue hardening regressions", () => {
     expect(mixer).not.toContain("libraryRef.current = sounds");
   });
 
-  it("#4064 ignores audio metadata results from older audit pages", () => {
+  it("#4064 ignores MP3 audit results from older audit pages", () => {
     const admin = source("src/pages/admin/AISongGeneration.tsx");
     const start = admin.indexOf("const run = ++auditRunRef.current");
     const read = admin.indexOf("await readAudioDuration(", start);
-    const guard = admin.indexOf("if (run !== auditRunRef.current) break", read);
+    const guard = admin.indexOf("if (controller.signal.aborted || run !== auditRunRef.current) break", read);
     expect(start).toBeGreaterThan(0);
     expect(read).toBeGreaterThan(start);
     expect(guard).toBeGreaterThan(read);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAudioDuration, isGeneratedAudioShort } from "./audioDurationAudit";
+import { audioDurationReviewStatus, audioGenerationMinimumStatus, formatAudioDuration, isGeneratedAudioShort } from "./audioDurationAudit";
 
 describe("generated audio quality thresholds", () => {
   it("flags a severe mismatch between intended and actual duration", () => {
@@ -17,4 +17,12 @@ describe("generated audio quality thresholds", () => {
     expect(formatAudioDuration(83.9)).toBe("1:24");
     expect(formatAudioDuration(null)).toBe("Unknown");
   });
+});
+
+it("keeps the current generation floor separate from planned song length", () => {
+  expect(audioGenerationMinimumStatus(59.99)).toBe("BELOW_MINIMUM");
+  expect(audioGenerationMinimumStatus(60)).toBe("MEETS_MINIMUM");
+  expect(audioGenerationMinimumStatus(null)).toBe("UNVERIFIABLE");
+  expect(audioGenerationMinimumStatus(83.9)).toBe("MEETS_MINIMUM");
+  expect(audioDurationReviewStatus(83.9, 283)).toBe("SHORT_REVIEW");
 });

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
-import { getMp3DurationSeconds } from "../_shared/mp3Duration.ts"
+import { getMp3DurationSeconds, MIN_GENERATED_MP3_SECONDS } from "../_shared/mp3Duration.ts"
 import { assertSafeGeneratedAudioUrl, readBoundedGeneratedAudio } from "../_shared/boundedAudioDownload.ts"
 
 const corsHeaders = {
@@ -136,8 +136,8 @@ serve(async (req) => {
     // The game's song.duration_seconds is NOT the billable audio clip length.
     // A complete, verified MP3 of any duration >= 60 seconds is acceptable;
     // do not truncate or reject long songs. Never automatically retry failures.
-    const minSeconds = 60
-    console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s minimum=60s bytes=${audioBytes.length}`)
+    const minSeconds = MIN_GENERATED_MP3_SECONDS
+    console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s minimum=${minSeconds}s bytes=${audioBytes.length}`)
     if (actualSeconds < minSeconds) {
       // A provider-successful prediction may have already cost credit. Keep
       // valid short MP3s as previews rather than discarding paid output.
@@ -155,7 +155,7 @@ serve(async (req) => {
         }
       }
       throw new Error(
-        `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required 60s. Existing audio preserved; manual retry only.${savedPreview}`
+        `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required ${minSeconds}s. Existing audio preserved; manual retry only.${savedPreview}`
       )
     }
     // The original validated MP3 is retained in full, even above 90 seconds.
