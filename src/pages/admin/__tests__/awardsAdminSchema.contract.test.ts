@@ -13,7 +13,7 @@ describe("awards admin creation and schema contract", () => {
     expect(admin).toContain("ceremony_date: ceremonyDate.toISOString()");
     expect(admin).toContain("venue: showData.venue_name.trim()");
     expect(admin).toContain("year: ceremonyDate.getUTCFullYear()");
-    expect(admin).toContain("categories: names.map((name) => ({ name }))");
+    expect(admin).toContain("categories: names.map((name) => ({ name, ...(juryWeight > 0 ? { juryWeight } : {}) }))");
     expect(admin).not.toContain("show_date: showData.show_date");
     expect(admin).not.toContain("venue_name: showData.venue_name");
     expect(admin).toContain("nom.category_name");
