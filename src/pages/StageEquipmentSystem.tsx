@@ -51,6 +51,13 @@ import {
 
 type BandStageEquipmentRow = Database["public"]["Tables"]["band_stage_equipment"]["Row"];
 
+type StageEquipmentCatalogItem = Database["public"]["Tables"]["equipment_catalog"]["Row"];
+
+type StageEquipmentPurchaseResult = {
+  equipment_name: string;
+  price: number;
+};
+
 type StageEquipmentRecord = BandStageEquipmentRow & {
   notes?: string | null;
 };
@@ -144,7 +151,8 @@ const StageEquipmentSystem = () => {
 
   const [selectedType, setSelectedType] = useState("all");
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
-  const [selectedDbItem, setSelectedDbItem] = useState<any | null>(null);
+  const [selectedDbItem, setSelectedDbItem] = useState<StageEquipmentCatalogItem | null>(null);
+  const [purchaseRequestId, setPurchaseRequestId] = useState<string | null>(null);
 
   const { data: memberCount = 1 } = useQuery({
     queryKey: ["band-member-count", bandId],
@@ -258,64 +266,29 @@ const StageEquipmentSystem = () => {
   };
 
   const purchaseMutation = useMutation({
-    mutationFn: async (item: any) => {
+    mutationFn: async ({ itemId, requestId }: { itemId: string; requestId: string }) => {
       if (!bandId) throw new Error("Join a band to purchase equipment");
-      const price = Number(item.base_price ?? 0);
 
-      const { data: band, error: bandError } = await supabase
-        .from("bands")
-        .select("band_balance")
-        .eq("id", bandId)
-        .single();
-      if (bandError) throw bandError;
-
-      const currentBalance = Number(band?.band_balance ?? 0);
-      if (currentBalance < price) {
-        throw new Error(`Insufficient band funds. Need ${formatCurrency(price)}.`);
-      }
-
-      const { error: balanceError } = await supabase
-        .from("bands")
-        .update({ band_balance: currentBalance - price })
-        .eq("id", bandId);
-      if (balanceError) throw balanceError;
-
-      const metadata: EquipmentMetadata = {
-        weight: "medium",
-        size: "medium",
-        baseCondition: "brand_new",
-        showsPerformed: 0,
-        liveImpact: item.description || "Professional shared stage equipment.",
-        rarity: (item.rarity as RarityTier) || "normal",
-        liveSelected: false,
-        value: price,
-        lastConditionTier: "brand_new",
-        lastConditionPoints: 100,
+      const rpcClient = supabase as unknown as {
+        rpc(
+          name: "purchase_band_stage_equipment_atomic",
+          args: { p_band_id: string; p_catalog_item_id: string; p_request_id: string },
+        ): PromiseLike<{ data: StageEquipmentPurchaseResult | null; error: { message: string } | null }>;
       };
-
-      const { error: insertError } = await supabase.from("band_stage_equipment").insert({
-        band_id: bandId,
-        equipment_name: item.name,
-        equipment_type: item.subcategory || "general",
-        quality_rating: Number(item.quality_rating ?? 80),
-        condition_rating: 100,
-        purchase_cost: price,
-        purchase_date: new Date().toISOString(),
-        size_units: 3,
-        notes: JSON.stringify(metadata),
-        is_active: false,
+      const { data, error } = await rpcClient.rpc("purchase_band_stage_equipment_atomic", {
+        p_band_id: bandId,
+        p_catalog_item_id: itemId,
+        p_request_id: requestId,
       });
 
-      if (insertError) {
-        // Best-effort compensation so a failed inventory insert does not silently charge the band.
-        await supabase.from("bands").update({ band_balance: currentBalance }).eq("id", bandId);
-        throw insertError;
+      if (error?.message.includes("insufficient_band_funds")) {
+        throw new Error("The band treasury does not have enough available funds.");
       }
-
-      return { price };
+      if (error || !data) throw new Error(error?.message ?? "No purchase receipt returned.");
+      return data;
     },
-    onSuccess: ({ price }) => {
-      toast.success(`${selectedDbItem?.name ?? "Equipment"} purchased for ${formatCurrency(price)}`);
+    onSuccess: ({ equipment_name, price }) => {
+      toast.success(`${equipment_name} purchased for ${formatCurrency(price)}`);
       queryClient.invalidateQueries({ queryKey: ["band-stage-equipment", bandId] });
       queryClient.invalidateQueries({ queryKey: ["band", bandId] });
       setPurchaseDialogOpen(false);
@@ -334,8 +307,9 @@ const StageEquipmentSystem = () => {
     [dbCatalog],
   );
 
-  const openDbPurchaseDialog = (item: any) => {
+  const openDbPurchaseDialog = (item: StageEquipmentCatalogItem) => {
     setSelectedDbItem(item);
+    setPurchaseRequestId(crypto.randomUUID());
     setPurchaseDialogOpen(true);
   };
 
@@ -670,6 +644,7 @@ const StageEquipmentSystem = () => {
         </Alert>
 
         <Dialog open={purchaseDialogOpen} onOpenChange={(open) => {
+          if (purchaseMutation.isPending) return;
           setPurchaseDialogOpen(open);
           if (!open) setSelectedDbItem(null);
         }}>
@@ -694,10 +669,17 @@ const StageEquipmentSystem = () => {
               </div>
             )}
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-              <Button variant="outline" onClick={() => { setPurchaseDialogOpen(false); setSelectedDbItem(null); }}>
+              <Button variant="outline" disabled={purchaseMutation.isPending} onClick={() => { setPurchaseDialogOpen(false); setSelectedDbItem(null); }}>
                 <Minus className="mr-2 h-4 w-4" /> Cancel
               </Button>
-              <Button onClick={() => selectedDbItem && purchaseMutation.mutate(selectedDbItem)} disabled={!selectedDbItem || purchaseMutation.isPending}>
+              <Button
+                onClick={() => {
+                  if (selectedDbItem && purchaseRequestId) {
+                    purchaseMutation.mutate({ itemId: selectedDbItem.id, requestId: purchaseRequestId });
+                  }
+                }}
+                disabled={!selectedDbItem || !purchaseRequestId || purchaseMutation.isPending}
+              >
                 {purchaseMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
                 Confirm purchase
               </Button>
