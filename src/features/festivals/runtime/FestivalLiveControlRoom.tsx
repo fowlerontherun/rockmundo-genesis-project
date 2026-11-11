@@ -93,7 +93,7 @@ export function FestivalLiveControlRoom({
       <section className="space-y-4" aria-label="Run Festival">
         <Card className="overflow-hidden border-primary/30">
           <div className="bg-gradient-to-r from-violet-950 via-slate-950 to-fuchsia-950 p-6 text-white">
-            <Badge className="mb-3">Festival launch</Badge>
+            <Badge className="mb-3">Festival simulation</Badge>
             <h2 className="text-3xl font-black">The festival simulation is almost ready</h2>
             <p className="mt-2 max-w-2xl text-sm text-violet-100">
               Finish the three big decisions, then run and complete the simulated event. Staffing, suppliers,
@@ -107,7 +107,11 @@ export function FestivalLiveControlRoom({
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <LaunchStep label="Annual plan" ready={readiness.readinessScore === 100} value={`${readiness.readinessScore}%`} />
-                  <LaunchStep label="Line-up" ready={readiness.confirmedActs > 0} value={`${readiness.confirmedActs} confirmed`} />
+                  {readiness.confirmedPlayerActs === undefined ? (
+                    <LaunchStep label="Confirmed acts" ready={readiness.confirmedActs > 0} value={String(readiness.confirmedActs)} />
+                  ) : (
+                    <LaunchStep label="Confirmed player acts" ready={readiness.confirmedPlayerActs > 0} value={String(readiness.confirmedPlayerActs)} />
+                  )}
                   <LaunchStep label="Stages" ready={readiness.stageCount > 0} value={readiness.licensedStageLimit ? `${readiness.stageCount}/${readiness.licensedStageLimit}` : `${readiness.stageCount}`} />
                 </div>
 
@@ -130,18 +134,18 @@ export function FestivalLiveControlRoom({
                     <div className="flex gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       <div>
-                        <p className="font-semibold">Ready for Festival Day</p>
-                        <p className="text-sm text-muted-foreground">One simulation action completes the festival and records results. This is not a real-time live show.</p>
+                        <p className="font-semibold">Ready to simulate</p>
+                        <p className="text-sm text-muted-foreground">Simulation completes the edition in one step and records the results.</p>
                       </div>
                     </div>
                   </div>
                 ) : null}
 
-                {runMutation.isError ? <p role="alert" className="text-destructive">The Festival could not be launched. Review the blockers and try again.</p> : null}
+                {runMutation.isError ? <p role="alert" className="text-destructive">The simulation could not complete. Review the blockers and try again.</p> : null}
 
                 <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
                   <Play className="mr-2 h-4 w-4" />
-                  {runMutation.isPending ? "Simulating Festival…" : "Simulate Festival & results"}
+                  {runMutation.isPending ? "Simulating Festival…" : "Simulate and complete edition"}
                 </Button>
               </>
             ) : null}
@@ -221,7 +225,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5" /> Stage programme · unverified</CardTitle>
-            <CardDescription>Published running order and provisional stage information. Only the official confirmations below establish live activity.</CardDescription>
+            <CardDescription>Published running order and provisional stage information. Live activity requires an operator confirmation.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {runtime.stages.map((stage) => (
@@ -321,7 +325,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader><CardTitle>Festival complete</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
-            <Metric icon={Users} label="Final attendance" value={runtime.attendance.admitted.toLocaleString("en-GB")} detail={`${occupancy}% peak site occupancy`} />
+            <Metric icon={Users} label="Final attendance" value={runtime.attendance.admitted.toLocaleString("en-GB")} detail="Total admissions" />
             <Metric icon={Sparkles} label="Audience rating" value={`${Math.round(runtime.satisfaction.audience)}/100`} detail="Final satisfaction" />
             <Metric icon={WalletCards} label="On-site sales" value={money(runtime.sales.foodAndDrinkMinor + runtime.sales.merchandiseMinor, runtime.currencyCode)} detail="Before full Results settlement" />
           </CardContent>
