@@ -295,7 +295,7 @@ export const TravelNotificationPreferences = () => {
                   <div>
                     <Label className="text-sm">Auto-rejoin missed pickups</Label>
                     <p className="text-[11px] text-muted-foreground">
-                      Automatically reattach to the nearest upcoming tour leg if you miss the band's pickup.
+                      If you miss a pickup, the game can book a later tour leg that departs from your current city, even while you’re offline.
                     </p>
                   </div>
                   <Switch

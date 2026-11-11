@@ -140,7 +140,7 @@ export const TourMemberSyncStatus = ({ tourId, bandId }: Props) => {
             syncReason = `Aboard ${leg.travel_mode || "transport"} until ${format(new Date(leg.arrival_date), "MMM d, h:mm a")}.`;
           } else {
             syncHealth = "desynced";
-            syncReason = "Pickup missed — not on the tour transport. Auto-rejoin should kick in shortly.";
+            syncReason = "Pickup missed. Check the travel timeline for catch-up options.";
           }
         } else if (upcomingLeg) {
           // upcoming: check if their current city matches the leg's origin

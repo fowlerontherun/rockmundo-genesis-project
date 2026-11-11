@@ -11,7 +11,6 @@ import { AlertCircle } from "lucide-react";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoMajorEventCompletion } from "@/hooks/useAutoMajorEventCompletion";
-import { useAutoRejoinTour } from "@/hooks/useAutoRejoinTour";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
@@ -62,7 +61,6 @@ const Layout = () => {
   useGlobalGigExecution(user?.id || null);
   usePlaytimeTracker(profileId || null);
   useAutoMajorEventCompletion(user?.id || null);
-  useAutoRejoinTour();
   useGameEventNotifications();
   useGigDayReminders();
   useReachMilestoneReminders();
