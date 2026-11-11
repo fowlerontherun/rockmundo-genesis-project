@@ -72,6 +72,7 @@ const EVENT_STYLE: Record<string, { icon: any; color: string; label: string }> =
     },
     eta_updated: { icon: Clock, color: "text-amber-500", label: "ETA updated" },
     rejoined: { icon: RefreshCw, color: "text-primary", label: "Rejoined" },
+    missed_pickup: { icon: RefreshCw, color: "text-muted-foreground", label: "Missed pickup" },
     status_changed: {
       icon: AlertCircle,
       color: "text-muted-foreground",
