@@ -10,6 +10,8 @@ import { Guitar, Music, Users, Mic, DollarSign } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { isBandUnavailableError } from "@/utils/bandActivityScheduling";
+import { useRehearsalBooking } from "@/hooks/useRehearsalBooking";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery } from "@tanstack/react-query";
 import { getRehearsalLevel, formatRehearsalTime } from "@/utils/rehearsalLevels";
@@ -26,6 +28,7 @@ export default function PerformanceBooking() {
   const location = useLocation();
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
+  const { bookRehearsal, isBooking } = useRehearsalBooking();
   const { checkConflicts, isChecking, result: conflictResult, clearResult } = useScheduleConflictCheck();
   
   const scheduledDate = location.state?.scheduledDate;
@@ -117,7 +120,7 @@ export default function PerformanceBooking() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rehearsal_rooms")
-        .select("id, name, quality_rating, hourly_rate")
+        .select("id, name, location, quality_rating, hourly_rate")
         .order("quality_rating", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -125,7 +128,6 @@ export default function PerformanceBooking() {
   });
 
   const selectedRoomData = rehearsalRooms.find(r => r.id === selectedRoom);
-  const selectedBandData = bands.find((b: any) => b.id === selectedBand);
   const totalCost = selectedRoomData ? selectedRoomData.hourly_rate * parseInt(duration) : 0;
 
   const handleBookRehearsal = async () => {
@@ -156,16 +158,6 @@ export default function PerformanceBooking() {
       return;
     }
 
-    // Check band balance
-    if (selectedBandData && (selectedBandData as any).band_balance < totalCost) {
-      toast({
-        title: "Insufficient Funds",
-        description: `Band balance is $${(selectedBandData as any).band_balance} but rehearsal costs $${totalCost}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     const [hours] = timeSlot.split(":").map(Number);
     const durationHours = parseInt(duration);
     const scheduledStart = buildScheduledDateTime(date, hours);
@@ -190,65 +182,23 @@ export default function PerformanceBooking() {
 
 
     try {
-      // Create band_rehearsals record
-      const { data: rehearsal, error: rehearsalError } = await supabase
-        .from("band_rehearsals")
-        .insert({
-          band_id: selectedBand,
-          rehearsal_room_id: selectedRoom,
-          scheduled_start: scheduledStart.toISOString(),
-          scheduled_end: scheduledEnd.toISOString(),
-          duration_hours: durationHours,
-          total_cost: totalCost,
-          status: "scheduled",
-          selected_song_id: practiceType === "song" ? selectedSong : null,
-          setlist_id: practiceType === "setlist" ? selectedSetlist : null,
-        })
-        .select()
-        .single();
-
-      if (rehearsalError) throw rehearsalError;
-
-      // Deduct from band balance
-      const { error: balanceError } = await supabase
-        .from("bands")
-        .update({ 
-          band_balance: ((selectedBandData as any).band_balance || 0) - totalCost 
-        })
-        .eq("id", selectedBand);
-
-      if (balanceError) throw balanceError;
-
-      // Create scheduled activity using profileId directly
-      if (profileId) {
-        await (supabase as any).from("player_scheduled_activities").insert({
-          user_id: profileId,
-          profile_id: profileId,
-          activity_type: "rehearsal",
-          scheduled_start: scheduledStart.toISOString(),
-          scheduled_end: scheduledEnd.toISOString(),
-          status: "scheduled",
-          title: "Band Rehearsal",
-          metadata: {
-            rehearsal_id: rehearsal.id,
-            band_id: selectedBand,
-            rehearsal_room_id: selectedRoom,
-          },
-        });
-      }
-
-      toast({
-        title: "Rehearsal Booked!",
-        description: `Successfully scheduled rehearsal for ${durationHours} hours.`,
+      await bookRehearsal({
+        bandId: selectedBand,
+        roomId: selectedRoom,
+        duration: durationHours,
+        songId: practiceType === "song" ? selectedSong : null,
+        setlistId: practiceType === "setlist" ? selectedSetlist : null,
+        scheduledStart,
+        roomName: selectedRoomData?.name ?? "Rehearsal room",
+        roomLocation: selectedRoomData?.location ?? "",
+        profileId,
       });
-
       navigate("/schedule");
-    } catch (error: any) {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+    } catch (error) {
+      // The booking hook reports RPC failures. This page has no member override dialog.
+      if (isBandUnavailableError(error)) {
+        toast({ title: "Band Unavailable", description: error.message, variant: "destructive" });
+      }
     }
   };
 
@@ -680,7 +630,7 @@ export default function PerformanceBooking() {
       </Tabs>
 
       <div className="flex gap-4">
-        <Button onClick={handleBookActivity} size="lg" className="flex-1">
+        <Button onClick={handleBookActivity} disabled={isBooking || isChecking} size="lg" className="flex-1">
           Book Activity
         </Button>
         <Button onClick={() => navigate("/schedule")} variant="outline" size="lg">
