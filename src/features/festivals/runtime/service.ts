@@ -20,6 +20,7 @@ export const festivalRunReadinessSchema = z.object({
   scheduledFor: z.string().nullable(),
   stageCount: z.number().int().nonnegative(),
   confirmedActs: z.number().int().nonnegative(),
+  confirmedPlayerActs: z.number().int().nonnegative().optional(),
   npcFillEnabled: z.boolean(),
   activeLicence: z.record(z.unknown()).nullable(),
   licensedStageLimit: z.number().int().positive().nullable().optional(),
@@ -74,38 +75,6 @@ export async function runSimplifiedFestival(
   });
   return runtimeProjectionSchema.parse(value);
 }
-
-// Retained for historical schedule-backed Festival runtimes and admin tooling.
-export async function prepareEditionRuntime(
-  companyId: string,
-  editionId: string,
-  expectedEditionVersion: number,
-  expectedScheduleRevision: string,
-) {
-  return rpc("prepare_festival_edition_runtime", {
-    p_festival_company_id: companyId,
-    p_edition_id: editionId,
-    p_expected_edition_version: expectedEditionVersion,
-    p_expected_schedule_revision: expectedScheduleRevision,
-    p_idempotency_key: crypto.randomUUID(),
-  });
-}
-
-export async function transitionEditionRuntime(
-  runtimeId: string,
-  expectedVersion: number,
-  action: string,
-  reason?: string,
-) {
-  return rpc("transition_festival_edition_runtime", {
-    p_runtime_id: runtimeId,
-    p_expected_version: expectedVersion,
-    p_action: action,
-    p_reason: reason ?? null,
-    p_idempotency_key: crypto.randomUUID(),
-  });
-}
-
 
 /** Only confirmation evidence from the canonical annual-edition runtime. */
 const canonicalStageStatusSchema = z.enum([
