@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 const edge = readFileSync("supabase/functions/auto-start-gigs/index.ts", "utf8");
-const hook = readFileSync("src/hooks/useAutoGigStart.ts", "utf8");
+const bookingPage = readFileSync("src/pages/GigBooking.tsx", "utf8");
+const config = readFileSync("supabase/config.toml", "utf8");
 const migration = readFileSync(
   "supabase/migrations/20261019111346_internal_locked_auto_start_gigs_schedule.sql",
   "utf8",
@@ -20,6 +22,22 @@ describe("gig auto-start internal scheduler authority (#4221)", () => {
     expect(edge).not.toContain("createClient");
     expect(edge).not.toContain("auto_start_scheduled_gigs(");
     expect(edge).not.toContain("startJobRun(");
+  });
+
+  it("requires a gateway JWT and retires requests that reach the handler", async () => {
+    expect(config).toMatch(/\[functions\."auto-start-gigs"\]\s+verify_jwt = true/);
+    let handler: ((request: Request) => Response) | undefined;
+    runInNewContext(edge, { Deno: { serve: (serve: typeof handler) => { handler = serve; } }, Response });
+    expect(handler).toBeDefined();
+
+    const url = "https://example.test/functions/v1/auto-start-gigs";
+    for (const headers of [{}, { Authorization: "Bearer test-player-token" }]) {
+      const response = handler!(new Request(url, { method: "POST", headers }));
+      expect(response.status).toBe(410);
+      expect(await response.json()).toEqual({
+        error: "Scheduled gig starts run only on the internal minute scheduler",
+      });
+    }
   });
 
   it("preserves the existing minute cron job without embedded bearer tokens", () => {
@@ -53,11 +71,11 @@ describe("gig auto-start internal scheduler authority (#4221)", () => {
     expect(migration).toContain("allow_manual_trigger=false");
   });
 
-  it("refreshes player gigs without allowing another global job trigger", () => {
-    expect(hook).not.toContain("functions.invoke");
-    expect(hook).not.toContain("auto_start_scheduled_gigs(");
-    expect(hook).toContain("queryClient.invalidateQueries");
-    expect(hook).toContain("60000");
+  it("uses the booking page's band-scoped read-only gig poll", () => {
+    expect(bookingPage).not.toMatch(/useAutoGigStart|auto-start-gigs|auto_start_scheduled_gigs/);
+    expect(bookingPage).toContain("void loadUpcomingGigs(band.id)");
+    expect(bookingPage).toContain(".eq('band_id', bandId)");
+    expect(bookingPage).toContain("clearInterval(interval)");
   });
 
   it("provides an SQL-only, rollback-safe production verification suite", () => {
