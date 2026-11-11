@@ -22,7 +22,6 @@ import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
-import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
@@ -119,9 +118,7 @@ const GigBooking = () => {
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
   const hasEligibleSetlists = eligibleSetlists.length > 0;
-  
-  // Auto-start gigs that are past their scheduled time
-  useAutoGigStart();
+
 
   const performanceSkill = skills?.performance ?? 0;
   const stagePresence = attributes?.stage_presence ?? 0;
