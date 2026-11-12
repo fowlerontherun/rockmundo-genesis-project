@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { awardSpecialXp } from "@/utils/progression";
+import type { SurveyAnswers } from "@/lib/playerSurvey";
 import { useToast } from "@/hooks/use-toast";
 
 export interface SurveyQuestion {
@@ -63,12 +62,13 @@ export function usePlayerSurvey() {
     enabled: !!userId && !!surveyConfig?.enabled && !!surveyConfig?.round,
     refetchOnMount: "always",
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("player_survey_completions")
         .select("id")
         .eq("user_id", userId!)
         .eq("survey_round", surveyConfig!.round)
         .maybeSingle();
+      if (error) throw error;
       return !!data;
     },
   });
@@ -79,95 +79,40 @@ export function usePlayerSurvey() {
     completionChecked &&
     surveyConfig?.enabled &&
     userId &&
+    profileId &&
     hasCompleted === false
   );
 
-  // Fetch random questions for this session
   const { data: questions } = useQuery<SurveyQuestion[]>({
-    queryKey: ["survey-questions", surveyConfig?.round],
+    queryKey: ["survey-questions", userId, surveyConfig?.round, surveyConfig?.questions_per_session],
     enabled: shouldShowSurvey,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("player_survey_questions")
-        .select("id, category, question_text, question_type, options, display_order")
-        .eq("is_active", true)
-        .order("display_order");
+      const { data, error } = await supabase.rpc("get_player_survey_questions", { p_round: surveyConfig!.round });
       if (error) throw error;
-      // Shuffle and pick N
-      const count = surveyConfig?.questions_per_session ?? 10;
-      const shuffled = (data || []).sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, count) as SurveyQuestion[];
+      return data as SurveyQuestion[];
     },
-    staleTime: Infinity, // Don't re-shuffle on refocus
   });
 
-  // Submit all answers + claim reward
   const submitMutation = useMutation({
-    mutationFn: async (answers: { questionId: string; answerValue: string; answerNumeric?: number }[]) => {
-      if (!userId || !surveyConfig) throw new Error("Not ready");
+    mutationFn: async (answers: SurveyAnswers) => {
+      if (!userId || !profileId || !surveyConfig) throw new Error("The survey is still loading.");
 
-      const round = surveyConfig.round;
-
-      // Insert responses
-      const rows = answers.map((a) => ({
-        user_id: userId,
-        profile_id: profileId,
-        question_id: a.questionId,
-        survey_round: round,
-        answer_value: a.answerValue,
-        answer_numeric: a.answerNumeric ?? null,
-      }));
-
-      const { error: respError } = await supabase
-        .from("player_survey_responses")
-        .upsert(rows, { onConflict: "user_id,question_id,survey_round" });
-      if (respError) throw respError;
-
-      // Award XP
-      try {
-        await awardSpecialXp({ amount: 250, reason: "survey_completion" });
-      } catch (e) {
-        console.warn("XP award failed (may have already been awarded):", e);
-      }
-
-      // Award attribute points via direct read + update
-      try {
-        const walletTable = supabase.from("player_xp_wallet") as any;
-        const walletQuery = await walletTable
-          .select("attribute_points_balance, attribute_points_lifetime")
-          .eq("user_id", userId)
-          .maybeSingle();
-        const wallet = walletQuery.data;
-        if (wallet) {
-          await walletTable
-            .update({
-              attribute_points_balance: (wallet.attribute_points_balance || 0) + 25,
-              attribute_points_lifetime: (wallet.attribute_points_lifetime || 0) + 25,
-            })
-            .eq("user_id", userId);
-        }
-      } catch (e) {
-        console.warn("Attribute points award failed:", e);
-      }
-
-      // Record completion
-      const { error: compError } = await supabase
-        .from("player_survey_completions")
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          survey_round: round,
-          xp_awarded: 250,
-          attribute_points_awarded: 25,
-        });
-      if (compError) throw compError;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Survey Complete! 🎉",
-        description: "You earned 250 XP and 25 Attribute Points!",
+      const { data, error } = await supabase.rpc("submit_player_survey", {
+        p_round: surveyConfig.round,
+        p_profile_id: profileId,
+        p_answers: answers,
       });
-      queryClient.invalidateQueries({ queryKey: ["survey-completion"] });
+      if (error) throw new Error(error.message);
+      return data as { already_completed: true } | { already_completed: false; xp: number; ap: number };
+    },
+    onSuccess: (result) => {
+      toast("xp" in result
+        ? {
+          title: "Survey complete",
+          description: `You earned ${result.xp.toLocaleString()} XP and ${result.ap} Attribute Points. Thank you for your feedback!`,
+        }
+        : { title: "Survey already completed" });
+      queryClient.setQueryData(["survey-completion", userId, surveyConfig?.round], true);
     },
     onError: (err) => {
       toast({
