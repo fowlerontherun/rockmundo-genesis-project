@@ -79875,6 +79875,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      get_player_survey_questions: {
+        Args: { p_round: string }
+        Returns: Database["public"]["Tables"]["player_survey_questions"]["Row"][]
+      }
       get_profile_achievement_stat: {
         Args: { p_key: string; p_profile_id: string }
         Returns: number
@@ -84878,6 +84882,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_player_survey: {
+        Args: { p_round: string; p_profile_id: string; p_answers: Json }
+        Returns: Json
       }
       submit_podcast_appearance: {
         Args: {
