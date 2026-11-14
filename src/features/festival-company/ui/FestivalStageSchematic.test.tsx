@@ -56,7 +56,27 @@ describe("illustrated festival stage schedule indicators", () => {
     expect(screen.getByText("Attendance not available")).toBeTruthy();
   });
 
-    it("retains accessible stage selection", () => {
+  it("budgets one CSS illustration across a large directory and none in lightweight view", () => {
+    const stages = Array.from({ length: 24 }, (_, index) => ({
+      ...stage, id: `stage-${index}`, name: index === 0 ? stage.name : `Stage ${index}`,
+    }));
+    const props = { ...base, stages, selectedStageId: stages[0].id, weatherState: "storm" as const,
+      now: Date.parse("2026-10-29T16:30:00Z") };
+    const { container, rerender } = render(<FestivalStageSchematic {...props} />);
+    expect(screen.getAllByRole("button")).toHaveLength(24);
+    expect(screen.getAllByTestId("festival-stage-illustration")).toHaveLength(1);
+    expect(container.querySelectorAll('[data-weather-visual="rain"]')).toHaveLength(8);
+    expect(container.querySelectorAll("[data-crowd-figure]")).toHaveLength(11);
+    expect(container.querySelectorAll("img, svg, canvas, video, audio, iframe, object")).toHaveLength(0);
+
+    rerender(<FestivalStageSchematic {...props} lightweight />);
+    expect(screen.queryByTestId("festival-stage-illustration")).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(24);
+    expect(screen.getByText("Shockmaster")).toBeVisible();
+    expect(screen.getByRole("button", { name: /Main Stage/ })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("retains accessible stage selection", () => {
     const onSelectStage = vi.fn();
     render(<FestivalStageSchematic {...base} onSelectStage={onSelectStage} now={Date.parse("2026-10-29T16:30:00Z")} />);
     fireEvent.click(screen.getByRole("button", { name: /Main Stage/ }));

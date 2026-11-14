@@ -25,6 +25,20 @@ interface FestivalGroundsProps {
   onViewTimetable: () => void;
 }
 
+const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
+
+function prefersLightweightGrounds() {
+  if (typeof window === "undefined") return true;
+  const device = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+  return window.matchMedia?.(reducedMotionQuery).matches === true ||
+    device.connection?.saveData === true ||
+    (device.deviceMemory ?? 8) <= 4 ||
+    (device.hardwareConcurrency || 8) <= 4;
+}
+
 /**
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
@@ -43,13 +57,33 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const verified = !cancelled && !live.isError && !suppressObservations && festivalEditionId !== null &&
     record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const showRefreshAction = !cancelled && (suppressObservations || live.isError || experience.isError);
+  const livePending = !cancelled && (live.isPending || experience.isPending);
+  const liveFailed = live.isError || experience.isError;
+  const [retrying, setRetrying] = useState(false);
+  const showRefreshAction = !cancelled && (suppressObservations || liveFailed || retrying);
+  const retryLiveUpdates = async () => {
+    setRetrying(true);
+    try {
+      await experience.refetch();
+    } finally {
+      setRetrying(false);
+    }
+  };
   const value = verified?.weather;
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
   const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
   const weatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
   const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
+  const [lightweightOverride, setLightweightOverride] = useState<boolean | null>(null);
+  const [preferLightweight, setPreferLightweight] = useState(prefersLightweightGrounds);
+  const lightweight = lightweightOverride ?? preferLightweight;
+  useEffect(() => {
+    const motion = window.matchMedia?.(reducedMotionQuery);
+    const update = () => setPreferLightweight(prefersLightweightGrounds());
+    motion?.addEventListener?.("change", update);
+    return () => motion?.removeEventListener?.("change", update);
+  }, []);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const stageCrowds = filterFreshPublicFestivalStageCrowds(
@@ -105,12 +139,18 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
           Select a stage to discover its announced artists. This is a stage guide, not a walking map.
         </p>
       </div>
+      {stages.length > 0 && (
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={lightweight} onChange={(event) => setLightweightOverride(event.target.checked)} />
+          Lightweight stage view
+        </label>
+      )}
       <div className="rounded-xl border bg-card p-4" aria-label="Festival site weather">
         <div className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "❔"}</span>
           <div>
             <h3 className="font-semibold">Festival site conditions</h3>
-            <p className="text-sm">{weatherState ? weatherNames[weatherState] : "Weather information unavailable"}</p>
+            <p className="text-sm">{weatherState ? weatherNames[weatherState] : livePending ? "Checking festival site conditions…" : "Weather information unavailable"}</p>
             {groundCondition && <p className="text-xs text-muted-foreground">Ground: {groundCondition.replaceAll("_", " ")}</p>}
             <p className="text-xs text-muted-foreground">Festival runtime conditions, not a live forecast.</p>
           </div>
@@ -120,7 +160,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
@@ -146,11 +186,11 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
             </div>
             <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3" role="status">
               <p className="text-xs font-semibold uppercase tracking-wider">Festival live status</p>
-              {cancelled ? <p className="mt-1 text-sm">This festival was cancelled. No performances are currently scheduled to take place.</p> : live.isPending || experience.isPending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
+              {cancelled ? <p className="mt-1 text-sm">This festival was cancelled. No performances are currently scheduled to take place.</p> : livePending ? <p className="mt-1 text-sm">Checking official stage status…</p> : staleLive ? (
                 <p className="mt-1 text-sm">The last festival runtime update is too old to confirm current stage activity. Published timetable information remains available.</p>
               ) : unverifiedLive ? (
                 <p className="mt-1 text-sm">Official runtime freshness could not be verified. Live stage information is hidden until it can be checked.</p>
-              ) : live.isError || experience.isError ? (
+              ) : liveFailed ? (
                 <p className="mt-1 text-sm">Official live updates are unavailable. The schedule below may have changed.</p>
               ) : !verifiedLive ? <p className="mt-1 text-sm">No verified live status for this edition.</p> : (
                 <>
@@ -162,8 +202,8 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
                 </>
               )}
               {showRefreshAction && (
-                <button type="button" className="mt-2 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => { void live.refetch(); void experience.refetch(); }}>
-                  Retry live festival updates
+                <button type="button" className="mt-2 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" disabled={experience.isFetching || retrying} onClick={() => { void retryLiveUpdates(); }}>
+                  {experience.isFetching ? "Retrying live festival updates…" : "Retry live festival updates"}
                 </button>
               )}
             </div>
