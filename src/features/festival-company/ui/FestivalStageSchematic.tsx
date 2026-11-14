@@ -6,6 +6,7 @@ import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 
 interface FestivalStageSchematicProps {
+  lightweight?: boolean;
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   now: number;
@@ -33,20 +34,20 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelled, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, localHour, onSelectStage }: FestivalStageSchematicProps) {
+export function FestivalStageSchematic({ lightweight = false, stages, lineup, now, timezone, cancelled, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, localHour, onSelectStage }: FestivalStageSchematicProps) {
   const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-emerald-500/20 p-4 sm:p-6 ${afterDark ? "bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950" : "bg-gradient-to-br from-sky-900/20 via-emerald-900/15 to-amber-900/15"}`}>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50" style={{
+    <div className={`relative overflow-hidden rounded-2xl border border-emerald-500/20 p-4 sm:p-6 ${lightweight ? "bg-card" : afterDark ? "bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-950" : "bg-gradient-to-br from-sky-900/20 via-emerald-900/15 to-amber-900/15"}`}>
+      {!lightweight && <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50" style={{
         backgroundImage: "radial-gradient(circle at 16% 20%, rgba(52,211,153,.16) 0 7%, transparent 8%), radial-gradient(circle at 84% 76%, rgba(251,191,36,.14) 0 9%, transparent 10%), repeating-linear-gradient(135deg, transparent 0 38px, rgba(255,255,255,.025) 39px 42px)",
-      }} />
+      }} />}
       <div className="relative mb-5 flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Festival grounds · visual stage directory</p>
           <p className="text-xs text-muted-foreground">Illustrative arrangement only — not a walking map</p>
-          <p className="mt-1 text-xs font-medium" role="status">{lightingLabel} · Fixed clock-based effect, not actual sunrise or weather</p>
+          {!lightweight && <p className="mt-1 text-xs font-medium" role="status">{lightingLabel} · Fixed clock-based effect, not actual sunrise or weather</p>}
         </div>
         <span className="rounded-full border bg-background/80 px-3 py-1 text-xs">{stages.length} stages</span>
       </div>
@@ -68,6 +69,8 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelle
         {stages.map((stage, index) => {
           const current = cancelled ? undefined : performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
           const delayed = cancelled ? undefined : performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
+          // The entire directory has a budget of one CSS-only illustration.
+          const showIllustration = !lightweight && stage.id === selectedStageId;
           const activeLighting = Boolean(current) && afterDark;
           const schedule = stageTimetableProgress(stage.name, lineup, now);
           const crowd = stageCrowds.find(
@@ -80,9 +83,9 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelle
             type="button"
             onClick={() => onSelectStage(stage.id)}
             aria-pressed={selectedStageId === stage.id}
-            className={`group relative min-h-44 overflow-hidden rounded-xl border-2 bg-card/90 p-4 text-center shadow-lg transition-transform motion-safe:hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStageId === stage.id ? "border-primary ring-2 ring-primary/30" : "border-border/70 hover:border-primary/60"}`}
+            className={`group relative overflow-hidden rounded-xl border-2 bg-card/90 p-4 text-center ${lightweight ? "min-h-11" : "shadow-lg motion-safe:transition-transform motion-safe:hover:-translate-y-1"} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStageId === stage.id ? "border-primary ring-2 ring-primary/30" : "border-border/70 hover:border-primary/60"}`}
           >
-            <div aria-hidden="true" className={`relative mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
+            {showIllustration && <div aria-hidden="true" className={`relative mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
               <div className="h-3 bg-slate-900/80" />
               <div className="flex flex-1 items-center justify-center gap-2">
                 <span className="h-10 w-1 rotate-12 bg-amber-300/70 shadow-[0_0_15px_rgba(252,211,77,.6)]" />
@@ -91,7 +94,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelle
               </div>
               <div className="h-2 bg-slate-950" />
               <FestivalStageAtmosphere weatherState={weatherState} activePerformance={Boolean(current)} />
-            </div>
+            </div>}
             <span className="block text-base font-bold">{stage.name}</span>
             {current ? (
               <span className="mt-2 block rounded-full bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Live · {current.artistName}</span>
@@ -137,7 +140,7 @@ export function FestivalStageSchematic({ stages, lineup, now, timezone, cancelle
         })}
       </div>
       <p className="relative mt-5 text-xs text-muted-foreground">Stage order is for discovery only. Routes, entrances and facilities require an organiser-published layout.</p>
-      <p className="relative mt-1 text-xs text-muted-foreground">People and weather artwork illustrate the atmosphere, not measured stage crowds. Crowd figures remain decorative unless authoritative stage snapshots are available.</p>
+      {!lightweight && <p className="relative mt-1 text-xs text-muted-foreground">People and weather artwork illustrate the atmosphere, not measured stage crowds. Crowd figures remain decorative unless authoritative stage snapshots are available.</p>}
     </div>
   );
 }
