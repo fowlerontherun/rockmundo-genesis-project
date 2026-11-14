@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { GigViewerErrorBoundary } from "@/features/gig-experience/viewer/GigViewerErrorBoundary";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
@@ -24,6 +25,8 @@ interface FestivalGroundsProps {
   };
   onViewTimetable: () => void;
 }
+
+const FestivalOutdoorStage = lazy(() => import("./FestivalOutdoorStage"));
 
 const reducedMotionQuery = "(prefers-reduced-motion: reduce)";
 
@@ -76,14 +79,19 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const weatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
   const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
   const [lightweightOverride, setLightweightOverride] = useState<boolean | null>(null);
+  const [reduceMotion, setReduceMotion] = useState(() => window.matchMedia?.(reducedMotionQuery).matches === true);
   const [preferLightweight, setPreferLightweight] = useState(prefersLightweightGrounds);
   const lightweight = lightweightOverride ?? preferLightweight;
   useEffect(() => {
     const motion = window.matchMedia?.(reducedMotionQuery);
-    const update = () => setPreferLightweight(prefersLightweightGrounds());
+    const update = () => {
+      setPreferLightweight(prefersLightweightGrounds());
+      setReduceMotion(motion?.matches === true);
+    };
     motion?.addEventListener?.("change", update);
     return () => motion?.removeEventListener?.("change", update);
   }, []);
+  const [openedStage, setOpenedStage] = useState<string | null>(null);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const stageCrowds = filterFreshPublicFestivalStageCrowds(
@@ -115,6 +123,13 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     ? verifiedLive.performances.filter((entry) => entry.stageName === selectedStage.name)
     : [];
   const livePerformance = livePerformances.find((entry) => entry.status === "live" || entry.status === "starting");
+  const selectedStageName = selectedStage?.name.trim().toLocaleLowerCase("en-GB");
+  const uniqueStageName = stages.filter((stage) => stage.name.trim().toLocaleLowerCase("en-GB") === selectedStageName).length === 1;
+  const activeStages = livePerformances.filter((entry) => entry.status === "live");
+  const stageArtist = freshness === "current" && uniqueStageName && activeStages.length === 1 ? activeStages[0].artistName : undefined;
+  const stageViewKey = !cancelled && !lightweight && festivalEditionId && selectedStage
+    ? JSON.stringify([festivalEditionId, selectedStage.id]) : null;
+  useEffect(() => { setOpenedStage(null); }, [stageViewKey]);
   const delayedPerformance = livePerformances.find((entry) => entry.status === "delayed");
   const cancelledPerformances = livePerformances.filter((entry) => entry.status === "cancelled");
   const liveStatus = livePerformance ?? delayedPerformance;
@@ -227,6 +242,25 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
                 <p className="mt-1 text-sm text-muted-foreground">No unambiguous stage crowd snapshot is available.</p>
               )}
             </div>
+            {stageViewKey && selectedStage && festivalEditionId && (
+              <div className="mt-4">
+                <button type="button" aria-expanded={openedStage === stageViewKey}
+                  className="min-h-11 rounded-md border px-3 text-sm font-medium"
+                  onClick={() => setOpenedStage(openedStage === stageViewKey ? null : stageViewKey)}>
+                  {openedStage === stageViewKey ? "Close 3D stage" : "Open 3D stage"}
+                </button>
+                {openedStage === stageViewKey && (
+                  <GigViewerErrorBoundary resetKey={stageViewKey} onClose={() => setOpenedStage(null)}>
+                  <Suspense fallback={<p role="status">Loading 3D stage viewer…</p>}>
+                    <FestivalOutdoorStage key={stageViewKey} editionId={festivalEditionId}
+                      stageId={selectedStage.id} stageName={selectedStage.name} capacity={selectedStage.capacity}
+                      artist={stageArtist} localHour={localHour} crowdBand={freshness === "current" ? selectedCrowd?.crowdBand : undefined}
+                      reducedMotion={reduceMotion} />
+                  </Suspense>
+                  </GigViewerErrorBoundary>
+                )}
+              </div>
+            )}
             <h4 className="mt-5 font-semibold">Announced artists</h4>
             {acts.length ? (
               <ul className="mt-3 space-y-3">

@@ -125,9 +125,10 @@ export class ConcertScene {
     this.assetManager.onError = () => { this.assetsFailed = true; };
     const pmrem = new T.PMREMGenerator(this.renderer), room = new RoomEnvironment();
     this.environment = pmrem.fromScene(room, 0.04); this.scene.environment = this.environment.texture; room.dispose(); pmrem.dispose();
-    this.scene.background = new T.Color('#010205'); this.scene.fog = this.fog;
-    this.scene.add(new T.HemisphereLight('#526070', '#050406', 0.18));
-    const key = new T.DirectionalLight('#f4d5b3', 0.22); key.position.set(0, 5, 6); this.scene.add(key);
+    const daylight = options?.outdoorDaylight && this.venueProfile?.outdoor;
+    this.scene.background = new T.Color(daylight ? '#8db9d2' : '#010205'); this.scene.fog = this.fog;
+    this.scene.add(new T.HemisphereLight(daylight ? '#c3e6ff' : '#526070', daylight ? '#626b49' : '#050406', daylight ? .85 : .18));
+    const key = new T.DirectionalLight('#f4d5b3', daylight ? 1.5 : .22); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#5f7390', 0.08); backFill.position.set(0, 5, -7); this.scene.add(backFill);
     const crowdSignal = options?.merchCrowdSignal ?? null;
     const distantMerch = crowdSignal
