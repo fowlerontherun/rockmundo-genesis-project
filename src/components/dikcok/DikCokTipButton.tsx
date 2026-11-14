@@ -15,7 +15,7 @@ export const DikCokTipButton = ({ videoId }: DikCokTipButtonProps) => {
   const [open, setOpen] = useState(false);
 
   const handleTip = (amount: number) => {
-    sendTip.mutate({ videoId, amount });
+    sendTip.mutate({ videoId, amount, requestId: crypto.randomUUID() });
     setOpen(false);
   };
 
