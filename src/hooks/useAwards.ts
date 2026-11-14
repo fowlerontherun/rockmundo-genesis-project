@@ -94,8 +94,8 @@ export const useAwards = (userId?: string, bandId?: string, watchCeremony = fals
   });
 
   // Browser callers pass a character profile ID, NOT auth.users.id.
-  // Nomination/win rows store the authenticated account ID and/or band ID.
-  // Resolve the account inside each query instead of comparing to profileId.
+  // Nominations and legacy wins store account and band IDs. New solo wins
+  // also store their exact character profile.
   const { data: nominations = [], isLoading: nominationsLoading } = useQuery({
     queryKey: ["award-nominations", userId, bandId],
     queryFn: async () => {
@@ -128,7 +128,7 @@ export const useAwards = (userId?: string, bandId?: string, watchCeremony = fals
       const accountId = authData.user?.id;
       if (!accountId) return [];
 
-      const filters = [`user_id.eq.${accountId}`];
+      const filters = [`profile_id.eq.${userId}`, `and(profile_id.is.null,user_id.eq.${accountId})`];
       if (bandId) filters.push(`band_id.eq.${bandId}`);
       const { data, error } = await (supabase as any)
         .from("award_wins")

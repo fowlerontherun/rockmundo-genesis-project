@@ -54,6 +54,7 @@ const AwardsAdmin = () => {
     categories: "",
     jury_weight: "0",
   });
+  const [typedNominee, setTypedNominee] = useState({ showId: "", category: "", type: "player", id: "" });
   const [bandSearch, setBandSearch] = useState("");
   const [selectedBand, setSelectedBand] = useState<{ id: string; name: string } | null>(null);
   const [inviteForm, setInviteForm] = useState({
@@ -133,6 +134,34 @@ const AwardsAdmin = () => {
       toast({ title: "Failed to create award show", description: error.message, variant: "destructive" });
     },
   });
+
+  const submitTypedNomination = useMutation({
+    mutationFn: async () => {
+      const client = supabase as unknown as {
+        rpc: (name: string, args: Record<string, string>) => Promise<{ error: Error | null }>;
+      };
+      const { error } = await client.rpc("award_admin_submit_typed_nomination", {
+        p_show_id: typedNominee.showId,
+        p_category: typedNominee.category,
+        p_nominee_type: typedNominee.type,
+        p_nominee_id: typedNominee.id.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-nominations"] });
+      void queryClient.invalidateQueries({ queryKey: ["award-show-nominations"] });
+      setTypedNominee((current) => ({ ...current, id: "" }));
+      toast({ title: "Nomination submitted for review" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to submit nomination", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const nominationShows = (shows as { id: string; show_name: string; status: string; categories: { name: string }[] }[])
+    .filter((show) => show.status === "nominations_open");
+  const nominationShow = nominationShows.find((show) => show.id === typedNominee.showId);
 
   const reviewNomination = useMutation({
     mutationFn: async ({ nominationId, decision }: { nominationId: string; decision: "shortlisted" | "rejected" }) => {
@@ -480,6 +509,49 @@ const AwardsAdmin = () => {
         </TabsContent>
 
         <TabsContent value="nominations">
+          <Card className="mb-4">
+            <CardHeader><CardTitle>Add a character, song or album nomination</CardTitle></CardHeader>
+            <CardContent>
+              <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => {
+                event.preventDefault();
+                submitTypedNomination.mutate();
+              }}>
+                <Label>Show
+                  <select className="mt-1 block w-full rounded border bg-background p-2" required
+                    value={typedNominee.showId}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, showId: event.target.value, category: "" })}>
+                    <option value="">Choose an open show</option>
+                    {nominationShows.map((show) => <option key={show.id} value={show.id}>{show.show_name}</option>)}
+                  </select>
+                </Label>
+                <Label>Category
+                  <select className="mt-1 block w-full rounded border bg-background p-2" required
+                    value={typedNominee.category}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, category: event.target.value })}>
+                    <option value="">Choose a category</option>
+                    {(Array.isArray(nominationShow?.categories) ? nominationShow.categories : []).map(({ name }) => <option key={name}>{name}</option>)}
+                  </select>
+                </Label>
+                <Label>Nominee type
+                  <select className="mt-1 block w-full rounded border bg-background p-2"
+                    value={typedNominee.type}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, type: event.target.value, id: "" })}>
+                    <option value="player">Character</option>
+                    <option value="song">Song</option>
+                    <option value="album">Album</option>
+                  </select>
+                </Label>
+                <Label>Nominee ID
+                  <Input className="mt-1" required value={typedNominee.id}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, id: event.target.value })} />
+                </Label>
+                <Button type="submit" disabled={!nominationShow || submitTypedNomination.isPending}>
+                  Submit nomination
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>All Nominations</CardTitle>
@@ -490,7 +562,7 @@ const AwardsAdmin = () => {
                   <TableRow>
                     <TableHead>Show</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Band</TableHead>
+                    <TableHead>Nominee</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -500,7 +572,7 @@ const AwardsAdmin = () => {
                     <TableRow key={nom.id}>
                       <TableCell>{nom.award_shows?.show_name}</TableCell>
                       <TableCell>{nom.category_name}</TableCell>
-                      <TableCell>{nom.bands?.name}</TableCell>
+                      <TableCell>{nom.nominee_name}</TableCell>
                       <TableCell>{nom.nominee_type}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
