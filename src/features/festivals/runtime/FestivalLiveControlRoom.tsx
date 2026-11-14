@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -23,9 +24,12 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { FestivalRuntimeProjection } from "./model";
+import { CanonicalLiveDayOperations } from "./CanonicalLiveDayOperations";
 import { CanonicalStageControl } from "./CanonicalStageControl";
 import {
   getEditionRuntime,
+  getCanonicalLiveDayAvailability,
+  startCanonicalFestivalLiveDay,
   getFestivalRunReadiness,
   runSimplifiedFestival,
 } from "./service";
@@ -61,6 +65,30 @@ export function FestivalLiveControlRoom({
     queryKey: ["festival-run-readiness", companyId, editionId],
     queryFn: () => getFestivalRunReadiness(companyId, editionId),
     enabled: query.isSuccess && query.data === null,
+  });
+  const openRequest = useRef<{ editionId: string; key: string } | null>(null);
+  const availability = useQuery({
+    queryKey: ["festival-live-day-availability", companyId, editionId],
+    queryFn: () => getCanonicalLiveDayAvailability(companyId, editionId),
+    enabled: query.isSuccess,
+    refetchInterval: 15_000,
+    retry: false,
+  });
+  const updateRuntime = (updated: FestivalRuntimeProjection) => {
+    queryClient.setQueryData(runtimeQueryKey(companyId, editionId), updated);
+    void queryClient.invalidateQueries({ queryKey: ["festival-live-day-availability", companyId, editionId] });
+    void queryClient.invalidateQueries({ queryKey: ["festival-edition-history", editionId] });
+  };
+  const openMutation = useMutation({
+    mutationFn: (editionVersion: number) => {
+      if (openRequest.current?.editionId !== editionId) {
+        openRequest.current = { editionId, key: crypto.randomUUID() };
+      }
+      return startCanonicalFestivalLiveDay({
+        companyId, editionId, editionVersion, requestId: openRequest.current.key,
+      });
+    },
+    onSuccess: updateRuntime,
   });
   const runMutation = useMutation({
     mutationFn: (expectedEditionVersion: number) =>
@@ -143,7 +171,17 @@ export function FestivalLiveControlRoom({
 
                 {runMutation.isError ? <p role="alert" className="text-destructive">The simulation could not complete. Review the blockers and try again.</p> : null}
 
-                <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
+                {availability.data?.canOpen && (
+                  <Button
+                    size="lg"
+                    disabled={readiness.blockers.some((blocker) => blocker.code !== "festival_not_due") || openMutation.isPending || runMutation.isPending}
+                    onClick={() => openMutation.mutate(readiness.editionVersion)}
+                  >Open festival gates</Button>
+                )}
+                {openMutation.isError && <p role="alert" className="text-sm text-destructive">
+                  {(openMutation.error as { message?: string }).message ?? "Festival gates could not be opened."}
+                </p>}
+                <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending || openMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
                   <Play className="mr-2 h-4 w-4" />
                   {runMutation.isPending ? "Simulating Festival…" : "Simulate and complete edition"}
                 </Button>
@@ -270,6 +308,10 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
           </CardContent>
         </Card>
       </div>
+
+      {availability.data?.managed && (
+        <CanonicalLiveDayOperations runtime={runtime} canAllocate={availability.data.canAllocate} onUpdate={updateRuntime} />
+      )}
 
       {["live", "gates_open", "paused"].includes(runtime.state) && (
         <CanonicalStageControl runtimeId={runtime.runtimeId} />
