@@ -1,14 +1,14 @@
-import { publicFestivalStageStatus } from "../domain/publicFestivalStageStatus";
+import { filterFreshPublicFestivalPerformances, publicFestivalStageStatus } from "../domain/publicFestivalStageStatus";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { GigViewerErrorBoundary } from "@/features/gig-experience/viewer/GigViewerErrorBoundary";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
-import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterPublicFestivalStageCrowdsForUniqueStages, filterFreshPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
+import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterFreshPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
 import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
-import { formatFestivalEditionDate, getFestivalLocalClockHour, festivalTimeZoneLabel } from "./festivalPublicDisplay";
+import { formatFestivalEditionDate, getFestivalLocalClockHour, getFestivalLocalDate, festivalTimeZoneLabel } from "./festivalPublicDisplay";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -95,10 +95,12 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const [openedStage, setOpenedStage] = useState<string | null>(null);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const stageCrowds = filterFreshPublicFestivalStageCrowds(
-    filterPublicFestivalStageCrowdsForUniqueStages(readPublicFestivalStageCrowds(verified, festivalLaunchId), stages),
-    currentTime,
-  );
+  const now = Math.max(currentTime, Date.now());
+  const localDate = getFestivalLocalDate(now, timezone);
+  const currentRuntimeDay = freshness === "current" && Boolean(localDate) && verifiedLive?.currentDay === localDate;
+  const stageCrowds = currentRuntimeDay && (verifiedLive?.runtimeStatus === "live" || verifiedLive?.runtimeStatus === "gates_open")
+    ? filterFreshPublicFestivalStageCrowds(readPublicFestivalStageCrowds(verified, festivalLaunchId), now)
+    : [];
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(timer);
@@ -107,7 +109,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const localHour = getFestivalLocalClockHour(currentTime, timezone);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const selectedCrowd = selectedStage
-    ? stageCrowds.find((item) => item.stageName.toLocaleLowerCase("en-GB") === selectedStage.name.trim().toLocaleLowerCase("en-GB"))
+    ? stageCrowds.find((item) => item.stageId === selectedStage.id)
     : undefined;
   const acts = selectedStage
     ? lineup.filter((entry) => entry.stageName === selectedStage.name)
@@ -120,9 +122,9 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     : schedule.kind === "next" ? "Next scheduled set"
     : schedule.kind === "finished" ? "Published sets finished" : "No published stage times";
 
-  const stageObservations = freshness === "current" && verifiedLive?.runtimeStatus === "live"
-    ? verifiedLive.performances : [];
-  const stageStatus = publicFestivalStageStatus(selectedStage, stages, stageObservations);
+  const stageObservations = currentRuntimeDay && verifiedLive?.runtimeStatus === "live"
+    ? filterFreshPublicFestivalPerformances(verifiedLive.performances, now) : [];
+  const stageStatus = publicFestivalStageStatus(selectedStage, stageObservations);
   const liveStatus = stageStatus?.performance;
   const stageArtist = liveStatus?.status === "live" ? liveStatus.artistName : undefined;
   const stageViewKey = !cancelled && !lightweight && festivalEditionId && selectedStage
