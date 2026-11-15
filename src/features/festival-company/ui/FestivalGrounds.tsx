@@ -1,3 +1,4 @@
+import { publicFestivalStageStatus } from "../domain/publicFestivalStageStatus";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { GigViewerErrorBoundary } from "@/features/gig-experience/viewer/GigViewerErrorBoundary";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
@@ -119,23 +120,17 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     : schedule.kind === "next" ? "Next scheduled set"
     : schedule.kind === "finished" ? "Published sets finished" : "No published stage times";
 
-  const livePerformances = verifiedLive && selectedStage
-    ? verifiedLive.performances.filter((entry) => entry.stageName === selectedStage.name)
-    : [];
-  const livePerformance = livePerformances.find((entry) => entry.status === "live" || entry.status === "starting");
-  const selectedStageName = selectedStage?.name.trim().toLocaleLowerCase("en-GB");
-  const uniqueStageName = stages.filter((stage) => stage.name.trim().toLocaleLowerCase("en-GB") === selectedStageName).length === 1;
-  const activeStages = livePerformances.filter((entry) => entry.status === "live");
-  const stageArtist = freshness === "current" && uniqueStageName && activeStages.length === 1 ? activeStages[0].artistName : undefined;
+  const stageObservations = freshness === "current" && verifiedLive?.runtimeStatus === "live"
+    ? verifiedLive.performances : [];
+  const stageStatus = publicFestivalStageStatus(selectedStage, stages, stageObservations);
+  const liveStatus = stageStatus?.performance;
+  const stageArtist = liveStatus?.status === "live" ? liveStatus.artistName : undefined;
   const stageViewKey = !cancelled && !lightweight && festivalEditionId && selectedStage
     ? JSON.stringify([festivalEditionId, selectedStage.id]) : null;
   useEffect(() => { setOpenedStage(null); }, [stageViewKey]);
-  const delayedPerformance = livePerformances.find((entry) => entry.status === "delayed");
-  const cancelledPerformances = livePerformances.filter((entry) => entry.status === "cancelled");
-  const liveStatus = livePerformance ?? delayedPerformance;
-  const liveStatusLabel = livePerformance ? "Confirmed stage activity" : delayedPerformance ? "Performance delayed"
-    : verifiedLive?.runtimeStatus === "runtime_complete" ? "Festival completed"
-    : verifiedLive?.currentDay === null ? "No active festival day" : "No confirmed live performance";
+  const liveStatusLabel = liveStatus?.status === "live" ? "Confirmed stage activity"
+    : stageStatus?.label ?? (verifiedLive?.runtimeStatus === "runtime_complete" ? "Festival completed"
+    : verifiedLive?.currentDay === null ? "No active festival day" : "No confirmed live performance");
 
   const lastRuntimeUpdate = verified && typeof verified.updatedAt === "string" && Number.isFinite(Date.parse(verified.updatedAt)) ? verified.updatedAt : null;
 
@@ -175,7 +170,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={live.isError ? [] : verifiedLive?.performances} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={stageObservations} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
           <div className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
@@ -211,7 +206,8 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
                 <>
                   <p className="mt-1 font-semibold">{liveStatusLabel}</p>
                   {liveStatus && <p className="text-sm">{liveStatus.artistName}{liveStatus.status === "delayed" && liveStatus.delayMinutes > 0 ? ` · ${liveStatus.delayMinutes} minute delay` : ""}</p>}
-                  {cancelledPerformances.length > 0 && <p className="mt-1 text-sm">{cancelledPerformances.length} cancelled performance{cancelledPerformances.length === 1 ? "" : "s"} reported for this stage.</p>}
+                  {stageStatus?.cancelled.filter((entry) => entry.id !== liveStatus?.id).map((entry) =>
+                    <p key={entry.id} className="mt-1 text-sm">Cancelled · {entry.artistName}</p>)}
                   <p className="mt-1 text-xs text-muted-foreground">Runtime: {verifiedLive.runtimeStatus.replaceAll("_", " ")} · Gates {verifiedLive.gatesStatus}</p>
                   {lastRuntimeUpdate && <p className="mt-1 text-xs text-muted-foreground">Last runtime update: {formatFestivalEditionDate(lastRuntimeUpdate, timezone, { dateStyle: "medium", timeStyle: "short" })} ({festivalTimeZoneLabel(timezone)})</p>}
                 </>
