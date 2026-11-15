@@ -41,6 +41,28 @@ describe("illustrated festival stage schedule indicators", () => {
     expect(screen.queryByText("Scheduled set (not confirmed live)")).toBeNull();
   });
 
+  it.each([
+    ["soundcheck", "Soundcheck"], ["changeover", "Changeover"],
+    ["starting", "Starting"], ["delayed", "Delayed"], ["cancelled", "Cancelled"],
+  ] as const)("shows verified %s without marking the act live", (status, label) => {
+    render(<FestivalStageSchematic {...base} now={Date.parse("2026-10-29T17:30:00Z")} performances={[{
+      id: "runtime-set", artistName: "Shockmaster", stageName: stage.name,
+      scheduledStart: null, scheduledEnd: null, status, delayMinutes: 0,
+    }]} />);
+    expect(screen.getByText(label + " · Shockmaster")).toBeVisible();
+    expect(screen.queryByText(/Live ·/)).toBeNull();
+  });
+
+  it("keeps the timetable fallback when a stage name is ambiguous", () => {
+    render(<FestivalStageSchematic {...base} now={Date.parse("2026-10-29T17:30:00Z")}
+      stages={[stage, { ...stage, id: "other-stage" }]} performances={[{
+        id: "runtime-set", artistName: "Shockmaster", stageName: stage.name,
+        scheduledStart: null, scheduledEnd: null, status: "soundcheck", delayMinutes: 0,
+      }]} />);
+    expect(screen.queryByText("Soundcheck · Shockmaster")).toBeNull();
+    expect(screen.getAllByText("Scheduled set (not confirmed live)")).toHaveLength(2);
+  });
+
   it("renders weather atmosphere without interpreting illustrated people as attendance", () => {
     const { container } = render(
       <FestivalStageSchematic

@@ -1,3 +1,4 @@
+import { canonicalStageStates } from "./canonicalStageEventModel";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import {
@@ -81,9 +82,7 @@ export async function runSimplifiedFestival(
 }
 
 /** Only confirmation evidence from the canonical annual-edition runtime. */
-const canonicalStageStatusSchema = z.enum([
-  "ready", "starting", "live", "delayed", "completed", "cancelled",
-]);
+const canonicalStageStatusSchema = z.enum(canonicalStageStates);
 export const canonicalStageControlSchema = z.object({
   runtimeId: z.string().uuid(),
   editionId: z.string().uuid(),

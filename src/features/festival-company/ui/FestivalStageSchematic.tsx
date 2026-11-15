@@ -1,3 +1,4 @@
+import { publicFestivalStageStatus } from "../domain/publicFestivalStageStatus";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { formatFestivalEditionDate, festivalTimeZoneLabel } from "./festivalPublicDisplay";
@@ -67,11 +68,11 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Select a festival stage">
         {stages.map((stage, index) => {
-          const current = cancelled ? undefined : performances.find((entry) => entry.stageName === stage.name && (entry.status === "live" || entry.status === "starting"));
-          const delayed = cancelled ? undefined : performances.find((entry) => entry.stageName === stage.name && entry.status === "delayed");
+          const status = cancelled ? null : publicFestivalStageStatus(stage, stages, performances);
+          const isPerforming = status?.performance.status === "live";
           // The entire directory has a budget of one CSS-only illustration.
           const showIllustration = !lightweight && stage.id === selectedStageId;
-          const activeLighting = Boolean(current) && afterDark;
+          const activeLighting = isPerforming && afterDark;
           const schedule = stageTimetableProgress(stage.name, lineup, now);
           const crowd = stageCrowds.find(
             (item) => item.stageName.toLocaleLowerCase("en-GB") === stage.name.trim().toLocaleLowerCase("en-GB"),
@@ -93,15 +94,15 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
                 <span className="h-10 w-1 -rotate-12 bg-cyan-300/70 shadow-[0_0_15px_rgba(103,232,249,.6)]" />
               </div>
               <div className="h-2 bg-slate-950" />
-              <FestivalStageAtmosphere weatherState={weatherState} activePerformance={Boolean(current)} />
+              <FestivalStageAtmosphere weatherState={weatherState} activePerformance={isPerforming} />
             </div>}
             <span className="block text-base font-bold">{stage.name}</span>
-            {current ? (
-              <span className="mt-2 block rounded-full bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Live · {current.artistName}</span>
-            ) : delayed ? (
-              <span className="mt-2 block rounded-full bg-amber-600 px-2 py-1 text-xs font-semibold text-white">Delayed · {delayed.artistName}</span>
-            ) : null}
-            {!current && !delayed && schedule.act && (
+            {status && (
+              <span className={`mt-2 block rounded-full px-2 py-1 text-xs font-semibold text-white ${isPerforming ? "bg-emerald-600" : "bg-slate-700"}`}>
+                {status.label} · {status.performance.artistName}
+              </span>
+            )}
+            {!status && schedule.act && (
               <span className="mt-2 block rounded-lg border border-violet-400/30 bg-violet-500/10 p-2 text-left">
                 <span className="block text-xs font-semibold">{cancelled ? "Cancelled edition · archived programme" : schedule.kind === "scheduled_now" ? "Scheduled set (not confirmed live)" : "Next scheduled set"}</span>
                 <span className="mt-1 block text-sm font-medium">{schedule.act.artistName}</span>
@@ -120,7 +121,7 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
                 )}
               </span>
             )}
-            {!cancelled && !current && !delayed && schedule.kind === "finished" && (
+            {!cancelled && !status && schedule.kind === "finished" && (
               <span className="mt-2 block text-xs text-muted-foreground">All published sets have passed</span>
             )}
             <span className="block text-xs text-muted-foreground">{stage.capacity.toLocaleString("en-GB")} capacity</span>

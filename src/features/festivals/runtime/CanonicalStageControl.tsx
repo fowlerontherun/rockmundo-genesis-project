@@ -8,18 +8,12 @@ import {
   type CanonicalStageStatus,
 } from "./service";
 
-const commands: Record<CanonicalStageStatus | "unconfirmed", CanonicalStageStatus[]> = {
-  unconfirmed: ["ready", "cancelled"],
-  ready: ["starting", "delayed", "cancelled"],
-  starting: ["live", "delayed", "cancelled"],
-  live: ["completed", "delayed", "cancelled"],
-  delayed: ["starting", "live", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
+import { canonicalStageTransitions, initialCanonicalStageStates } from "./canonicalStageEventModel";
 
 const actionLabels: Record<CanonicalStageStatus, string> = {
   ready: "Confirm stage ready",
+  changeover: "Confirm changeover",
+  soundcheck: "Confirm soundcheck",
   starting: "Confirm starting",
   live: "Confirm performing",
   delayed: "Report delay",
@@ -71,7 +65,7 @@ export function CanonicalStageControl({
         {data?.items.length === 0 && <p>No acts are scheduled for the current festival day.</p>}
         {data?.items.map(item => {
           const state = item.status ?? "unconfirmed";
-          const allowed = commands[state];
+          const allowed = state === "unconfirmed" ? initialCanonicalStageStates : canonicalStageTransitions[state];
           // The canonical server enforces the same state machine, authorization and runtime version.
           const transitions = writable
             ? allowed.filter(next => next === "ready" || data.runtimeState === "live")
