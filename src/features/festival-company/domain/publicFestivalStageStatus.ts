@@ -13,18 +13,22 @@ const labels = {
 type PublicStageStatus = keyof typeof labels;
 type Performance = FestivalPublicLiveStatus["performances"][number];
 
+export function filterFreshPublicFestivalPerformances(
+  performances: readonly Performance[], now: number,
+): Performance[] {
+  return performances.filter((entry) => {
+    const age = now - Date.parse(entry.observedAt ?? "");
+    const maxAge = entry.status === "cancelled" || entry.status === "completed" ? 120 : 10;
+    return Boolean(entry.stageId) && age >= -60_000 && age <= maxAge * 60_000;
+  });
+}
+
 export function publicFestivalStageStatus(
   stage: FestivalPublicStage | undefined,
-  stages: readonly FestivalPublicStage[],
   performances: readonly Performance[],
 ) {
-  const normalise = (name: string) => name.trim().toLocaleLowerCase("en-GB");
-  const name = stage && normalise(stage.name);
-  if (!name || stages.filter((candidate) => normalise(candidate.name) === name).length !== 1) return null;
-
-  // The published directory and site-plan snapshot can use different ID namespaces.
-  const matching = performances.filter((entry) => normalise(entry.stageName) === name);
-  if (new Set(matching.flatMap((entry) => entry.stageId ?? [])).size > 1) return null;
+  if (!stage) return null;
+  const matching = performances.filter((entry) => entry.stageId === stage.id);
   const active = matching.filter((entry) =>
     entry.status === "soundcheck" || entry.status === "changeover" ||
     entry.status === "starting" || entry.status === "live");

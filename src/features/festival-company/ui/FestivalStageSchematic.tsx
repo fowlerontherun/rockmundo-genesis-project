@@ -68,14 +68,14 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Select a festival stage">
         {stages.map((stage, index) => {
-          const status = cancelled ? null : publicFestivalStageStatus(stage, stages, performances);
+          const status = cancelled ? null : publicFestivalStageStatus(stage, performances);
           const isPerforming = status?.performance.status === "live";
           // The entire directory has a budget of one CSS-only illustration.
           const showIllustration = !lightweight && stage.id === selectedStageId;
           const activeLighting = isPerforming && afterDark;
           const schedule = stageTimetableProgress(stage.name, lineup, now);
           const crowd = stageCrowds.find(
-            (item) => item.stageName.toLocaleLowerCase("en-GB") === stage.name.trim().toLocaleLowerCase("en-GB"),
+            (item) => item.stageId === stage.id,
           );
           const band = crowd ? atmosphereBands[crowd.crowdBand] : null;
           return (

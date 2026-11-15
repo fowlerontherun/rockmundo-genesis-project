@@ -68,6 +68,20 @@ export function formatFestivalEditionDate(
   }
 }
 
+/** Local calendar day used to expire cached observations at festival midnight. */
+export function getFestivalLocalDate(now: number, timeZone: string): string | undefined {
+  if (!Number.isFinite(now)) return undefined;
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      year: "numeric", month: "2-digit", day: "2-digit", timeZone,
+    }).formatToParts(now);
+    return ["year", "month", "day"].map((type) => parts.find((part) => part.type === type)?.value).join("-");
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return undefined;
+  }
+}
+
 /**
  * Visual stage lighting uses festival-local clock time, not the visitor's
  * device timezone. Unknown/invalid IANA zones must not crash the Grounds

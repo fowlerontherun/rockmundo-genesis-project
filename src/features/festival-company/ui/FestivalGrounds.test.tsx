@@ -73,18 +73,21 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
   const launch = "00000000-0000-4000-8000-000000000001";
   const performance = "00000000-0000-4000-8000-000000000002";
   const now = new Date().toISOString();
-  publicExperience.mockReset().mockResolvedValue({
+  const stageId = "00000000-0000-4000-8000-000000000003";
+  const festivalDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/London", dateStyle: "short" }).format(new Date(now));
+  const snapshot = {
     festivalLaunchId: launch, editionId: "edition", runtimeStatus: "live", gatesStatus: "open",
-    currentDay: now.slice(0, 10), updatedAt: now, attendanceBand: "busy", messages: [],
-    performances: [{ id: performance, artistName: "Shockmaster", stageName: "Main Stage",
+    currentDay: festivalDate, updatedAt: now, attendanceBand: "busy", messages: [],
+    performances: [{ id: performance, stageId, observedAt: now, artistName: "Shockmaster", stageName: "Main Stage",
       status: "live", delayMinutes: 0, scheduledStart: null, scheduledEnd: null }],
-    stageCrowds: [{ stageId: "runtime-main", stageName: "Main Stage", crowdBand: "busy",
-      mood: "engaged", festivalDate: now.slice(0, 10), lastCalculatedAt: now }],
-  });
+    stageCrowds: [{ stageId, stageName: "Main Stage", crowdBand: "busy",
+      mood: "engaged", festivalDate, lastCalculatedAt: now }],
+  };
+  publicExperience.mockReset().mockResolvedValue(snapshot);
   const grounds = (editionId: string) => (
     <QueryClientProvider client={client}>
       <FestivalGrounds slug="festival" festivalLaunchId={launch} festivalEditionId={editionId}
-        cancelled={false} stages={[{ id: "public-main", name: "Main Stage", capacity: 5000 }]}
+        cancelled={false} stages={[{ id: stageId, name: "Main Stage", capacity: 5000 }]}
         lineup={[]} timezone="Europe/London"
         visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }}
         onViewTimetable={() => {}} />
@@ -97,6 +100,17 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
     expect(await screen.findByText("Confirmed stage activity")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Open 3D stage" }));
     expect(await screen.findByTestId("outdoor-view")).toHaveTextContent("Main Stage · Shockmaster · busy");
+
+    const outdated = new Date(Date.parse(now) - 11 * 60_000).toISOString();
+    await act(async () => {
+      client.setQueryData(["festival-public-canonical-edition", "festival"], {
+        ...snapshot,
+        performances: snapshot.performances.map((entry) => ({ ...entry, observedAt: outdated })),
+        stageCrowds: snapshot.stageCrowds.map((entry) => ({ ...entry, lastCalculatedAt: outdated })),
+      });
+    });
+    expect(await screen.findByText("No confirmed live performance")).toBeVisible();
+    expect(screen.getByTestId("outdoor-view")).toHaveTextContent(/^Main Stage$/);
 
     view.rerender(grounds("other-edition"));
     expect(screen.queryByTestId("outdoor-view")).toBeNull();
