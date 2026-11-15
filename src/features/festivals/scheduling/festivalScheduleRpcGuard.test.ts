@@ -19,9 +19,9 @@ describe("festival schedule server-side timezone and idempotency guard", () => {
     expect(sql).toContain("FESTIVAL_SCHEDULE_SLOT_WRONG_EDITION");
     expect(sql).toContain("public.festival_stage_slots");
   });
-  it("guards retry hashes with per-edition advisory locking and private receipts", () => {
+  it("guards retry hashes with per-edition row locking and private receipts", () => {
     expect(sql).toContain("private.festival_schedule_slot_upsert_receipts");
-    expect(sql).toContain("pg_catalog.pg_advisory_xact_lock");
+    expect(sql).toContain("WHERE id = p_edition_id FOR UPDATE");
     expect(sql).toContain("FESTIVAL_SCHEDULE_IDEMPOTENCY_CONFLICT");
     expect(sql).toContain("FORCE ROW LEVEL SECURITY");
     expect(sql).not.toContain("GRANT SELECT ON private.festival_schedule_slot_upsert_receipts");
