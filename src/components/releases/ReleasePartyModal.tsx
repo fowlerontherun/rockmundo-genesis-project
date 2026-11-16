@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useReleasePartySession } from "@/hooks/useReleasePartySession";
-import { PartyPopper, Clock, Zap, Users, DollarSign, Star, AlertTriangle, Flame } from "lucide-react";
+import { PartyPopper, Clock, Star, AlertTriangle, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -35,17 +35,11 @@ const optionBadgeColors = [
 const EffectBadges = ({ effects }: { effects: Record<string, unknown> }) => {
   const items: { label: string; value: string; positive: boolean }[] = [];
   const hype = effects.hype_mult as number;
-  const fan = effects.fan_mult as number;
-  const cash = effects.cash_mult as number;
-  const rep = effects.reputation as Record<string, number> | undefined;
-
-  if (hype && hype !== 1) items.push({ label: "Hype", value: hype > 1 ? `+${Math.round((hype - 1) * 100)}%` : `${Math.round((hype - 1) * 100)}%`, positive: hype > 1 });
-  if (fan && fan !== 1) items.push({ label: "Fans", value: fan > 1 ? `+${Math.round((fan - 1) * 100)}%` : `${Math.round((fan - 1) * 100)}%`, positive: fan > 1 });
-  if (cash && cash !== 1) items.push({ label: "Cash", value: cash > 1 ? `+${Math.round((cash - 1) * 100)}%` : `${Math.round((cash - 1) * 100)}%`, positive: cash > 1 });
-  if (rep) {
-    Object.entries(rep).forEach(([k, v]) => {
-      if (v !== 0) items.push({ label: k, value: v > 0 ? `+${v}` : `${v}`, positive: v > 0 });
-    });
+  // Only hype is applied by release-party settlement. Other catalogue effects
+  // are reserved for future gameplay and must not be presented as rewards.
+  if (typeof hype === "number" && Number.isFinite(hype) && hype !== 1) {
+    const percent = Math.round((hype - 1) * 100);
+    items.push({ label: "Hype", value: `${percent > 0 ? "+" : ""}${percent}%`, positive: hype > 1 });
   }
 
   return (
@@ -100,6 +94,11 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
           </DialogDescription>
         </DialogHeader>
 
+        <p className="text-sm text-muted-foreground">
+          Release parties currently award release hype only. Fan, cash and reputation effects
+          are reserved for future gameplay and are not applied to your character or band.
+        </p>
+
         {/* INTRO */}
         {phase === "intro" && (
           <div className="space-y-4">
@@ -116,7 +115,7 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
                   Your choices will determine how much hype your release gains!
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Base hype award: <strong>100 points</strong>, modified by your answers (range: 50-150+).
+                  Base hype award: <strong>100 points</strong>, modified by your answers. Final hype is confirmed when you save.
                 </p>
                 <div className="flex items-center gap-1 text-xs text-warning">
                   <AlertTriangle className="h-3 w-3" />
@@ -215,7 +214,7 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
             <Card className="border-primary/30">
               <CardContent className="p-4">
                 <h4 className="text-sm font-oswald mb-2">Party Results</h4>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="text-center">
                     <Flame className="h-4 w-4 mx-auto mb-1 text-orange-400" />
                     <p className="text-xs text-muted-foreground">Projected Hype</p>
@@ -228,33 +227,10 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
                       {totalEffects.hype_mult >= 1 ? "+" : ""}{Math.round((totalEffects.hype_mult - 1) * 100)}%
                     </p>
                   </div>
-                  <div className="text-center">
-                    <Users className="h-4 w-4 mx-auto mb-1 text-blue-400" />
-                    <p className="text-xs text-muted-foreground">Fans</p>
-                    <p className={cn("text-sm font-bold", totalEffects.fan_mult >= 1 ? "text-green-400" : "text-red-400")}>
-                      {totalEffects.fan_mult >= 1 ? "+" : ""}{Math.round((totalEffects.fan_mult - 1) * 100)}%
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <DollarSign className="h-4 w-4 mx-auto mb-1 text-emerald-400" />
-                    <p className="text-xs text-muted-foreground">Cash</p>
-                    <p className={cn("text-sm font-bold", totalEffects.cash_mult >= 1 ? "text-green-400" : "text-red-400")}>
-                      {totalEffects.cash_mult >= 1 ? "+" : ""}{Math.round((totalEffects.cash_mult - 1) * 100)}%
-                    </p>
-                  </div>
                 </div>
-                {Object.keys(totalEffects.reputation).length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs text-muted-foreground mb-1">Reputation Changes</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Object.entries(totalEffects.reputation).map(([axis, val]) => (
-                        <Badge key={axis} variant="outline" className={cn("text-[10px] capitalize", val > 0 ? "text-green-400 border-green-500/30" : "text-red-400 border-red-500/30")}>
-                          {axis}: {val > 0 ? "+" : ""}{val}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  This is a preview. Save your results to confirm the release hype award.
+                </p>
               </CardContent>
             </Card>
 

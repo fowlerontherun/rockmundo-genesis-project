@@ -169,7 +169,7 @@ export default function PersonalVehicles() {
   return (
     <FMPageScaffold
       title="Vehicles & Vessels"
-      subtitle="Buy cars, motorbikes, boats and yachts. Insurance & upkeep charged daily."
+      subtitle="Buy cars, motorbikes, boats and yachts. Running costs are estimates only; no daily charges are applied."
       icon={Car}
       backTo="/hub/character"
       headerActions={
@@ -266,16 +266,17 @@ export default function PersonalVehicles() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span>${vehicle.upkeepDaily}/day upkeep</span>
+                        <span>Est. upkeep: ${vehicle.upkeepDaily}/day</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Shield className="h-4 w-4 text-muted-foreground" />
-                        <span>${vehicle.insuranceDaily}/day insurance</span>
+                        <span>Est. insurance: ${vehicle.insuranceDaily}/day</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <span className="text-xs">Total: ${totalDaily}/day</span>
+                        <span className="text-xs">Estimated total: ${totalDaily}/day</span>
                       </div>
                     </div>
+                    <p className="text-xs text-muted-foreground">Running-cost estimates are not charged.</p>
                     <div className="pt-2 flex items-center justify-between border-t">
                       <span className="text-lg font-bold">${vehicle.price.toLocaleString()}</span>
                       <Button disabled={owned || buyVehicle.isPending} onClick={() => buyVehicle.mutate(vehicle)}>
@@ -330,13 +331,14 @@ export default function PersonalVehicles() {
                         <span>${vehicle.purchasePrice.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Daily costs</span>
+                        <span className="text-muted-foreground">Estimated running costs</span>
                         <span>${totalDaily}/day</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Sell value (70%)</span>
                         <span className="font-semibold">${sellPrice.toLocaleString()}</span>
                       </div>
+                      <p className="text-xs text-muted-foreground">Running-cost estimates are not charged.</p>
                       <Button variant="outline" className="w-full" disabled={sellVehicle.isPending} onClick={() => sellVehicle.mutate(vehicle.id)}>
                         Sell Vehicle
                       </Button>
