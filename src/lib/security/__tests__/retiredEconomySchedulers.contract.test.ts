@@ -32,10 +32,10 @@ describe("retired public economy endpoints never execute privileged jobs", () =>
         `\\[functions\\.${name}\\]\\s*verify_jwt\\s*=\\s*(true|false)`,
       ));
       expect(section?.[1]).toBe("true");
-      expect(source).toMatch(/status:\\s*410/);
+      expect(source).toMatch(/status:\s*410/);
       // A legacy URL must not regain a service-role client, remote fetch,
       // DB transaction, RPC, or mutable table access during future refactors.
-      expect(source).not.toMatch(/createClient|SUPABASE_SERVICE_ROLE_KEY|\\.rpc\\s*\\(|\\.from\\s*\\(|fetch\\s*\\(/);
+      expect(source).not.toMatch(/createClient|SUPABASE_SERVICE_ROLE_KEY|\.rpc\s*\(|\.from\s*\(|fetch\s*\(/);
       expect(source).not.toContain("pg_cron.run");
       expect(source).toContain(cronProcedure);
     });
@@ -58,7 +58,7 @@ describe("Postgres scheduler authority remains atomic and private", () => {
     expect(sql).toContain("order by week_start asc limit 1 for update");
     expect(sql).toContain("public.settle_lottery_ticket_atomic");
     expect(sql).toContain("no_due_draw");
-    expect(sql).toMatch(/revoke all on function public\\.process_weekly_lottery_draw\\(\\) from public,anon,authenticated/i);
+    expect(sql).toMatch(/revoke all on function public\.process_weekly_lottery_draw\(\) from public,anon,authenticated/i);
   });
 
   it("video release, unique award and associated rewards commit in one transaction", () => {
