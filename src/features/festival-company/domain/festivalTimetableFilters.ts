@@ -7,6 +7,11 @@ export interface FestivalTimetableFilters {
 }
 
 const normalizeStage = (stage: string) => stage.trim().toLocaleLowerCase("en-GB");
+const isRealFestivalDay = (day: unknown): day is string => {
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  const parsed = Date.parse(day + "T00:00:00Z");
+  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === day;
+};
 const validInterval = (act: FestivalPublicConfirmedAct) => {
   const start = Date.parse(act.startsAt ?? "");
   const end = Date.parse(act.endsAt ?? "");
@@ -21,7 +26,7 @@ export function festivalTimetableOptions(acts: readonly FestivalPublicConfirmedA
   }
   return {
     stages: [...stages.values()].sort((a, b) => a.localeCompare(b, "en-GB")),
-    days: [...new Set(acts.map((act) => act.festivalDate).filter((day): day is string => typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day)))].sort(),
+    days: [...new Set(acts.map((act) => act.festivalDate).filter(isRealFestivalDay))].sort(),
   };
 }
 
