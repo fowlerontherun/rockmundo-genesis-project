@@ -39,6 +39,8 @@ describe("festival artist invitation and offer response deadlines", () => {
   it("rejects unknown and invalid calendar dates", () => {
     expect(suggestedFestivalResponseDeadline([], now)).toBeNull();
     expect(earliestFestivalStartBoundary(["2026-02-30", "invalid"])).toBeNull();
+    expect(earliestFestivalStartBoundary(["2026-11-10", "2026-02-30"])).toBeNull();
+    expect(suggestedFestivalResponseDeadline(["2026-11-10", "invalid"], now)).toBeNull();
     expect(validateFestivalResponseDeadline("2026-11-07T10:00:00Z", [], now)).toBeNull();
   });
 
