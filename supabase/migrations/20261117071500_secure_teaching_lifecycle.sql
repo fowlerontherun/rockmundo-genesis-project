@@ -404,6 +404,10 @@ BEGIN
       RAISE WARNING 'Teaching session % not settled (retryable): %',v_session.id,SQLERRM;
     END;
   END LOOP;
+  -- Expire unanswered invitations so teachers cannot be blocked forever.
+  UPDATE public.player_teaching_sessions SET status='cancelled',completed_at=now()
+    WHERE accepted_at IS NULL AND status='pending'
+      AND created_at<now()-interval '7 days';
   UPDATE public.player_teaching_sessions SET status='in_progress'
     WHERE accepted_at IS NOT NULL AND status='scheduled' AND started_at<=now()
       AND scheduled_end>now();
