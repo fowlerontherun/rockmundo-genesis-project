@@ -15,7 +15,7 @@ WITH checks AS (
       SELECT 1 FROM cron.job
       WHERE jobid=123 AND jobname='weekly-lottery-draw'
         AND active AND schedule='5 0 * * 1'
-        AND command='SELECT public.process_weekly_lottery_draw();'
+        AND lower(btrim(command))='select public.process_weekly_lottery_draw();'
     )
   UNION ALL SELECT 'video_completion_internal_cron',
     EXISTS (
