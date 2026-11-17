@@ -15,6 +15,9 @@ export interface TeachingSession {
   teacher_xp_earned: number;
   student_xp_earned: number;
   session_duration_days: number;
+  accepted_at?: string | null;
+  scheduled_end?: string | null;
+  teaching_tier?: string | null;
   created_at: string;
 }
 
@@ -48,6 +51,7 @@ export const useTeaching = () => {
   const { progress } = useSkillSystem();
   const [sessions, setSessions] = useState<TeachingSession[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendProfiles, setFriendProfiles] = useState<Record<string, { id: string; username: string; display_name: string | null }>>({});
   const [acceptedFriendIds, setAcceptedFriendIds] = useState<Set<string>>(new Set());
@@ -120,6 +124,7 @@ export const useTeaching = () => {
   const refreshSessions = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
+    setSessionsError(null);
     try {
       const { data, error } = await supabase
         .from("player_teaching_sessions")
@@ -127,9 +132,10 @@ export const useTeaching = () => {
         .or(`teacher_profile_id.eq.${profile.id},student_profile_id.eq.${profile.id}`)
         .order("created_at", { ascending: false });
 
-      if (!error && data) {
-        setSessions(data as TeachingSession[]);
-      }
+      if (error) throw error;
+      setSessions((data ?? []) as TeachingSession[]);
+    } catch (error) {
+      setSessionsError(error instanceof Error ? error.message : "Could not load teaching sessions");
     } finally {
       setLoading(false);
     }
@@ -171,7 +177,7 @@ export const useTeaching = () => {
       sessions.filter(
         (s) =>
           s.teacher_profile_id === profile?.id &&
-          (s.status === "in_progress" || s.status === "scheduled"),
+          (s.status === "pending" || s.status === "in_progress" || s.status === "scheduled"),
       ).length,
     [sessions, profile],
   );
@@ -210,7 +216,7 @@ export const useTeaching = () => {
           s.teacher_profile_id === profile.id &&
           s.student_profile_id === studentProfileId &&
           s.skill_slug === skillSlug &&
-          (s.status === "in_progress" || s.status === "scheduled"),
+          (s.status === "pending" || s.status === "in_progress" || s.status === "scheduled"),
       );
       if (duplicate) {
         return { valid: false, error: "You're already teaching this skill to this friend" };
@@ -221,111 +227,69 @@ export const useTeaching = () => {
     [profile, teachingTier, canTeach, acceptedFriendIds, activeTeachingCount, sessions],
   );
 
-  // Start a new teaching session
+  // The browser sends identifiers only. Consent, skill eligibility, capacity,
+  // booking conflicts and rewards are enforced in database transactions.
   const startTeachingSession = useCallback(
     async (studentProfileId: string, skillSlug: string, durationDays: number): Promise<{ session: TeachingSession | null; error: string | null }> => {
       const validation = validateSession(studentProfileId, skillSlug);
-      if (!validation.valid) {
-        return { session: null, error: validation.error };
+      if (!validation.valid || !profile) {
+        return { session: null, error: validation.error ?? "Select a character first" };
       }
-
-      const teacherLevel = getSkillLevel(skillSlug);
-      const { studentXpPerDay, teacherXpPerDay } = calculateXp(teachingTier!, teacherLevel);
-      const totalStudentXp = studentXpPerDay * durationDays;
-      const totalTeacherXp = teacherXpPerDay * durationDays;
-
-      const { data, error } = await supabase
-        .from("player_teaching_sessions")
-        .insert({
-          teacher_profile_id: profile!.id,
-          student_profile_id: studentProfileId,
-          skill_slug: skillSlug,
-          status: "in_progress",
-          started_at: new Date().toISOString(),
-          student_xp_earned: totalStudentXp,
-          teacher_xp_earned: totalTeacherXp,
-          session_duration_days: durationDays,
-        } as any)
-        .select("*")
-        .single();
-
-      if (error) {
-        console.error("Failed to start teaching session", error);
-        return { session: null, error: error.message };
-      }
-
+      const { data, error } = await (supabase as any).rpc("request_teaching_lesson", {
+        p_teacher_profile_id: profile.id,
+        p_student_profile_id: studentProfileId,
+        p_skill_slug: skillSlug,
+        p_duration_days: durationDays,
+      });
+      if (error) return { session: null, error: error.message };
       await refreshSessions();
       return { session: data as TeachingSession, error: null };
     },
-    [profile, teachingTier, validateSession, getSkillLevel, calculateXp, refreshSessions],
+    [profile, validateSession, refreshSessions],
   );
 
-  // Cancel an active session
+  const respondSession = useCallback(
+    async (sessionId: string, accept: boolean): Promise<{ success: boolean; error?: string }> => {
+      if (!profile) return { success: false, error: "Select a character first" };
+      const { error } = await (supabase as any).rpc("respond_teaching_lesson", {
+        p_session_id: sessionId,
+        p_student_profile_id: profile.id,
+        p_accept: accept,
+      });
+      if (error) return { success: false, error: error.message };
+      await refreshSessions();
+      return { success: true };
+    },
+    [profile, refreshSessions],
+  );
+
   const cancelSession = useCallback(
     async (sessionId: string): Promise<boolean> => {
       if (!profile) return false;
-
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) return false;
-
-      // Only teacher or student can cancel, and only if active
-      const isTeacher = session.teacher_profile_id === profile.id;
-      const isStudent = session.student_profile_id === profile.id;
-      if (!isTeacher && !isStudent) return false;
-      if (session.status !== "in_progress" && session.status !== "scheduled") return false;
-
-      const { error } = await supabase
-        .from("player_teaching_sessions")
-        .update({ status: "cancelled", completed_at: new Date().toISOString() } as any)
-        .eq("id", sessionId);
-
+      const { error } = await (supabase as any).rpc("cancel_teaching_lesson", {
+        p_session_id: sessionId,
+        p_profile_id: profile.id,
+      });
       if (error) {
         console.error("Failed to cancel teaching session", error);
         return false;
       }
-
       await refreshSessions();
       return true;
     },
-    [profile, sessions, refreshSessions],
+    [profile, refreshSessions],
   );
 
-  // Check and auto-complete expired sessions
-  const completeExpiredSessions = useCallback(async () => {
-    if (!profile) return;
-
-    const now = new Date();
-    const expiredSessions = sessions.filter((s) => {
-      if (s.status !== "in_progress" || !s.started_at) return false;
-      const startDate = new Date(s.started_at);
-      const endDate = new Date(startDate.getTime() + s.session_duration_days * 24 * 60 * 60 * 1000);
-      return now >= endDate;
-    });
-
-    if (expiredSessions.length === 0) return;
-
-    for (const session of expiredSessions) {
-      await supabase
-        .from("player_teaching_sessions")
-        .update({ status: "completed", completed_at: new Date().toISOString() } as any)
-        .eq("id", session.id);
-    }
-
-    if (expiredSessions.length > 0) {
-      await refreshSessions();
-    }
-  }, [profile, sessions, refreshSessions]);
-
-  // Auto-complete expired sessions on load
+  // Refresh pending invitations and offline completions while viewing the page.
   useEffect(() => {
-    if (sessions.length > 0) {
-      void completeExpiredSessions();
-    }
-  }, [sessions.length]); // Only on session count change, not on sessions ref
+    const interval = window.setInterval(() => void refreshSessions(), 60_000);
+    return () => window.clearInterval(interval);
+  }, [refreshSessions]);
 
   // Calculate session progress (0-100%)
   const getSessionProgress = useCallback((session: TeachingSession): number => {
     if (session.status === "completed") return 100;
+    if (session.status === "pending" || session.status === "scheduled") return 0;
     if (session.status === "cancelled") return 0;
     if (!session.started_at) return 0;
 
@@ -339,6 +303,8 @@ export const useTeaching = () => {
 
   // Get time remaining for a session
   const getTimeRemaining = useCallback((session: TeachingSession): string => {
+    if (session.status === "pending") return "Awaiting student reply";
+    if (session.status === "scheduled" && session.started_at) return `Starts ${new Date(session.started_at).toLocaleString()}`;
     if (!session.started_at || session.status !== "in_progress") return "";
     const start = new Date(session.started_at).getTime();
     const end = start + session.session_duration_days * 24 * 60 * 60 * 1000;
@@ -353,6 +319,11 @@ export const useTeaching = () => {
     if (days > 0) return `${days}d ${remainingHours}h remaining`;
     return `${remainingHours}h remaining`;
   }, []);
+
+  const pendingSessions = useMemo(
+    () => sessions.filter((s) => s.status === "pending"),
+    [sessions],
+  );
 
   const activeSessions = useMemo(
     () => sessions.filter((s) => s.status === "in_progress" || s.status === "scheduled"),
@@ -377,7 +348,11 @@ export const useTeaching = () => {
     calculateXp,
     validateSession,
     startTeachingSession,
+    respondSession,
     cancelSession,
+    profileId: profile?.id,
+    pendingSessions,
+    sessionsError,
     activeSessions,
     completedSessions,
     cancelledSessions,
