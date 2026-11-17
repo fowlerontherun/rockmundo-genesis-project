@@ -76,7 +76,7 @@ function TeachingInner() {
     getTimeRemaining,
   } = useTeaching();
 
-  const { definitions, progress } = useSkillSystem();
+  const { definitions } = useSkillSystem();
   const { map: skillMap } = useMergedSkillDefinitions(definitions);
 
   const [selectedSkill, setSelectedSkill] = useState<string>("");
