@@ -59,7 +59,11 @@ function TeachingInner() {
     calculateXp,
     validateSession,
     startTeachingSession,
+    respondSession,
     cancelSession,
+    profileId,
+    pendingSessions,
+    sessionsError,
     activeSessions,
     completedSessions,
     cancelledSessions,
@@ -80,6 +84,7 @@ function TeachingInner() {
   const [selectedDuration, setSelectedDuration] = useState<string>("3");
   const [isStarting, setIsStarting] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   const teachableSkills = getTeachableSkills();
   const friendList = Object.values(friendProfiles);
@@ -109,8 +114,8 @@ function TeachingInner() {
 
     if (session) {
       toast({
-        title: "Teaching Session Started!",
-        description: `You're now teaching ${getSkillName(selectedSkill)} for ${selectedDuration} days`,
+        title: "Teaching invitation sent",
+        description: `Your friend must accept the ${selectedDuration}-day lesson before any sessions are scheduled.`,
       });
       setSelectedSkill("");
       setSelectedFriend("");
@@ -121,6 +126,16 @@ function TeachingInner() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleRespond = async (sessionId: string, accept: boolean) => {
+    setRespondingId(sessionId);
+    const { success, error } = await respondSession(sessionId, accept);
+    setRespondingId(null);
+    toast(success
+      ? { title: accept ? "Teaching accepted" : "Invitation declined",
+          description: accept ? "Daily one-hour lessons have been added to both calendars." : undefined }
+      : { title: "Unable to respond", description: error, variant: "destructive" });
   };
 
   const handleCancelSession = async (sessionId: string) => {
@@ -171,6 +186,44 @@ function TeachingInner() {
     );
   };
 
+  const invitationCards = (
+    <div className="space-y-3">
+      {pendingSessions.length === 0 ? (
+        <Card><CardContent className="py-6 text-sm text-muted-foreground">
+          No teaching invitations awaiting a response.
+        </CardContent></Card>
+      ) : pendingSessions.map((session) => {
+        const invitedStudent = session.student_profile_id === profileId;
+        return (
+          <Card key={session.id}>
+            <CardContent className="py-4 space-y-3">
+              <p className="font-medium">{getSkillName(session.skill_slug)} — {session.session_duration_days} day(s)</p>
+              <p className="text-sm text-muted-foreground">
+                {getProfileName(session.teacher_profile_id)} invited {getProfileName(session.student_profile_id)}.
+                {invitedStudent
+                  ? " Accept to book a one-hour lesson on each day, beginning around two hours later. Both calendars must be free."
+                  : " Awaiting the student's consent; nothing is booked or rewarded yet."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {invitedStudent ? (
+                  <>
+                    <Button size="sm" disabled={respondingId === session.id}
+                      onClick={() => void handleRespond(session.id, true)}>Accept invitation</Button>
+                    <Button size="sm" variant="outline" disabled={respondingId === session.id}
+                      onClick={() => void handleRespond(session.id, false)}>Decline</Button>
+                  </>
+                ) : (
+                  <Button size="sm" variant="outline" disabled={cancellingId === session.id}
+                    onClick={() => void handleCancelSession(session.id)}>Withdraw invitation</Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
   // ---- UNLOCKED STATE ----
   if (!teachingTier) {
     return (
@@ -180,6 +233,29 @@ function TeachingInner() {
         icon={GraduationCap}
         backTo="/hub/career"
       >
+        {sessionsError && <Card role="alert"><CardContent className="py-3 text-destructive text-sm">
+          Teaching sessions could not be loaded: {sessionsError}
+        </CardContent></Card>}
+        {pendingSessions.length > 0 && (
+          <Card><CardHeader><CardTitle>Teaching invitations</CardTitle></CardHeader>
+            <CardContent>{invitationCards}</CardContent></Card>
+        )}
+        {activeSessions.length > 0 && (
+          <Card><CardHeader><CardTitle>Lessons you're attending</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {activeSessions.map((session) => <p key={session.id} className="text-sm">
+                {getSkillName(session.skill_slug)} — {session.status}
+              </p>)}
+            </CardContent></Card>
+        )}
+        {completedSessions.length > 0 && (
+          <Card><CardHeader><CardTitle>Completed lessons</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {completedSessions.map((session) => <p key={session.id} className="text-sm">
+                {getSkillName(session.skill_slug)} — +{session.student_xp_earned} skill XP
+              </p>)}
+            </CardContent></Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -238,8 +314,6 @@ function TeachingInner() {
     );
   }
 
-  const profileId = progress.length > 0 ? progress[0]?.profile_id : undefined;
-
   return (
     <FMPageScaffold
       title="Teaching"
@@ -252,6 +326,9 @@ function TeachingInner() {
         </Badge>
       }
     >
+      {sessionsError && <Card role="alert"><CardContent className="py-3 text-sm text-destructive">
+        Could not load teaching sessions: {sessionsError}
+      </CardContent></Card>}
       {/* Tier stats card */}
       {tierConfig && (
         <Card className="border-primary/20 bg-primary/5">
@@ -291,9 +368,12 @@ function TeachingInner() {
       )}
 
       <Tabs defaultValue="teach">
-        <TabsList className="w-full">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto">
           <TabsTrigger value="teach" className="flex-1">
             <BookOpen className="h-4 w-4 mr-1" /> Teach
+          </TabsTrigger>
+          <TabsTrigger value="invites" className="flex-1">
+            <Users className="h-4 w-4 mr-1" /> Invites ({pendingSessions.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="flex-1">
             <Users className="h-4 w-4 mr-1" /> Active ({activeSessions.length})
@@ -304,14 +384,16 @@ function TeachingInner() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="invites">{invitationCards}</TabsContent>
+
         {/* ===== TEACH TAB ===== */}
         <TabsContent value="teach">
           <Card>
             <CardHeader>
-              <CardTitle>Start a Teaching Session</CardTitle>
+              <CardTitle>Request a Teaching Session</CardTitle>
               <CardDescription>
-                Choose a skill and a friend. Both of you earn XP daily — more
-                than university!
+                Invite a friend to a lesson. They must accept before daily one-hour
+                calendar blocks are booked. XP is awarded only after the final lesson.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -406,7 +488,7 @@ function TeachingInner() {
                     <Card className="border-border/50 bg-muted/30">
                       <CardContent className="py-3">
                         <p className="text-sm font-medium mb-1">
-                          XP Preview ({selectedDuration} days)
+                          Estimated XP on completion ({selectedDuration} days)
                         </p>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
@@ -468,7 +550,7 @@ function TeachingInner() {
                         Starting...
                       </>
                     ) : (
-                      "Start Teaching Session"
+                      "Send Teaching Invitation"
                     )}
                   </Button>
                 </>
@@ -485,7 +567,7 @@ function TeachingInner() {
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
                   <p>No active teaching sessions.</p>
-                  <p className="text-xs mt-1">Start one from the Teach tab!</p>
+                  <p className="text-xs mt-1">Send an invitation from the Teach tab.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -530,9 +612,9 @@ function TeachingInner() {
                                 Cancel Teaching Session?
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will cancel the session for{" "}
-                                {getSkillName(session.skill_slug)}. Any XP
-                                already earned will be lost.
+                                This cancels the remaining lessons for{" "}
+                                {getSkillName(session.skill_slug)}. XP is only awarded
+                                after the entire lesson series completes.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -559,12 +641,7 @@ function TeachingInner() {
                       </div>
 
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>
-                          Student: +{session.student_xp_earned} XP total
-                        </span>
-                        <span>
-                          Teacher: +{session.teacher_xp_earned} XP total
-                        </span>
+                        <span>XP awards are granted after confirmed completion, not during booking.</span>
                       </div>
                     </CardContent>
                   </Card>
