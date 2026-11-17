@@ -146,12 +146,23 @@ export function FestivalTicketPlanner({
   const [capacityInput, setCapacityInput] = useState<string | null>(null);
   const retry = useRef<{ hash: string; key: string } | null>(null);
 
+  const editionKey = `${festivalCompanyId}:${festivalEditionId ?? ""}`;
+  // A pending save from a different edition must not overwrite this draft.
+  const activeEditionKey = useRef(editionKey);
+  activeEditionKey.current = editionKey;
   const loadedKey = useRef<string | null>(null);
   useEffect(() => {
-    const key = `${festivalCompanyId}:${festivalEditionId ?? ""}`;
-    if (loadedKey.current !== key) { loadedKey.current = key; setDraft(null); }
-    if (query.data && loadedKey.current === key) setDraft(current => current ?? simpleDraftFromResult(query.data!));
-  }, [query.data, festivalCompanyId, festivalEditionId]);
+    if (loadedKey.current !== editionKey) {
+      loadedKey.current = editionKey;
+      setDraft(null);
+      setPriceInput(null);
+      setCapacityInput(null);
+      retry.current = null;
+    }
+    if (query.data && loadedKey.current === editionKey) {
+      setDraft(current => current ?? simpleDraftFromResult(query.data!));
+    }
+  }, [query.data, editionKey]);
 
   if (site.isLoading) {
     return <p role="status">Checking Festival readiness…</p>;
@@ -175,15 +186,27 @@ export function FestivalTicketPlanner({
     return <p role="status">Loading ticket choices…</p>;
   }
 
-  if (query.isError || !query.data || !draft) {
+  // Block stale prices and save controls synchronously during an edition switch.
+  if (loadedKey.current !== editionKey) {
+    return <p role="status">Preparing ticket choices for this Festival…</p>;
+  }
+
+  if (query.isError || !query.data) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" role="alert">
         <AlertDescription>
           Ticket choices could not be loaded. Check your company access and try
-          again.
+          again.{" "}
+          <button type="button" className="underline" onClick={() => void query.refetch()}>
+            Retry ticket choices
+          </button>
         </AlertDescription>
       </Alert>
     );
+  }
+
+  if (!draft) {
+    return <p role="status">Preparing ticket choices for this Festival…</p>;
   }
 
   const data = query.data;
@@ -253,6 +276,7 @@ export function FestivalTicketPlanner({
       },
       {
         onSuccess: (result) => {
+          if (activeEditionKey.current !== editionKey) return;
           setDraft(simpleDraftFromResult(result));
           setPriceInput(null);
           setCapacityInput(null);
