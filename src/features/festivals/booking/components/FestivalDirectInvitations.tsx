@@ -26,12 +26,15 @@ export function FestivalDirectInvitations({
   const { respond } = useFestivalDirectInvitationActions(bandId);
   const editionById = new Map(editions.map((edition) => [edition.id, edition]));
 
-  if (invitations.isLoading) return <p>Loading invitations…</p>;
+  if (invitations.isLoading) return <p role="status">Loading invitations…</p>;
   if (invitations.isError) {
     return (
-      <p className="text-sm text-destructive">
-        Festival invitations could not be loaded. Please retry.
-      </p>
+      <div role="alert" className="space-y-2 rounded-lg border border-destructive/40 p-3 text-sm">
+        <p>Festival invitations could not be loaded. This does not mean you have no invitations.</p>
+        <Button variant="outline" size="sm" onClick={() => void invitations.refetch()}>
+          Retry invitations
+        </Button>
+      </div>
     );
   }
   if (!(invitations.data ?? []).length) return <p>No direct invitations yet.</p>;
