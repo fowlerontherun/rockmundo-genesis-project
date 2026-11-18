@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,11 @@ const MusicVideos = () => {
   const { profile } = useGameData();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const purchaseRequests = useRef(new Map<string, string>());
+  const requestIdFor = (intent: string) => {
+    if (!purchaseRequests.current.has(intent)) purchaseRequests.current.set(intent, crypto.randomUUID());
+    return purchaseRequests.current.get(intent)!;
+  };
   const [activeTab, setActiveTab] = useState<"all" | "my" | "trending">("all");
   const [recordDialogOpen, setRecordDialogOpen] = useState(false);
   const [tvShowsDialogOpen, setTvShowsDialogOpen] = useState(false);
@@ -123,7 +128,7 @@ const MusicVideos = () => {
 
   // Fetch user's recorded songs (from releases OR directly recorded)
   const { data: releasedSongs = [], isLoading: songsLoading } = useQuery({
-    queryKey: ["songs-for-videos", profile?.user_id],
+    queryKey: ["songs-for-videos", profile?.user_id, profile?.id],
     queryFn: async () => {
       if (!profile?.user_id) return [];
       
@@ -131,7 +136,9 @@ const MusicVideos = () => {
       const { data: userBands, error: bandsError } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("user_id", profile.user_id);
+        .eq("user_id", profile.user_id)
+        .eq("profile_id", profile.id)
+        .eq("member_status", "active");
       
       if (bandsError) {
         console.error("Error fetching user bands:", bandsError);
@@ -145,7 +152,7 @@ const MusicVideos = () => {
       if (bandIds.length > 0) {
         const { data: bandSongs, error: songsError } = await supabase
           .from("songs")
-          .select("id, title, band_id, status")
+          .select("id, title, band_id, status, profile_id, user_id")
           .in("band_id", bandIds)
           .eq("status", "recorded");
         
@@ -160,9 +167,10 @@ const MusicVideos = () => {
       // Also get songs directly owned by user (solo artist songs)
       const { data: userOwnedSongs, error: userSongsError } = await supabase
         .from("songs")
-        .select("id, title, band_id, status")
+        .select("id, title, band_id, status, profile_id, user_id")
         .eq("user_id", profile.user_id)
-        .eq("status", "recorded");
+        .eq("status", "recorded")
+        .or(`profile_id.eq.${profile.id},profile_id.is.null`);
       
       if (userSongsError) {
         console.error("Error fetching user-owned songs:", userSongsError);
@@ -182,6 +190,7 @@ const MusicVideos = () => {
       }
       
       for (const song of (userOwnedSongs || [])) {
+        if (song.band_id && !bandIds.includes(song.band_id)) continue;
         if (!songMap.has(song.id)) {
           songMap.set(song.id, {
             ...song,
@@ -202,12 +211,14 @@ const MusicVideos = () => {
         const releaseIds = userReleases.map((r) => r.id);
         const { data: releaseSongs } = await supabase
           .from("release_songs")
-          .select("song_id, release_id, songs(id, title, band_id, status)")
+          .select("song_id, release_id, songs(id, title, band_id, status, profile_id, user_id)")
           .in("release_id", releaseIds);
         
         for (const rs of (releaseSongs || [])) {
           const song = rs.songs as any;
-          if (song && !songMap.has(song.id)) {
+          if (song && !songMap.has(song.id) &&
+              (song.band_id ? bandIds.includes(song.band_id) :
+                song.user_id === profile.user_id && (song.profile_id == null || song.profile_id === profile.id))) {
             const release = userReleases.find(r => r.id === (rs as any).release_id);
             songMap.set(song.id, {
               ...song,
@@ -265,44 +276,19 @@ const MusicVideos = () => {
   const createVideoMutation = useMutation({
     mutationFn: async () => {
       if (!profile?.id || !selectedSong) throw new Error("Missing required data");
-      const budget = parseInt(videoBudget);
-
-      if (profile.cash < budget) {
-        throw new Error("Insufficient funds");
-      }
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - budget })
-        .eq("id", profile.id);
-      if (cashError) throw cashError;
-
-      let qualityScore = Math.min(100, budget / 100 + 20);
-      if (videoStyle === "premium") qualityScore += 20;
-      if (videoStyle === "deluxe") qualityScore += 40;
-
       const song = releasedSongs.find((s: any) => s.id === selectedSong);
-
-      const { data, error } = await supabase
-        .from("music_videos")
-        .insert({
-          song_id: selectedSong,
-          release_id: song?.release_id,
-          title: videoTitle,
-          description: videoDescription || null,
-          budget,
-          production_quality: Math.min(100, qualityScore),
-          status: "production",
-          views_count: 0,
-          earnings: 0,
-          hype_score: 0,
-        })
-        .select()
-        .single();
+      const intent = `production:${profile.id}:${selectedSong}:${videoBudget}:${videoStyle}:${videoTitle}:${videoDescription}:${song?.release_id || ""}`;
+      const { error } = await (supabase as any).rpc("purchase_music_video_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profile.id,
+        p_action: "production", p_song_id: selectedSong,
+        p_release_id: song?.release_id || null, p_budget: Number(videoBudget),
+        p_style: videoStyle, p_title: videoTitle, p_description: videoDescription,
+      });
       if (error) throw error;
-      return data;
+      return intent;
     },
-    onSuccess: () => {
+    onSuccess: (intent) => {
+      purchaseRequests.current.delete(intent);
       queryClient.invalidateQueries({ queryKey: ["music-videos"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
       toast({
@@ -347,35 +333,18 @@ const MusicVideos = () => {
   const placeTvShowMutation = useMutation({
     mutationFn: async ({ videoId, showId }: { videoId: string; showId: string }) => {
       if (!profile?.id) throw new Error("Not logged in");
-      
       const show = TV_SHOWS.find((s) => s.id === showId);
       if (!show) throw new Error("Invalid show");
-
-      if (profile.cash < show.cost) {
-        throw new Error("Insufficient funds");
-      }
-
-      // Deduct cost
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - show.cost })
-        .eq("id", profile.id);
-      if (cashError) throw cashError;
-
-      // Update video stats
-      const video = videos.find((v) => v.id === videoId);
-      if (!video) throw new Error("Video not found");
-
-      const { error } = await supabase
-        .from("music_videos")
-        .update({
-          views_count: video.views_count + show.viewBoost,
-          hype_score: Math.min(100, video.hype_score + show.hypeBoost),
-        })
-        .eq("id", videoId);
+      const intent = `tv:${profile.id}:${videoId}:${showId}`;
+      const { error } = await (supabase as any).rpc("purchase_music_video_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profile.id,
+        p_action: "tv", p_video_id: videoId, p_option_id: showId,
+      });
       if (error) throw error;
+      return intent;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (intent, variables) => {
+      purchaseRequests.current.delete(intent);
       const show = TV_SHOWS.find((s) => s.id === variables.showId);
       queryClient.invalidateQueries({ queryKey: ["music-videos"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
@@ -398,33 +367,18 @@ const MusicVideos = () => {
   const promoteVideoMutation = useMutation({
     mutationFn: async ({ videoId, promoId }: { videoId: string; promoId: string }) => {
       if (!profile?.id) throw new Error("Not logged in");
-      
       const promo = PROMO_OPTIONS.find((p) => p.id === promoId);
       if (!promo) throw new Error("Invalid promotion");
-
-      if (profile.cash < promo.cost) {
-        throw new Error("Insufficient funds");
-      }
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - promo.cost })
-        .eq("id", profile.id);
-      if (cashError) throw cashError;
-
-      const video = videos.find((v) => v.id === videoId);
-      if (!video) throw new Error("Video not found");
-
-      const { error } = await supabase
-        .from("music_videos")
-        .update({
-          views_count: video.views_count + promo.viewBoost,
-          earnings: video.earnings + Math.floor(promo.viewBoost * 0.002),
-        })
-        .eq("id", videoId);
+      const intent = `promo:${profile.id}:${videoId}:${promoId}`;
+      const { error } = await (supabase as any).rpc("purchase_music_video_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profile.id,
+        p_action: "promo", p_video_id: videoId, p_option_id: promoId,
+      });
       if (error) throw error;
+      return intent;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (intent, variables) => {
+      purchaseRequests.current.delete(intent);
       const promo = PROMO_OPTIONS.find((p) => p.id === variables.promoId);
       queryClient.invalidateQueries({ queryKey: ["music-videos"] });
       queryClient.invalidateQueries({ queryKey: ["game-data"] });
