@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -24,9 +24,7 @@ import {
   BODY_SLOTS,
   TATTOO_CATEGORIES,
   CATEGORY_LABELS,
-  calculateTattooQuality,
   getTattooDifficulty,
-  rollForInfection,
   type BodySlot,
   type TattooCategory,
   type TattooDesign,
@@ -52,6 +50,12 @@ export default function TattooParlour() {
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [customArtist, setCustomArtist] = useState<TattooArtist | null>(null);
   const [tattooingSession, setTattooingSession] = useState(false);
+  // Keep the same request key if a response is lost after a committed purchase.
+  const purchaseRequests = useRef(new Map<string, string>());
+  const requestIdFor = (intent: string) => {
+    if (!purchaseRequests.current.has(intent)) purchaseRequests.current.set(intent, crypto.randomUUID());
+    return purchaseRequests.current.get(intent)!;
+  };
 
   const { data: profile } = useQuery({
     queryKey: ["profile-city", profileId],
@@ -121,7 +125,8 @@ export default function TattooParlour() {
   const { data: customRequests } = useQuery({
     queryKey: ["custom-tattoo-requests", profileId],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("custom_tattoo_requests").select("*, tattoo_artists(*)").eq("profile_id", profileId!).order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any).from("custom_tattoo_requests").select("*, tattoo_artists(*)").eq("profile_id", profileId!).order("created_at", { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!profileId,
@@ -174,17 +179,19 @@ export default function TattooParlour() {
   const customMutation = useMutation({
     mutationFn: async (data: { description: string; bodySlot: BodySlot; quotedPrice: number; estimatedQuality: number }) => {
       if (!customArtist || !currentParlour || !profileId) throw new Error("Missing data");
-      if ((profile?.cash || 0) < data.quotedPrice) throw new Error("Insufficient funds");
-      const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + customArtist.quality_bonus + 10);
-      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - data.quotedPrice }).eq("id", profileId);
-      if (cashError) throw cashError;
-      const { data: tattoo, error } = await (supabase as any).from("player_tattoos").insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: customArtist.id, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: "#1a1a2e", price_paid: data.quotedPrice, is_infected: false }).select().single();
+      const intent = `custom:${profileId}:${currentParlour.id}:${customArtist.id}:${data.bodySlot}:${data.description}`;
+      const { data: purchased, error } = await (supabase as any).rpc("purchase_personal_tattoo_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profileId, p_kind: "custom",
+        p_parlour_id: currentParlour.id, p_artist_id: customArtist.id,
+        p_body_slot: data.bodySlot, p_description: data.description,
+      });
       if (error) throw error;
-      await (supabase as any).from("custom_tattoo_requests").insert({ profile_id: profileId, artist_id: customArtist.id, description: data.description, body_slot: data.bodySlot, status: "completed", quoted_price: data.quotedPrice, estimated_quality: qualityScore, completed_tattoo_id: tattoo.id });
-      return { qualityScore, price: data.quotedPrice };
+      return { intent, qualityScore: purchased.quality_score as number, price: purchased.price as number };
     },
     onSuccess: (result) => {
+      purchaseRequests.current.delete(result.intent);
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["custom-tattoo-requests", profileId] });
       queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
       queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
       queryClient.invalidateQueries({ queryKey: ["profile-city", profileId] });
@@ -197,16 +204,17 @@ export default function TattooParlour() {
   const textTattooMutation = useMutation({
     mutationFn: async (data: { text: string; fontStyle: string; bodySlot: BodySlot; price: number }) => {
       if (!currentParlour || !profileId) throw new Error("Select a parlour first");
-      if ((profile?.cash || 0) < data.price) throw new Error("Insufficient funds");
-      const qualityScore = Math.min(100, calculateTattooQuality(currentParlour.quality_tier) + (selectedArtist?.quality_bonus || 0));
-      const isInfected = rollForInfection(currentParlour.infection_risk);
-      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - data.price }).eq("id", profileId);
-      if (cashError) throw cashError;
-      const { error } = await (supabase as any).from("player_tattoos").insert({ profile_id: profileId, tattoo_design_id: null, parlour_id: currentParlour.id, artist_id: selectedArtist?.id || null, body_slot: data.bodySlot, quality_score: qualityScore, ink_color: "#1a1a2e", price_paid: data.price, is_infected: isInfected, custom_text: data.text, font_style: data.fontStyle });
+      const intent = `text:${profileId}:${currentParlour.id}:${selectedArtist?.id || ""}:${data.bodySlot}:${data.fontStyle}:${data.text}`;
+      const { data: purchased, error } = await (supabase as any).rpc("purchase_personal_tattoo_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profileId, p_kind: "text",
+        p_parlour_id: currentParlour.id, p_artist_id: selectedArtist?.id || null,
+        p_body_slot: data.bodySlot, p_text: data.text, p_font_style: data.fontStyle,
+      });
       if (error) throw error;
-      return { qualityScore, isInfected, price: data.price };
+      return { intent, qualityScore: purchased.quality_score as number, isInfected: purchased.is_infected as boolean, price: purchased.price as number };
     },
     onSuccess: (result) => {
+      purchaseRequests.current.delete(result.intent);
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
       queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
       queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
@@ -218,13 +226,17 @@ export default function TattooParlour() {
 
   const treatMutation = useMutation({
     mutationFn: async (tattooId: string) => {
-      if ((profile?.cash || 0) < 200) throw new Error("Need $200 for treatment");
-      const { error: cashError } = await supabase.from("profiles").update({ cash: (profile?.cash || 0) - 200 }).eq("id", profileId!);
-      if (cashError) throw cashError;
-      const { error } = await (supabase as any).from("player_tattoos").update({ is_infected: false, infection_cleared_at: new Date().toISOString() }).eq("id", tattooId);
+      if (!profileId) throw new Error("No active character");
+      const intent = `treatment:${profileId}:${tattooId}`;
+      const { error } = await (supabase as any).rpc("purchase_personal_tattoo_atomic", {
+        p_request_id: requestIdFor(intent), p_profile_id: profileId,
+        p_kind: "treatment", p_tattoo_id: tattooId,
+      });
       if (error) throw error;
+      return intent;
     },
-    onSuccess: () => {
+    onSuccess: (intent) => {
+      purchaseRequests.current.delete(intent);
       queryClient.invalidateQueries({ queryKey: ["player-tattoos", profileId] });
       queryClient.invalidateQueries({ queryKey: ["player-stage-tattoos", profileId] });
       queryClient.invalidateQueries({ queryKey: ["gig-player-appearances"] });
