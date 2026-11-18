@@ -22,6 +22,14 @@ Deno.serve(async (req) => {
   try {
     console.log('[process-tour-travel] Starting tour travel processing...')
 
+    // Repair missed calendar mirrors first, including historical rows whose
+    // original history INSERT succeeded but schedule INSERT failed (#4251).
+    // The DB function is service-only and uses unique keys for concurrent runs.
+    const { data: repairedCalendars, error: repairError } = await supabase.rpc(
+      'reconcile_tour_travel_calendar', { p_batch_size: 100 },
+    )
+    if (repairError) throw repairError
+
     const now = new Date()
     const nowISO = now.toISOString()
 
@@ -33,6 +41,7 @@ Deno.serve(async (req) => {
       .not('tour_leg_id', 'is', null)
       .not('profile_id', 'is', null)
       .lte('arrival_time', nowISO)
+    if (inProgressError) throw inProgressError
 
     let travelCompleted = 0
     if (!inProgressError && inProgressTravels) {
@@ -44,12 +53,19 @@ Deno.serve(async (req) => {
       
       for (const travel of inProgressTravels) {
         try {
-          await supabase
-            .from('player_travel_history')
+          // Keep history in_progress until the character and calendar are
+          // updated; a failure before the final status write can be retried.
+          const { error: scheduleError } = await supabase
+            .from('player_scheduled_activities')
             .update({ status: 'completed' })
-            .eq('id', travel.id)
+            .eq('profile_id', travel.profile_id)
+            .eq('activity_type', 'travel')
+            .in('status', ['scheduled', 'in_progress'])
+            .contains('metadata', { travel_history_id: travel.id })
+            .lte('scheduled_end', nowISO)
+          if (scheduleError) throw scheduleError
 
-          await supabase
+          const { error: profileError } = await supabase
             .from('profiles')
             .update({
               current_city_id: travel.to_city_id,
@@ -57,16 +73,14 @@ Deno.serve(async (req) => {
               travel_arrives_at: null,
             })
             .eq('id', travel.profile_id)
+          if (profileError) throw profileError
 
-          // Complete the scheduled activity too
-          await supabase
-            .from('player_scheduled_activities')
+          const { error: historyError } = await supabase
+            .from('player_travel_history')
             .update({ status: 'completed' })
-            .eq('profile_id', travel.profile_id)
-            .eq('activity_type', 'travel')
+            .eq('id', travel.id)
             .eq('status', 'in_progress')
-            .contains('metadata', { travel_history_id: travel.id })
-            .lte('scheduled_end', nowISO)
+          if (historyError) throw historyError
 
           travelCompleted++
           console.log(`[process-tour-travel] Completed tour travel ${travel.id} for user ${travel.user_id}`)
@@ -100,6 +114,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         travelsCompleted: travelCompleted,
+        calendarMirrorsRepaired: repairedCalendars ?? 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

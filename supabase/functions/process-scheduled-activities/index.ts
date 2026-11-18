@@ -6,6 +6,11 @@ import {
   safeJson,
   startJobRun,
 } from "../_shared/job-logger.ts";
+import {
+  failedCompletionMetadata,
+  isCompletionRetryDue,
+  requireWorkerSuccess,
+} from "../_shared/scheduledCompletionGuards.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,22 +71,29 @@ Deno.serve(async (req) => {
     let processedCount = 0;
     let startedCount = 0;
     let completedCount = 0;
+    let completionFailures = 0;
+    let completionDeferred = 0;
+    let completionNeedsReview = 0;
     const scheduledTwaatResult = await publishDueScheduledTwaats(supabase, now, supabaseUrl, supabaseKey);
 
     const { data: toStart, error: startError } = await supabase
       .from('player_scheduled_activities')
       .select('*')
       .eq('status', 'scheduled')
-      .lte('scheduled_start', now)
-      .gt('scheduled_end', now);
+      .lte('scheduled_start', now);
     if (startError) throw startError;
 
     for (const activity of toStart || []) {
-      await supabase
+      // An outage must not turn an expired-but-unprocessed booking into a
+      // permanent "missed" result. Its canonical worker still has to settle it.
+      const { data: started, error: startUpdateError } = await supabase
         .from('player_scheduled_activities')
         .update({ status: 'in_progress', started_at: now })
-        .eq('id', activity.id);
-      startedCount++;
+        .eq('id', activity.id)
+        .eq('status', 'scheduled')
+        .select('id');
+      if (startUpdateError) throw startUpdateError;
+      if (started?.length) startedCount++;
     }
 
     const { data: toComplete, error: completeError } = await supabase
@@ -92,6 +104,11 @@ Deno.serve(async (req) => {
     if (completeError) throw completeError;
 
     for (const activity of toComplete || []) {
+      if (!isCompletionRetryDue(activity.metadata, new Date(now))) {
+        completionDeferred++;
+        if (activity.metadata?.completionNeedsReview) completionNeedsReview++;
+        continue;
+      }
       // Film schedules must be settled entirely in one SQL transaction,
       // including their activity status. No generic status UPDATE may follow.
       if (activity.activity_type === 'film_production') {
@@ -112,55 +129,58 @@ Deno.serve(async (req) => {
           }
         } catch (filmError) {
           console.error(`[process-scheduled-activities] Film settlement failed for ${activity.id}`, filmError);
+          completionFailures++;
+          const metadata = failedCompletionMetadata(activity.metadata, getErrorMessage(filmError), new Date(now));
+          if (metadata.completionNeedsReview) completionNeedsReview++;
+          const { error: retryError } = await supabase.from('player_scheduled_activities')
+            .update({ metadata }).eq('id', activity.id).eq('status', 'in_progress');
+          if (retryError) console.error(`Unable to record film settlement retry for ${activity.id}`, retryError);
         }
         continue;
       }
       // Work-shift payout is owned by the dedicated, secret-authorised cron
       // and its atomic settlement RPC. Do not call that global worker here or
       // mark the scheduled work activity complete before wages actually post.
-      if (activity.activity_type === 'work' || activity.activity_type === 'university') continue;
+      // Tour/manual travel completion belongs to the travel lifecycle worker;
+      // no generic calendar tick may race its location/state transitions.
+      if (activity.activity_type === 'work' || activity.activity_type === 'university' ||
+          activity.activity_type === 'travel') continue;
       try {
         await processActivityCompletion(supabase, activity);
-        await supabase
+        const { data: completed, error: statusError } = await supabase
           .from('player_scheduled_activities')
           .update({ status: 'completed', completed_at: now })
-          .eq('id', activity.id);
-        completedCount++;
+          .eq('id', activity.id)
+          .eq('status', 'in_progress')
+          .select('id')
+          .maybeSingle();
+        if (statusError) throw statusError;
+        if (completed) completedCount++;
       } catch (error) {
         console.error(`Error processing activity ${activity.id}:`, error);
-        if (activity.activity_type === 'skill_practice') {
-          await supabase
-            .from('player_scheduled_activities')
-            .update({ metadata: { ...activity.metadata, completionError: getErrorMessage(error) } })
-            .eq('id', activity.id)
-            .eq('status', 'in_progress');
-          continue;
-        }
-        await supabase
+        completionFailures++;
+        // Keep the activity retryable. Mark persistent failures for an admin
+        // rather than claiming the underlying gig, recording or pay completed.
+        const metadata = failedCompletionMetadata(activity.metadata, getErrorMessage(error), new Date(now));
+        if (metadata.completionNeedsReview) completionNeedsReview++;
+        const { error: retryError } = await supabase
           .from('player_scheduled_activities')
-          .update({ status: 'missed' })
-          .eq('id', activity.id);
+          .update({ metadata })
+          .eq('id', activity.id)
+          .eq('status', 'in_progress');
+        if (retryError) console.error(`Unable to record retry for activity ${activity.id}`, retryError);
       }
-    }
-
-    const { data: toMiss } = await supabase
-      .from('player_scheduled_activities')
-      .select('id')
-      .eq('status', 'scheduled')
-      .lt('scheduled_end', now);
-
-    if (toMiss?.length) {
-      await supabase
-        .from('player_scheduled_activities')
-        .update({ status: 'missed' })
-        .in('id', toMiss.map(a => a.id));
     }
 
     processedCount = startedCount + completedCount + scheduledTwaatResult.publishedCount;
     const resultSummary = {
       startedCount,
       completedCount,
-      missedCount: toMiss?.length || 0,
+      completionFailures,
+      completionDeferred,
+      completionNeedsReview,
+      // A late/outage-delayed booking is retried; never silently mark it missed.
+      missedCount: 0,
       publishedTwaatCount: scheduledTwaatResult.publishedCount,
       scheduledOutcomeAttempts: scheduledTwaatResult.outcomeAttempts,
       scheduledOutcomeFailures: scheduledTwaatResult.outcomeFailures,
@@ -172,6 +192,7 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startedAt,
       processedCount,
+      errorCount: completionFailures,
       resultSummary,
     });
 
@@ -271,6 +292,14 @@ async function publishDueScheduledTwaats(
 async function processActivityCompletion(supabase: any, activity: ScheduledActivity) {
   const duration = (new Date(activity.scheduled_end).getTime() - new Date(activity.scheduled_start).getTime()) / 3600000;
 
+  async function requireLinkedStatus(table: string, id: string, acceptedStates: string[]) {
+    const { data, error } = await supabase.from(table).select('status').eq('id', id).maybeSingle();
+    if (error) throw error;
+    if (!data || !acceptedStates.includes(data.status)) {
+      throw new Error(`${table} ${id} has not confirmed its canonical completion`);
+    }
+  }
+
   switch (activity.activity_type) {
     case 'skill_practice': {
       const { error } = await supabase.rpc('complete_skill_practice', { p_activity_id: activity.id });
@@ -278,21 +307,40 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       break;
     }
     case 'gig':
-      if (activity.linked_gig_id) {
-        const { data: gig } = await supabase
+      if (!activity.linked_gig_id) throw new Error('Gig schedule is missing a linked gig');
+      {
+        const { data: gig, error: gigError } = await supabase
           .from('gigs')
           .select('status, completed_at')
           .eq('id', activity.linked_gig_id)
           .maybeSingle();
+        if (gigError) throw gigError;
         if (gig?.status === 'completed' || gig?.completed_at) break;
-        await supabase.functions.invoke('complete-gig', { body: { gigId: activity.linked_gig_id } });
+        requireWorkerSuccess('complete-gig', await supabase.functions.invoke('complete-gig', { body: { gigId: activity.linked_gig_id } }));
+        await requireLinkedStatus('gigs', activity.linked_gig_id, ['completed']);
       }
       break;
     case 'rehearsal':
-      if (activity.linked_rehearsal_id) await supabase.functions.invoke('complete-rehearsals');
+      if (!activity.linked_rehearsal_id) throw new Error('Rehearsal schedule is missing a linked rehearsal');
+      {
+        const { data, error } = await supabase.from('band_rehearsals')
+          .select('status').eq('id', activity.linked_rehearsal_id).maybeSingle();
+        if (error) throw error;
+        if (data?.status === 'completed') break;
+      }
+      requireWorkerSuccess('complete-rehearsals', await supabase.functions.invoke('complete-rehearsals'));
+      await requireLinkedStatus('band_rehearsals', activity.linked_rehearsal_id, ['completed']);
       break;
     case 'recording':
-      if (activity.linked_recording_id) await supabase.functions.invoke('complete-recording-sessions');
+      if (!activity.linked_recording_id) throw new Error('Recording schedule is missing a linked session');
+      {
+        const { data, error } = await supabase.from('recording_sessions')
+          .select('status').eq('id', activity.linked_recording_id).maybeSingle();
+        if (error) throw error;
+        if (data && ['recorded', 'completed'].includes(data.status)) break;
+      }
+      requireWorkerSuccess('complete-recording-sessions', await supabase.functions.invoke('complete-recording-sessions'));
+      await requireLinkedStatus('recording_sessions', activity.linked_recording_id, ['recorded', 'completed']);
       break;
     case 'work':
       // The scheduler loop deliberately skips work until atomic settlement.
@@ -316,32 +364,42 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       break;
     }
     case 'songwriting':
-      await supabase.functions.invoke('cleanup-songwriting');
+      requireWorkerSuccess('cleanup-songwriting', await supabase.functions.invoke('cleanup-songwriting'));
       break;
     case 'health': {
-      const { data: profile } = await supabase
+      const { data: profile, error: healthError } = await supabase
         .from('profiles')
         .select('id, health')
         .eq('id', activity.profile_id)
         .maybeSingle();
+      if (healthError) throw healthError;
+      if (!profile) throw new Error('Health activity character was not found');
       if (profile) {
         const healthGain = Math.min(20 * duration, 100 - (profile.health || 0));
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ health: (profile.health || 0) + healthGain })
           .eq('id', profile.id);
+        if (updateError) throw updateError;
       }
       break;
     }
     case 'pr_appearance':
-      if (activity.metadata?.offer_id) {
-        await supabase.functions.invoke('process-pr-activity', {
-          body: { action: 'complete', offerId: activity.metadata.offer_id },
-        });
+      if (!activity.metadata?.offer_id) throw new Error('PR appearance has no settlement offer reference');
+      {
+        const { data, error } = await supabase.from('pr_media_offers')
+          .select('status').eq('id', activity.metadata.offer_id).maybeSingle();
+        if (error) throw error;
+        if (data?.status === 'completed') break;
       }
+      requireWorkerSuccess('process-pr-activity', await supabase.functions.invoke('process-pr-activity', {
+        body: { action: 'complete', offerId: activity.metadata.offer_id },
+      }));
+      await requireLinkedStatus('pr_media_offers', activity.metadata.offer_id, ['completed']);
       break;
     case 'self_promotion':
-      if (activity.metadata?.self_promotion_id) {
+      if (!activity.metadata?.self_promotion_id) throw new Error('Promotion activity has no settlement reference');
+      {
         // Same atomic settlement used by pg_cron. Never rely on a
         // browser-accessible Edge worker or ignore its HTTP error.
         const { data: outcome, error: promotionError } = await supabase.rpc(
@@ -360,6 +418,6 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       // receipt, contract and schedule status (#4227).
       break;
     default:
-      console.log(`No specific processing for activity type: ${activity.activity_type}`);
+      throw new Error(`No confirmed completion handler for activity type: ${activity.activity_type}`);
   }
 }
