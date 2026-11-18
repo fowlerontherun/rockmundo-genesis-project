@@ -1,8 +1,9 @@
--- #4232: production-safe authenticated, multi-character RLS acceptance test.
--- All inserted test offers are rolled back. No existing offers are modified.
+-- #4232: production-safe character-scoped RLS acceptance test.
+-- A privileged fixture seeds two provisional rows; browser roles are read
+-- only and cannot forge or edit contracts. All fixture rows are rolled back.
 BEGIN;
 DO $setup$
-DECLARE u uuid;a uuid;b uuid;other_character uuid;gig uuid;
+DECLARE u uuid;a uuid;b uuid;other_character uuid;gig uuid;fixture_offer uuid;
 BEGIN
  SELECT user_id INTO u FROM public.profiles WHERE deleted_at IS NULL
  GROUP BY user_id HAVING count(*)>=2 ORDER BY user_id LIMIT 1;
@@ -20,23 +21,21 @@ BEGIN
  PERFORM set_config('test.modeling_b',b::text,true);
  PERFORM set_config('test.modeling_other',other_character::text,true);
  PERFORM set_config('test.modeling_gig',gig::text,true);
+ INSERT INTO public.player_modeling_contracts
+  (user_id,profile_id,gig_id,status,expires_at)
+ VALUES (u,a,gig,'pending',now()+interval '1 day')
+ RETURNING id INTO fixture_offer;
+ PERFORM set_config('test.modeling_offer',fixture_offer::text,true);
+ INSERT INTO public.player_modeling_contracts
+  (user_id,profile_id,gig_id,status,expires_at)
+ VALUES (u,b,gig,'pending',now()+interval '1 day');
 END $setup$;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub',current_setting('test.modeling_u'),true);
 DO $check$
 DECLARE offer uuid;n integer;
 BEGIN
- INSERT INTO public.player_modeling_contracts
-  (user_id,profile_id,gig_id,status,expires_at)
- VALUES (current_setting('test.modeling_u')::uuid,
-         current_setting('test.modeling_a')::uuid,
-         current_setting('test.modeling_gig')::uuid,'pending',now()+interval '1 day')
- RETURNING id INTO offer;
- INSERT INTO public.player_modeling_contracts
-  (user_id,profile_id,gig_id,status,expires_at)
- VALUES (current_setting('test.modeling_u')::uuid,
-         current_setting('test.modeling_b')::uuid,
-         current_setting('test.modeling_gig')::uuid,'pending',now()+interval '1 day');
+ offer:=current_setting('test.modeling_offer')::uuid;
  SELECT count(*) INTO n FROM public.player_modeling_contracts
  WHERE profile_id=current_setting('test.modeling_a')::uuid;
  IF n<>1 THEN RAISE EXCEPTION 'character_A_offer_scope_failed'; END IF;
@@ -55,8 +54,7 @@ BEGIN
   UPDATE public.player_modeling_contracts
   SET profile_id=current_setting('test.modeling_b')::uuid WHERE id=offer;
   RAISE EXCEPTION 'modeling_offer_identity_swap_allowed';
- EXCEPTION WHEN others THEN
-  IF SQLERRM<>'modeling_contract_identity_immutable' THEN RAISE; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
  IF has_table_privilege('authenticated','public.player_modeling_contracts','TRUNCATE')
  OR has_table_privilege('authenticated','public.player_modeling_contracts','TRIGGER')

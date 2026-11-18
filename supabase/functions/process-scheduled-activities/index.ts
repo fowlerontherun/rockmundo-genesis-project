@@ -109,6 +109,30 @@ Deno.serve(async (req) => {
         if (activity.metadata?.completionNeedsReview) completionNeedsReview++;
         continue;
       }
+      // Modeling shoots own their cash/fame and schedule status in one SQL
+      // transaction. Never follow with the generic completion UPDATE.
+      if (activity.activity_type === 'pr_appearance' && activity.metadata?.modeling_contract_id) {
+        try {
+          const { data: settlement, error: settlementError } = await supabase.rpc(
+            'settle_modeling_contract_atomic',
+            { p_activity_id: activity.id, p_contract_id: activity.metadata.modeling_contract_id },
+          );
+          if (settlementError) throw settlementError;
+          if (settlement?.settled === true) completedCount++;
+          else if (settlement?.reason !== 'already_settled' && settlement?.reason !== 'schedule_not_due') {
+            throw new Error(`Modeling settlement rejected: ${settlement?.reason ?? 'unknown'}`);
+          }
+        } catch (modelingError) {
+          console.error(`[process-scheduled-activities] Modeling settlement failed for ${activity.id}`, modelingError);
+          completionFailures++;
+          const metadata = failedCompletionMetadata(activity.metadata, getErrorMessage(modelingError), new Date(now));
+          if (metadata.completionNeedsReview) completionNeedsReview++;
+          const { error: retryError } = await supabase.from('player_scheduled_activities')
+            .update({ metadata }).eq('id', activity.id).eq('status', 'in_progress');
+          if (retryError) console.error(`Unable to record modeling settlement retry for ${activity.id}`, retryError);
+        }
+        continue;
+      }
       // Film schedules must be settled entirely in one SQL transaction,
       // including their activity status. No generic status UPDATE may follow.
       if (activity.activity_type === 'film_production') {
@@ -385,6 +409,10 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       break;
     }
     case 'pr_appearance':
+      if (activity.metadata?.gig_id && !activity.metadata?.offer_id) {
+        // Legacy modeling diary rows were never linked to a settlement.
+        throw new Error('Legacy modeling booking requires manual reconciliation');
+      }
       if (!activity.metadata?.offer_id) throw new Error('PR appearance has no settlement offer reference');
       {
         const { data, error } = await supabase.from('pr_media_offers')

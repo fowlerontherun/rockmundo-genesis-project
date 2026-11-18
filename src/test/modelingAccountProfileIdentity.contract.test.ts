@@ -17,6 +17,10 @@ const catalogue = readFileSync(
   "utf8",
 );
 const smoke = readFileSync("supabase/tests/modeling_account_profile_rls_4232.sql", "utf8");
+const atomic = readFileSync(
+  "supabase/migrations/20261118180100_atomic_modeling_booking_settlement.sql",
+  "utf8",
+);
 
 describe("modeling offer account/character identity (#4232)", () => {
   it("passes the authenticated account and selected character separately", () => {
@@ -26,22 +30,25 @@ describe("modeling offer account/character identity (#4232)", () => {
     expect(page).not.toContain("userId={profileId}");
     expect(panel).toContain("userId: string;");
     expect(panel).toContain("profileId: string;");
-    expect(panel).toContain("checkTimeSlotAvailable(userId, shootStart, shootEnd)");
-    expect(panel).toContain("userId,\n        activityType");
+    expect(panel).toContain('assertWellnessAllows(profileId, "pr_appearance")');
+    expect(generator).toContain('p_profile_id: input.profileId');
+    expect(panel).not.toContain("createScheduledActivity({");
   });
 
   it("reads character-scoped offers and generates only for the active character", () => {
     expect(panel).toContain('["modeling-offers-pending", profileId]');
     expect(panel).toContain('.eq("profile_id", profileId)');
-    expect(panel).toContain("generateModelingOffersForUser(userId, profileId,");
+    expect(panel).toContain("generateModelingOffersForUser(profileId)");
     expect(panel).toContain("isOfferCooldownExpired(profileId)");
-    expect(generator).toContain(".eq('user_id', userId)");
-    expect(generator).toContain(".eq('profile_id', profileId)");
-    expect(generator).toContain("user_id: userId,\n      profile_id: profileId");
+    expect(generator).toContain("rpc('generate_modeling_offers_secure'");
+    expect(generator).toContain("p_profile_id: profileId");
     expect(generator).toContain("cooldownKey(profileId)");
-    expect(generator).toContain("if (pendingError) throw pendingError;");
-    expect(generator).toContain("if (gigsError) throw gigsError;");
     expect(generator).toContain("if (error) throw error;");
+    expect(generator).not.toContain(".insert(offers)");
+    expect(atomic).toContain("v_actor uuid := (SELECT auth.uid())");
+    expect(atomic).toContain("user_id=v_actor AND is_active=true");
+    expect(atomic).toContain("Photo shoots are the entry path");
+    expect(atomic).toContain("WHEN 'commercial' THEN 2");
   });
 
   it("enforces account ownership and character FK in production schema", () => {
@@ -71,5 +78,13 @@ describe("modeling offer account/character identity (#4232)", () => {
     expect(smoke).toContain("character_B_offer_scope_failed");
     expect(smoke).toContain("foreign_character_offer_allowed");
     expect(smoke).toContain("modeling_offer_identity_swap_allowed");
+  });
+
+  it("locks paid modeling terms to server-issued offers and a single character", () => {
+    expect(atomic).toContain("REVOKE INSERT,UPDATE,DELETE ON public.player_modeling_contracts FROM authenticated");
+    expect(atomic).toContain("CREATE TABLE IF NOT EXISTS public.modeling_offer_terms");
+    expect(atomic).toContain("CREATE TABLE IF NOT EXISTS public.modeling_contract_settlements");
+    expect(atomic).toContain("v_contract.profile_id<>p_profile_id");
+    expect(atomic).toContain("modeling_offer_terms_unverified");
   });
 });
