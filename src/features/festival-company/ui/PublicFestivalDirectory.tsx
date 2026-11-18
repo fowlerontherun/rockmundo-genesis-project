@@ -32,7 +32,7 @@ const hasFestivalStory = (status: string) => ["completed", "left_early"].include
 
 export default function PublicFestivalDirectory() {
   const { user } = useAuth();
-  const { data = [], isLoading, isError } = usePublicFestivalDirectory();
+  const { data = [], isLoading, isError, refetch: retryDirectory } = usePublicFestivalDirectory();
   const { data: attendance = [], isError: attendanceError, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
   const [storyAttendanceId, setStoryAttendanceId] = useState<string | null>(null);
 
@@ -137,7 +137,14 @@ export default function PublicFestivalDirectory() {
       ) : null}
 
       {isLoading && <p role="status">Loading launched Festivals…</p>}
-      {isError && <p role="alert">The Festival directory is temporarily unavailable.</p>}
+      {isError && (
+        <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm">
+          <p>The Festival directory is temporarily unavailable. Any previously shown availability may be outdated.</p>
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => void retryDirectory()}>
+            Retry festival directory
+          </Button>
+        </div>
+      )}
       {!isLoading && !isError && data.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -147,7 +154,7 @@ export default function PublicFestivalDirectory() {
       ) : null}
 
       <section aria-label="Festival directory" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {data.map((festival) => {
+        {!isLoading && !isError && data.map((festival) => {
           const availableAdmission = festival.ticketProducts.filter((product) => product.productClass === "admission" && product.availableQuantity > 0 && product.saleStatus === "tickets_on_sale" && festival.launchStatus === "tickets_on_sale");
           const admissionCurrencies = new Set(availableAdmission.map((product) => product.currency));
           // Minor amounts cannot be compared across different currencies.
