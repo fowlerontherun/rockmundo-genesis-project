@@ -10,6 +10,7 @@ import { FestivalModeRewards } from "../attendance/FestivalModeRewards";
 import { useMyFestivalAttendance } from "../attendance/useFestivalAttendance";
 import { usePublicFestivalDirectory } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
+import { FestivalBrandArtwork } from "./FestivalBrandArtwork";
 
 const attendanceLabel = (status: string) => {
   switch (status) {
@@ -185,10 +186,7 @@ export default function PublicFestivalDirectory() {
               className="group rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <Card className="h-full overflow-hidden transition group-hover:-translate-y-1 group-hover:border-primary">
-                <div
-                  className="h-40 bg-gradient-to-br from-violet-700 to-fuchsia-600 bg-cover bg-center"
-                  style={festival.heroImageReference ? { backgroundImage: `url(${festival.heroImageReference})` } : undefined}
-                />
+                <FestivalBrandArtwork festival={festival} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>

@@ -29,6 +29,7 @@ import { FestivalVisitorGuide } from "./FestivalVisitorGuide";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
+import { FestivalBrandArtwork, FestivalLineupRibbon } from "./FestivalBrandArtwork";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
 import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
 
@@ -169,8 +170,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   return (
     <main>
       {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival wallet, attendance, keepsakes or check-in status could not be verified. Unverified information is hidden. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); if (attendanceError) void retryAttendance(); if (memorabiliaError) void retryMemorabilia(); }}>Retry verification</button></div>}
-      <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
+      <header className="relative isolate overflow-hidden bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
+        <FestivalBrandArtwork festival={f} variant="backdrop" />
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
             {verifiedFestivalLogo && failedFestivalLogo !== verifiedFestivalLogo ? (
               <img src={verifiedFestivalLogo} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" onError={() => setFailedFestivalLogo(verifiedFestivalLogo)} />
@@ -410,7 +412,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <h3 className="font-semibold">{dayLabel(day || null)}</h3>
                       <div className="grid gap-3 sm:grid-cols-2">
                         {confirmedLineup.filter((entry) => (entry.festivalDate ?? "") === day).map((entry) => (
-                          <Card key={entry.id}>
+                          <Card key={entry.id} className="overflow-hidden">
+                            <FestivalLineupRibbon act={entry} />
                             <CardHeader>
                               <CardTitle className="flex flex-wrap items-center gap-2">
                                 {entry.artistName}

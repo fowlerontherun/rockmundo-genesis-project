@@ -17,6 +17,15 @@ const base = {
 };
 
 describe("illustrated festival stage schedule indicators", () => {
+  it("uses canonical stage capacities for visual tiers and announced headliner labels", () => {
+    render(<FestivalStageSchematic {...base} now={Date.parse("2026-10-29T16:30:00Z")}
+      stages={[stage, { id: "small", name: "Acoustic Stage", capacity: 180 }]} />);
+    expect(screen.getByText("Large-format stage")).toBeVisible();
+    expect(screen.getByText("Intimate stage")).toBeVisible();
+    expect(screen.getByText("Headliner: Shockmaster")).toBeVisible();
+    expect(screen.getAllByTestId("festival-stage-illustration")).toHaveLength(1);
+    expect(screen.getAllByText("Stage crowd not reported")).toHaveLength(2);
+  });
   it("shows next published set without suggesting it is live", () => {
     render(<FestivalStageSchematic {...base} now={Date.parse("2026-10-29T16:30:00Z")} />);
     expect(screen.getByText("Next scheduled set")).toBeTruthy();
