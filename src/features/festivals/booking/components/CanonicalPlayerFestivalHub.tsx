@@ -1,5 +1,6 @@
 import { FestivalPoster } from "@/components/game-art/GameArtwork";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listPublicFestivalEditions } from "@/features/festivals/service";
+import { festivalRoutes } from "@/features/festivals/routes";
 import { festivalBookingKeys } from "../bookingTypes";
+import { getFestivalApplicationAvailability } from "../festivalHubState";
 import { useFestivalBookingRealtime } from "../b7CollaborationVoting";
 import {
   useFestivalApplicationActions,
@@ -34,6 +37,33 @@ import {
 import { FestivalDirectInvitations } from "./FestivalDirectInvitations";
 import { FestivalSetlistEditorCanonical } from "./FestivalSetlistEditor";
 import { OfferRevisionCard } from "./OfferRevisionCard";
+
+function FestivalReadState({
+  label,
+  loading,
+  failed,
+  retry,
+  children,
+}: {
+  label: string;
+  loading: boolean;
+  failed: boolean;
+  retry: () => void;
+  children: ReactNode;
+}) {
+  if (loading) return <p role="status">Loading {label}…</p>;
+  if (failed) {
+    return (
+      <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm">
+        <p>Could not load {label}. This does not mean there are no records.</p>
+        <Button size="sm" variant="outline" className="mt-2" onClick={retry}>
+          Retry {label}
+        </Button>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
 
 export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
   const [applyEdition, setApplyEdition] =
@@ -67,26 +97,48 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
 
   return (
     <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
+        <div>
+          <h2 className="text-xl font-semibold">Festival artist centre</h2>
+          <p className="text-sm text-muted-foreground">
+            Discover editions, manage invitations and applications, then prepare for your show.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to={festivalRoutes.publicDirectory()}>Attend festivals and tickets</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/festivals/history">Festival history</Link>
+          </Button>
+        </div>
+      </header>
+      {!bandId && (
+        <p role="status" className="rounded-lg border border-amber-500/40 p-3 text-sm">
+          Select a band to apply, review offers or prepare a festival setlist.
+        </p>
+      )}
       <Tabs defaultValue="discover">
-        <TabsList className="grid h-auto grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
-          <TabsTrigger value="discover">Discover</TabsTrigger>
-          <TabsTrigger value="applications">My Applications</TabsTrigger>
-          <TabsTrigger value="invitations">Invitations</TabsTrigger>
-          <TabsTrigger value="fan-voting">Fan Voting</TabsTrigger>
-          <TabsTrigger value="offers">Offers</TabsTrigger>
-          <TabsTrigger value="contracts">Contracts</TabsTrigger>
-          <TabsTrigger value="prep">Preparation</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
-        <TabsContent
-          value="discover"
-          className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
-        >
-          {editions.isLoading ? (
-            <p>Loading festivals…</p>
-          ) : visibleEditions.length ? (
-            visibleEditions.map((edition) => (
-              <Card key={edition.id}>
+        <div className="-mx-1 overflow-x-auto px-1 pb-2" role="region" aria-label="Festival artist navigation" tabIndex={0}>
+          <TabsList className="flex h-auto w-max min-w-full justify-start gap-1">
+
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="discover">Discover</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="applications">My Applications</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="invitations">Invitations</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="fan-voting">Fan Voting</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="offers">Offers</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="contracts">Contracts</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="prep">Preparation</TabsTrigger>
+          <TabsTrigger className="min-h-11 shrink-0 whitespace-nowrap" value="history">History</TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="discover">
+          <FestivalReadState label="festivals" loading={editions.isLoading} failed={editions.isError} retry={() => void editions.refetch()}>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visibleEditions.length ? (
+            visibleEditions.map((edition) => {
+              const availability = getFestivalApplicationAvailability(edition, bandId);
+              return <Card key={edition.id}>
                 <FestivalPoster
                   id={edition.id}
                   title={edition.title ?? edition.festival_name ?? "Festival edition"}
@@ -109,21 +161,28 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
                       editionCurrency(edition),
                     )}
                   </p>
-                  <p>Status: {edition.status}</p>
-                  <Button size="sm" onClick={() => setApplyEdition(edition)}>
-                    Apply
+                  <p>Status: {(edition.status ?? "unconfirmed").replaceAll("_", " ")}</p>
+                  <Button
+                    size="sm"
+                    disabled={!availability.canApply}
+                    title={availability.reason}
+                    onClick={() => setApplyEdition(edition)}
+                  >
+                    {availability.canApply ? "Apply to perform" : "Applications unavailable"}
                   </Button>
+                  {!availability.canApply && <p className="text-xs text-muted-foreground">{availability.reason}</p>}
                 </CardContent>
-              </Card>
-            ))
+              </Card>;
+            })
           ) : (
             <p>No canonical festivals are currently available.</p>
           )}
+            </div>
+          </FestivalReadState>
         </TabsContent>
         <TabsContent value="applications" className="space-y-3">
-          {applications.isLoading ? (
-            <p>Loading applications…</p>
-          ) : (applications.data ?? []).length ? (
+          <FestivalReadState label="applications" loading={applications.isLoading} failed={applications.isError} retry={() => void applications.refetch()}>
+          {(applications.data ?? []).length ? (
             (applications.data ?? []).map((a) => (
               <ApplicationStatusCard
                 key={a.id}
@@ -144,8 +203,9 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
               />
             ))
           ) : (
-            <p>No applications yet.</p>
+            <p>{bandId ? "No applications yet." : "Select a band to view applications."}</p>
           )}
+          </FestivalReadState>
         </TabsContent>
         <TabsContent value="invitations" className="space-y-4">
           <FestivalDirectInvitations bandId={bandId} editions={allEditions} />
@@ -155,24 +215,29 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
           <FestivalFanVoting />
         </TabsContent>
         <TabsContent value="offers" className="space-y-3">
+          <FestivalReadState label="offers" loading={offers.isLoading} failed={offers.isError} retry={() => void offers.refetch()}>
           {(offers.data ?? []).length ? (
             (offers.data ?? []).map((offer) => (
               <OfferRevisionCard key={offer.id} offer={offer} />
             ))
           ) : (
-            <p>No offers yet.</p>
+            <p>{bandId ? "No offers yet." : "Select a band to view offers."}</p>
           )}
+          </FestivalReadState>
         </TabsContent>
         <TabsContent value="contracts" className="space-y-3">
+          <FestivalReadState label="contracts" loading={contracts.isLoading} failed={contracts.isError} retry={() => void contracts.refetch()}>
           {(contracts.data ?? []).length ? (
             (contracts.data ?? []).map((c) => (
               <ContractWorkspace key={c.id} contract={c} />
             ))
           ) : (
-            <p>No contracts yet.</p>
+            <p>{bandId ? "No contracts yet." : "Select a band to view contracts."}</p>
           )}
+          </FestivalReadState>
         </TabsContent>
         <TabsContent value="prep" className="space-y-3">
+          <FestivalReadState label="contracts" loading={contracts.isLoading} failed={contracts.isError} retry={() => void contracts.refetch()}>
           {(contracts.data ?? []).filter((c) => c.status === "active")
             .length ? (
             (contracts.data ?? [])
@@ -183,6 +248,7 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
           ) : (
             <p>Preparation unlocks after a contract is active.</p>
           )}
+          </FestivalReadState>
         </TabsContent>
         <TabsContent value="history">
           <p className="text-sm text-muted-foreground">
