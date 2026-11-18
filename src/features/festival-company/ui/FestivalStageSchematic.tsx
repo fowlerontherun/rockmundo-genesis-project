@@ -5,6 +5,7 @@ import { formatFestivalEditionDate, festivalTimeZoneLabel } from "./festivalPubl
 import type { AttendanceBand, FestivalPublicLiveStatus, FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
 import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
+import { stagePublishedHeadliners, stageVisualScale } from "../domain/festivalVisualIdentity";
 
 interface FestivalStageSchematicProps {
   lightweight?: boolean;
@@ -68,6 +69,8 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Select a festival stage">
         {stages.map((stage, index) => {
+          const stageScale = stageVisualScale(stage);
+          const headliners = stagePublishedHeadliners(stage.name, lineup);
           const status = cancelled ? null : publicFestivalStageStatus(stage, performances);
           const isPerforming = status?.performance.status === "live";
           // The entire directory has a budget of one CSS-only illustration.
@@ -86,8 +89,11 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
             aria-pressed={selectedStageId === stage.id}
             className={`group relative overflow-hidden rounded-xl border-2 bg-card/90 p-4 text-center ${lightweight ? "min-h-11" : "shadow-lg motion-safe:transition-transform motion-safe:hover:-translate-y-1"} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${selectedStageId === stage.id ? "border-primary ring-2 ring-primary/30" : "border-border/70 hover:border-primary/60"}`}
           >
-            {showIllustration && <div aria-hidden="true" className={`relative mx-auto mb-3 flex h-20 max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
+            {showIllustration && <div aria-hidden="true" style={{ height: stageScale.height }} className={`relative mx-auto mb-3 flex max-w-52 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-slate-700 ${activeLighting ? "bg-gradient-to-b from-fuchsia-700 via-indigo-600 to-slate-950 shadow-[0_0_24px_rgba(217,70,239,.45)]" : "bg-gradient-to-b from-violet-800 via-fuchsia-700 to-slate-950 shadow-xl"}`}>
               <div className="h-3 bg-slate-900/80" />
+              <div className="flex justify-evenly bg-slate-900 py-1">
+                {Array.from({ length: stageScale.lights }, (_, light) => <span key={light} className="h-1.5 w-1.5 rounded-full bg-amber-200 shadow-[0_0_8px_rgba(251,191,36,.8)]" />)}
+              </div>
               <div className="flex flex-1 items-center justify-center gap-2">
                 <span className="h-10 w-1 rotate-12 bg-amber-300/70 shadow-[0_0_15px_rgba(252,211,77,.6)]" />
                 <span className="text-2xl">{index === 0 ? "🎸" : index % 2 ? "🎤" : "🎵"}</span>
@@ -97,6 +103,10 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
               <FestivalStageAtmosphere weatherState={weatherState} activePerformance={isPerforming} />
             </div>}
             <span className="block text-base font-bold">{stage.name}</span>
+            <span className="mt-1 block text-xs font-medium text-muted-foreground">{stageScale.label}</span>
+            {headliners.length > 0 && (
+              <span className="mt-2 block text-xs font-semibold text-primary">Headliner{headliners.length === 1 ? "" : "s"}: {headliners.map((act) => act.artistName).join(" · ")}</span>
+            )}
             {status && (
               <span className={`mt-2 block rounded-full px-2 py-1 text-xs font-semibold text-white ${isPerforming ? "bg-emerald-600" : "bg-slate-700"}`}>
                 {status.label} · {status.performance.artistName}
