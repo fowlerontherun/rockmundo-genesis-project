@@ -1,160 +1,68 @@
 import { supabase } from '@/integrations/supabase/client';
 
+type SecureModelingRpc = {
+  rpc(name: string, params: Record<string, string>): Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+};
+const modelingRpc = supabase as unknown as SecureModelingRpc;
+
 const OFFER_COOLDOWN_KEY = 'modeling_offer_cooldown';
 const cooldownKey = (profileId: string) => `${OFFER_COOLDOWN_KEY}:${profileId}`;
-const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+const COOLDOWN_MS = 10 * 60 * 1000;
 
-/** Check if cooldown has expired */
+// UI throttle only. The database independently enforces character ownership,
+// catalogue eligibility, immutable offer terms and a per-profile cooldown.
 export function isOfferCooldownExpired(profileId: string): boolean {
   const last = sessionStorage.getItem(cooldownKey(profileId));
-  if (!last) return true;
-  return Date.now() - parseInt(last, 10) > COOLDOWN_MS;
+  return !last || Date.now() - Number(last) > COOLDOWN_MS;
 }
 
-function setCooldown(profileId: string) {
-  sessionStorage.setItem(cooldownKey(profileId), Date.now().toString());
-}
-
-const OFFER_REASONS = [
-  (agency: string) => `${agency} spotted your look and wants you for a campaign`,
-  (agency: string) => `A casting director at ${agency} thinks you're perfect for their next shoot`,
-  (_: string) => `Your rising fame caught the attention of a top brand`,
-  (agency: string) => `${agency} needs a fresh face for their spring collection`,
-  (_: string) => `A luxury brand wants you for an exclusive editorial spread`,
-  (agency: string) => `${agency} is offering a last-minute booking — interested?`,
-  (_: string) => `Your social media presence impressed a major fashion house`,
-];
-
-/** Skill requirements per gig type */
-const GIG_TYPE_SKILL_REQUIREMENTS: Record<string, { slug: string; minValue: number }> = {
-  runway: { slug: 'modeling_basic_runway', minValue: 50 },
-  cover_shoot: { slug: 'modeling_basic_camera', minValue: 50 },
-  commercial: { slug: 'modeling_basic_commercial', minValue: 30 },
-  brand_ambassador: { slug: 'modeling_basic_brand', minValue: 50 },
-  photo_shoot: { slug: 'modeling_basic_posing', minValue: 30 },
-  music_video_cameo: { slug: 'modeling_basic_camera', minValue: 20 },
-  // Fashion design skills unlock exclusive modeling gig types
-  editorial: { slug: 'fashion_professional_styling', minValue: 200 },
-  fashion_week: { slug: 'fashion_professional_fundamentals', minValue: 300 },
-};
-
-/**
- * Generate 1-3 modeling offers for a user based on their looks/fame/skills.
- * Returns the number of offers created.
- */
-export async function generateModelingOffersForUser(
-  userId: string,
-  profileId: string,
-  looks: number,
-  fame: number,
-  skillLevels: Record<string, number> = {},
-): Promise<number> {
-  // Don't generate if cooldown hasn't expired
+/** Generate server-authoritative offers for the selected character. */
+export async function generateModelingOffersForUser(profileId: string): Promise<number> {
   if (!isOfferCooldownExpired(profileId)) return 0;
-
-  // Check existing pending offers
-  // Narrow this boundary: the full generated Supabase union exceeds TS's
-  // recursive instantiation limit on this modelling table, even for id-only reads.
-  // RLS and all server-side filters remain enforced by the same client.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: pending, error: pendingError } = await (supabase as any)
-    .from('player_modeling_contracts')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('profile_id', profileId)
-    .eq('status', 'pending')
-    .gt('expires_at', new Date().toISOString());
-
-  if (pendingError) throw pendingError;
-  if (pending && pending.length > 0) return 0;
-
-  // Find eligible gigs
-  // Narrow the generated Supabase typing boundary. Deep relationship
-  // inference here triggers TS2589 and blocks CI; the database still enforces
-  // every query filter and the returned shape is checked by the consumer.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: gigs, error: gigsError } = await (supabase as any)
-    .from('modeling_gigs')
-    .select('*, agency:modeling_agencies(name, tier)')
-    .eq('is_available', true)
-    .lte('min_looks_required', looks)
-    .lte('min_fame_required', fame)
-    .limit(20);
-
-  if (gigsError) throw gigsError;
-  if (!gigs || gigs.length === 0) {
-    setCooldown(profileId);
-    return 0;
-  }
-
-  // Filter gigs by skill requirements
-  const qualifiedGigs = gigs.filter((gig: any) => {
-    const req = GIG_TYPE_SKILL_REQUIREMENTS[gig.gig_type];
-    if (!req) return true; // no skill req for this type
-    return (skillLevels[req.slug] ?? 0) >= req.minValue;
+  // Never choose compensation or insert modeling contracts from the browser.
+  const { data, error } = await modelingRpc.rpc('generate_modeling_offers_secure', {
+    p_profile_id: profileId,
   });
-
-  if (qualifiedGigs.length === 0) {
-    setCooldown(profileId);
-    return 0;
-  }
-
-  // Shuffle and pick 1-3
-  const shuffled = qualifiedGigs.sort(() => Math.random() - 0.5);
-  const count = Math.min(shuffled.length, Math.floor(Math.random() * 3) + 1);
-  const selected = shuffled.slice(0, count);
-
-  const offers = selected.map((gig: any) => {
-    const compensation = Math.floor(
-      gig.compensation_min + Math.random() * (gig.compensation_max - gig.compensation_min)
-    );
-
-    const daysToExpiry = Math.floor(Math.random() * 5) + 3; // 3-7 days
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + daysToExpiry);
-
-    const agencyName = gig.agency?.name || 'An agency';
-    const reason = OFFER_REASONS[Math.floor(Math.random() * OFFER_REASONS.length)](agencyName);
-
-    return {
-      user_id: userId,
-      profile_id: profileId,
-      gig_id: gig.id,
-      status: 'pending',
-      gig_type: gig.gig_type,
-      compensation,
-      fame_boost: gig.fame_boost,
-      expires_at: expiresAt.toISOString(),
-      offer_reason: reason,
-    };
-  });
-
-  const { error } = await supabase.from('player_modeling_contracts').insert(offers);
-
   if (error) throw error;
-
-  setCooldown(profileId);
-  return offers.length;
+  if (typeof data !== 'number' || !Number.isInteger(data) || data < 0 || data > 3) {
+    throw new Error('The modeling offers service returned an invalid response.');
+  }
+  sessionStorage.setItem(cooldownKey(profileId), String(Date.now()));
+  return data;
 }
 
-/** Accept a modeling offer */
-export async function acceptModelingOffer(offerId: string) {
-  const { error } = await supabase
-    .from('player_modeling_contracts')
-    .update({ status: 'accepted' })
-    .eq('id', offerId)
-    .eq('status', 'pending');
-
+/** Decline a pending offer without permitting direct contract mutations. */
+export async function declineModelingOffer(offerId: string): Promise<void> {
+  const { data, error } = await modelingRpc.rpc('decline_modeling_offer_secure', {
+    p_offer_id: offerId,
+  });
   if (error) throw error;
+  if (data !== true) throw new Error('This offer is no longer available.');
 }
 
-/** Decline a modeling offer */
-export async function declineModelingOffer(offerId: string) {
-  const { error } = await supabase
-    .from('player_modeling_contracts')
-    .update({ status: 'declined' })
-    .eq('id', offerId)
-    .eq('status', 'pending');
-
+export async function bookModelingOfferAtomic(input: {
+  offerId: string;
+  profileId: string;
+  startIso: string;
+  endIso: string;
+  shootDate: string;
+}): Promise<{ activityId: string; compensation: number }> {
+  const { data, error } = await modelingRpc.rpc('book_modeling_offer_atomic', {
+    p_offer_id: input.offerId,
+    p_profile_id: input.profileId,
+    p_start: input.startIso,
+    p_end: input.endIso,
+    p_shoot_date: input.shootDate,
+  });
   if (error) throw error;
+  if (!data || typeof data !== 'object' || !('booked' in data) ||
+      data.booked !== true || !('activity_id' in data) ||
+      typeof data.activity_id !== 'string' || !('compensation_amount' in data) ||
+      typeof data.compensation_amount !== 'number') {
+    throw new Error('The shoot could not be booked. Please retry.');
+  }
+  return { activityId: data.activity_id, compensation: data.compensation_amount };
 }

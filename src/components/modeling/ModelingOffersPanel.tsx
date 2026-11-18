@@ -11,13 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, DollarSign, Star, Clock, CalendarIcon, AlertCircle, X, Check, Timer } from "lucide-react";
 import { toast } from "sonner";
-import { createScheduledActivity, checkTimeSlotAvailable } from "@/hooks/useActivityBooking";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { ModelingCareerProgress } from "./ModelingCareerProgress";
 import { format, addDays, startOfDay, isBefore, differenceInHours } from "date-fns";
 import {
   generateModelingOffersForUser,
   isOfferCooldownExpired,
-  acceptModelingOffer,
+  bookModelingOfferAtomic,
   declineModelingOffer,
 } from "@/utils/modelingOfferGenerator";
 interface ModelingOffersPanelProps {
@@ -123,7 +123,7 @@ export const ModelingOffersPanel = ({ userId, profileId, playerLooks, playerFame
     // No auto-generation until a successful read proves there are no offers.
     if (!userId || !profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;
     if (pendingOffers.length === 0 && isOfferCooldownExpired(profileId)) {
-      generateModelingOffersForUser(userId, profileId, playerLooks, playerFame, skillLevels).then((count) => {
+      generateModelingOffersForUser(profileId).then((count) => {
         if (count > 0) {
           queryClient.invalidateQueries({ queryKey: ["modeling-offers-pending"] });
           toast.info(`${count} new modeling offer${count > 1 ? "s" : ""} arrived!`);
@@ -133,7 +133,7 @@ export const ModelingOffersPanel = ({ userId, profileId, playerLooks, playerFame
         toast.error("Unable to generate modeling offers. Please try again later.");
       });
     }
-  }, [profileId, isLoading, isError, offersLoaded, pendingOffers?.length, userId, playerLooks, playerFame, queryClient]);
+  }, [profileId, isLoading, isError, offersLoaded, pendingOffers, userId, queryClient]);
 
   // Accept mutation — opens scheduling dialog first, then confirms
   const confirmBooking = useMutation({
@@ -149,42 +149,16 @@ export const ModelingOffersPanel = ({ userId, profileId, playerLooks, playerFame
         throw new Error("Please select a date/time in the future.");
       }
 
-      const { available, conflictingActivity } = await checkTimeSlotAvailable(userId, shootStart, shootEnd);
-      if (!available) {
-        throw new Error(
-          `Schedule conflict: You have "${conflictingActivity?.title}" at this time. Choose a different slot.`
-        );
-      }
-
-      // Mark offer as accepted
-      await acceptModelingOffer(offer.id);
-
-      // Update shoot date
-      await supabase
-        .from("player_modeling_contracts")
-        .update({
-          shoot_date: shootStart.toISOString().split("T")[0],
-          scheduled_start: shootStart.toISOString(),
-          scheduled_end: shootEnd.toISOString(),
-        })
-        .eq("id", offer.id);
-
-      // Block schedule
-      await createScheduledActivity({
-        userId,
-        activityType: "pr_appearance",
-        scheduledStart: shootStart,
-        scheduledEnd: shootEnd,
-        title: `Modeling: ${gig?.title || "Gig"}`,
-        description: `${gigTypeLabels[gig?.gig_type] || gig?.gig_type} (${durationHours}h)`,
-        metadata: {
-          gig_id: offer.gig_id,
-          gig_type: gig?.gig_type,
-          compensation: offer.compensation,
-        },
+      // The server transaction is authoritative for offer state and overlap.
+      await assertWellnessAllows(profileId, "pr_appearance");
+      const booking = await bookModelingOfferAtomic({
+        offerId: offer.id,
+        profileId,
+        startIso: shootStart.toISOString(),
+        endIso: shootEnd.toISOString(),
+        shootDate: format(shootStart, "yyyy-MM-dd"),
       });
-
-      return { compensation: offer.compensation, shootStart };
+      return { compensation: booking.compensation, shootStart };
     },
     onSuccess: (data) => {
       toast.success(
