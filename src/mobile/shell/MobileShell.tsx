@@ -78,7 +78,7 @@ export const MobileShell = ({ children }: { children?: ReactNode }) => {
       >
         <div className="px-3 pt-3 pb-6 space-y-3">
           <div role="note" className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-            <strong className="text-foreground">RockMundo Mobile Companion</strong> — manage your day, education and messages here. The full RockMundo game is designed for desktop; play on a computer at <a href="https://rockmundo.uk" className="font-semibold text-primary underline underline-offset-2">rockmundo.uk</a>.
+            <strong className="text-foreground">RockMundo Mobile Companion</strong> — manage your day, education, messages and festival plans here. The full RockMundo game is designed for desktop; play on a computer at <a href="https://rockmundo.uk" className="font-semibold text-primary underline underline-offset-2">rockmundo.uk</a>.
           </div>
           {children ?? <Outlet />}
         </div>

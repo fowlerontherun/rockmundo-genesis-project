@@ -22,6 +22,8 @@ const titleFor = (pathname: string, search: string, t: (key: string) => string) 
   if (pathname === "/mobile/chat") return t("playerControls.gameChat");
   if (pathname === "/mobile/progression") return t("playerControls.progression");
   if (pathname === "/mobile/education") return "Education";
+  if (pathname === "/mobile/festivals") return "Festivals";
+  if (pathname.startsWith("/mobile/festivals/")) return "Festival guide";
   if (pathname.startsWith("/mobile/university/")) return "University";
   return "RockMundo Mobile";
 };

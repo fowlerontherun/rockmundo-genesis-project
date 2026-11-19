@@ -10,6 +10,8 @@ describe("mobile route bridge", () => {
     expect(getMobileBridgeTarget("/skills")).toBe("/mobile/progression");
     expect(getMobileBridgeTarget("/education")).toBe("/mobile/education");
     expect(getMobileBridgeTarget("/university/uni-123")).toBe("/mobile/university/uni-123");
+    expect(getMobileBridgeTarget("/world/festivals")).toBe("/mobile/festivals");
+    expect(getMobileBridgeTarget("/world/festivals/summer-fest")).toBe("/mobile/festivals/summer-fest");
   });
   it("contains everything else at the schedule screen", () => {
     expect(getMobileBridgeTarget("/travel")).toBe("/mobile");

@@ -60,6 +60,8 @@ const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
 const MobileProgression = lazyWithRetry(() => import("./mobile/pages/MobileProgression"));
 const MobileEducation = lazyWithRetry(() => import("./mobile/pages/MobileEducation"));
+const MobileFestivals = lazyWithRetry(() => import("./mobile/pages/MobileFestivals"));
+const MobileFestivalDetail = lazyWithRetry(() => import("./mobile/pages/MobileFestivals").then((module) => ({ default: module.MobileFestivalDetail })));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
@@ -534,6 +536,8 @@ function App() {
                     <Route path="chat" element={<MobileSocial />} />
                     <Route path="progression" element={<MobileProgression />} />
                     <Route path="education" element={<MobileEducation />} />
+                    <Route path="festivals" element={<MobileFestivals />} />
+                    <Route path="festivals/:festivalCompanyIdentifier" element={<MobileFestivalDetail />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="*" element={<Navigate to="/mobile" replace />} />
                   </Route>
