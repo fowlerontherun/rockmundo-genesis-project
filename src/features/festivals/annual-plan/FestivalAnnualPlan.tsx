@@ -11,6 +11,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ import {
   getFestivalAnnualPlan,
   saveFestivalAnnualPlan,
 } from "./repository";
+import { festivalRoutes } from "@/features/festivals/routes";
+import { getAnnualPlanReadinessLabel, getReadinessAction } from "./readinessActions";
 
 type PlanningSection = "when" | "festival" | "promotion" | "values";
 
@@ -145,12 +148,13 @@ export function FestivalAnnualPlan({
     ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
     : 0;
 
-  const readinessLabel =
-    data.readinessScore >= 80
-      ? "Ready to launch"
-      : data.readinessScore >= 50
-        ? "Taking shape"
-        : "Early planning";
+  const readinessLabel = getAnnualPlanReadinessLabel(data);
+  const planReady = readinessLabel === "Plan ready";
+
+  const openPlanningSection = (target: PlanningSection) => {
+    setSection(target);
+    document.getElementById(`annual-plan-${target}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const patch = (values: Partial<FestivalAnnualPlanDraft>) =>
     setDraft((current) => (current ? { ...current, ...values } : current));
@@ -183,7 +187,7 @@ export function FestivalAnnualPlan({
                 Make the big decisions. The Festival company handles the operational detail.
               </CardDescription>
             </div>
-            <Badge variant={data.readinessScore >= 80 ? "default" : "secondary"}>
+            <Badge variant={planReady ? "default" : "secondary"}>
               {data.readinessScore}% · {readinessLabel}
             </Badge>
           </div>
@@ -205,8 +209,51 @@ export function FestivalAnnualPlan({
         </CardContent>
       </Card>
 
+      <Card aria-label="Festival readiness checklist" className={data.blockers.length ? "border-amber-500/40" : ""}>
+        <CardHeader>
+          <CardTitle>Readiness checklist</CardTitle>
+          <CardDescription>
+            {data.blockers.length
+              ? `${data.blockers.length} decision${data.blockers.length === 1 ? "" : "s"} need attention before this Festival plan is ready. Use the quick actions below.`
+              : planReady
+                ? "The annual plan has no outstanding planning blockers. Check the line-up, tickets and Festival Day separately before opening gates."
+                : "No individual planning blockers are reported, but the edition is not yet marked ready. Review the plan before launch."}
+          </CardDescription>
+        </CardHeader>
+        {data.blockers.length ? (
+          <CardContent>
+            <ul className="space-y-3">
+              {data.blockers.map((blocker) => {
+                const action = getReadinessAction(blocker.code);
+                return (
+                  <li key={blocker.code} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                    <div role="alert" className="flex min-w-0 flex-1 items-start gap-2 text-sm">
+                      <span aria-hidden="true" className="mt-0.5 text-amber-700">●</span>
+                      <span>{blocker.message}</span>
+                    </div>
+                    {action.kind === "section" ? (
+                      <Button type="button" size="sm" variant="outline" disabled={!data.editable || !data.canWrite} onClick={() => openPlanningSection(action.section)}>
+                        {action.label}
+                      </Button>
+                    ) : action.kind === "licence" ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={festivalRoutes.upgrades(festivalCompanyId)}>{action.label}</Link>
+                      </Button>
+                    ) : (
+                      <Button type="button" size="sm" variant="outline" onClick={() => openPlanningSection("festival")}>{action.label}</Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {!data.editable ? <p className="mt-3 text-sm text-muted-foreground">This edition's planning choices are locked; review your Festival company options before making changes.</p> : null}
+          </CardContent>
+        ) : null}
+      </Card>
+
       <div className="grid gap-3 md:grid-cols-2">
         <ChoiceCard
+          id="annual-plan-when"
           icon={<CalendarDays className="h-5 w-5" />}
           title="When & where"
           summary={`${selectedCity?.name ?? "Choose city"} · ${formatDate(draft.startsOn)}${endDate && endDate !== draft.startsOn ? ` – ${formatDate(endDate)}` : ""}`}
@@ -246,6 +293,7 @@ export function FestivalAnnualPlan({
         </ChoiceCard>
 
         <ChoiceCard
+          id="annual-plan-festival"
           icon={<Tent className="h-5 w-5" />}
           title="Festival"
           summary={`${selectedScale?.displayName ?? "Choose size"} · ${draft.durationDays} day${draft.durationDays === 1 ? "" : "s"} · ${selectedVibe?.displayName ?? "Choose vibe"}`}
@@ -274,6 +322,7 @@ export function FestivalAnnualPlan({
         </ChoiceCard>
 
         <ChoiceCard
+          id="annual-plan-promotion"
           icon={<Megaphone className="h-5 w-5" />}
           title="Promotion"
           summary={`${selectedMarketing?.displayName ?? "Choose campaign"}${demandShift === 0 ? "" : ` · ${demandShift > 0 ? "+" : ""}${demandShift}% demand effect`}`}
@@ -287,6 +336,7 @@ export function FestivalAnnualPlan({
         </ChoiceCard>
 
         <ChoiceCard
+          id="annual-plan-values"
           icon={<Sparkles className="h-5 w-5" />}
           title="Values"
           summary={selectedEnvironment?.displayName ?? "Choose approach"}
@@ -324,19 +374,11 @@ export function FestivalAnnualPlan({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
-            <Pulse title="Planning" body={`${data.readinessScore}% ready. ${data.blockers.length ? `${data.blockers.length} blocker${data.blockers.length === 1 ? "" : "s"} still need attention.` : "No planning blockers."}`} />
+            <Pulse title="Planning" body={`${data.readinessScore}% planning progress. ${data.blockers.length ? `${data.blockers.length} blocker${data.blockers.length === 1 ? "" : "s"} still need attention.` : planReady ? "Annual plan ready." : "Plan still under review."}`} />
             <Pulse title="Buzz" body={selectedMarketing ? `${selectedMarketing.displayName} promotion is shaping demand for the event.` : "Choose a marketing emphasis to start building buzz."} />
-            <Pulse title="Next move" body={data.readinessScore < 50 ? "Lock the core Festival choices, then move on to the line-up and tickets." : data.readinessScore < 80 ? "Build the line-up and ticket plan to move towards launch readiness." : "The Festival is close to launch readiness. Review the line-up, tickets and Run Festival screen."} />
+            <Pulse title="Next move" body={data.blockers.length ? "Resolve the readiness checklist above, then review the line-up and tickets." : planReady ? "Review the line-up, tickets and Run Festival screen to check launch readiness." : "Review the plan status, line-up and tickets before launch."} />
           </CardContent>
         </Card>
-      ) : null}
-
-      {data.blockers.length ? (
-        <Alert>
-          <AlertDescription>
-            <strong>Still needed:</strong> {data.blockers.map((blocker) => blocker.message).join(" · ")}
-          </AlertDescription>
-        </Alert>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -352,6 +394,7 @@ export function FestivalAnnualPlan({
 }
 
 function ChoiceCard({
+  id,
   icon,
   title,
   summary,
@@ -359,6 +402,7 @@ function ChoiceCard({
   onClick,
   children,
 }: {
+  id: string;
   icon: React.ReactNode;
   title: string;
   summary: string;
@@ -367,7 +411,7 @@ function ChoiceCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className={open ? "border-primary/40" : ""}>
+    <Card id={id} className={open ? "border-primary/40" : ""}>
       <button type="button" className="flex w-full items-center gap-3 p-5 text-left" onClick={onClick}>
         <span className="rounded-md bg-muted p-2">{icon}</span>
         <span className="min-w-0 flex-1">
