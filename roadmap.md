@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Review the production avatar creator and shared clothing fit; improve genre pack discovery and stage previews.
+- [x] Add four genre packs with twelve published garments through the existing paid-set catalogue, preserving ownership and stage compatibility.
+- [x] Test garment validation and shared rendering (40 tests pass), review desktop/mobile previews, update version 1.1.801 and commit. Authenticated purchase/equip checks unavailable with external account sessions; older wardrobe not fully clipping-certified.
+
 - [x] Fix university completion at the saved duration and add one-time completion XP: four overdue courses repaired, zero remain overdue, 16 tests pass, version 1.1.800. Signed-in course receipt display remains unverified because external account sessions are unavailable.
 
 - [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.

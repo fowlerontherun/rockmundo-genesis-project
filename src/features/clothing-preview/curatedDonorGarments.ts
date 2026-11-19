@@ -49,16 +49,21 @@ export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | nul
   const material = item.material_config || {};
   const finish = String(raw.finish || material.finish || '').toLowerCase();
   const allowedFinishes = new Set(['cotton','vintage-cotton','denim','tartan','leather','canvas','polished-leather']);
+  const shape = curatedGarmentShape(item, raw.part as CuratedDonorPart);
+  // Casual legs are shorts in the shipped GLBs. Never stretch those into jeans;
+  // use the full-length suit donor, retaining its original rig weights.
+  const style: Style = raw.part === 'legs' && shape === 'trousers' && raw.style === 'casual'
+    ? 'suit' : raw.style as Style;
   return {
     kind: 'avatar-part',
     assetKey: item.curated_asset_key || undefined,
-    style: raw.style as Style,
+    style,
     part: raw.part as CuratedDonorPart,
     color: typeof raw.color === 'string' ? raw.color : undefined,
     secondaryColor: typeof raw.secondaryColor === 'string' ? raw.secondaryColor : undefined,
     fabric: typeof raw.fabric === 'string' ? raw.fabric as CuratedDonorSource['fabric'] : undefined,
     finish: allowedFinishes.has(finish) ? finish as CuratedDonorSource['finish'] : undefined,
-    shape: curatedGarmentShape(item, raw.part as CuratedDonorPart),
+    shape,
   };
 }
 

@@ -1,4 +1,5 @@
 vi.mock('./OwnedAccessories', () => ({ OwnedAccessories: () => <div>Your collection</div> }));
+vi.mock('./OwnedClothingWardrobe', () => ({ OwnedClothingWardrobe: () => <div>Skin pack wardrobe</div> }));
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PlayerModelEditor from './PlayerModelEditor';

@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.801",
+    date: "2026-11-19",
+    changes: [
+      { type: "feature", description: "New Metal, Indie Rock, Electronic and Jazz skin packs with 12 rigged stage clothing pieces, using the existing £1.99 paid-set checkout." },
+      { type: "improvement", description: "Avatar Creator now includes owned skin-pack clothes with equip/remove controls; Skin Packs supports genre search and mobile scrolling tabs." },
+      { type: "fix", description: "Curated jeans now use full-length trouser meshes; stripes follow garment surfaces and ankle coverage respects equipped clothes." },
+      { type: "improvement", description: "Garment upload checks now reject missing or invalid animation weights, invalid vertices and excess materials with duplicate names." },
+    ],
+  },
+  {
     version: "1.1.800",
     date: "2026-11-05",
     changes: [
