@@ -73,6 +73,16 @@ afterEach(() => {
 });
 
 describe("annual Festival readiness checklist", () => {
+  it("opens the canonical Festival size choices from the SVG planning overview", async () => {
+    const { client } = renderPlan();
+    try {
+      expect(await screen.findByText("Visual planning overview")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Stage production" }));
+      fireEvent.click(screen.getByRole("button", { name: "Review stage production" }));
+      expect(screen.getByText("Size")).toBeInTheDocument();
+    } finally { client.clear(); }
+  });
+
   it("shows canonical blockers even if a stale score says 100%, and opens the right form", async () => {
     const { client } = renderPlan();
     try {

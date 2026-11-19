@@ -2,6 +2,7 @@ import { filterFreshPublicFestivalPerformances, publicFestivalStageStatus } from
 import { lazy, Suspense, useEffect, useState } from "react";
 import { GigViewerErrorBoundary } from "@/features/gig-experience/viewer/GigViewerErrorBoundary";
 import { FestivalStageSchematic } from "./FestivalStageSchematic";
+import { FestivalGroundsMap } from "./FestivalGroundsMap";
 import { usePublicFestivalLiveStatus, usePublicFestivalLiveExperience } from "../application/useFestivalRuntime";
 import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/festivalLaunch";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterFreshPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
@@ -93,6 +94,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     return () => motion?.removeEventListener?.("change", update);
   }, []);
   const [openedStage, setOpenedStage] = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const now = Math.max(currentTime, Date.now());
@@ -157,6 +159,26 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
           Lightweight stage view
         </label>
       )}
+      {stages.length > 0 && (
+        <div className="space-y-3">
+          <button type="button" aria-expanded={mapOpen} aria-controls="festival-grounds-map"
+            className="min-h-11 rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            onClick={() => setMapOpen((value) => !value)}>
+            {mapOpen ? "Hide illustrated grounds map" : "Explore illustrated grounds map"}
+          </button>
+          <div id="festival-grounds-map">
+            {mapOpen && (
+              <FestivalGroundsMap stages={stages} selectedStageId={selectedStage?.id}
+                visitorInformation={visitorInformation} stageCrowds={stageCrowds}
+                weatherState={weatherState} localHour={localHour}
+                onSelectStage={(id) => {
+                  setSelectedStageId(id);
+                  document.getElementById("festival-stage-details")?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+                }} />
+            )}
+          </div>
+        </div>
+      )}
       <div className="rounded-xl border bg-card p-4" aria-label="Festival site weather">
         <div className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "❔"}</span>
@@ -173,7 +195,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={stageObservations} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
-          <div className="rounded-2xl border bg-card p-5" aria-live="polite">
+          <div id="festival-stage-details" className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
             <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/5 p-3" role="status">
