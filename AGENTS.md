@@ -13,4 +13,5 @@
 - Resolve curated trouser donors through the shared clothing resolver and paint textile patterns on skinned UVs, not detached panels; creator, previews and stage must use the same fitted garment.
 - Keep guitar fittings named and individually material-owned in the shared stage builder so saved hardware finishes cannot recolour strings or unrelated parts.
 - Render instrument store stills with the shared stage instrument builder, releasing WebGL resources after capture; product pictures must match equipped visuals.
+- Validate static hub responses as images and fall back to destination icons on load failure; SPA HTML fallback responses must never be treated as artwork.
 - University completion uses the saved enrollment deadline and an atomic, unique completion receipt independently of daily attendance; this prevents stuck courses and duplicate completion rewards.

@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.804",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Game-wide shared headings, panels and tabs have clearer hierarchy, neutral graphite surfaces and compact active indicators." },
+      { type: "improvement", description: "Hub artwork is brighter and unobscured, with separate readable destination captions and touch-visible navigation arrows." },
+      { type: "fix", description: "Long page headings and actions wrap on small screens; panel headings grow to fit their content and tabs retain scrollable widths." },
+      { type: "fix", description: "Missing hub pictures now show a clear destination icon rather than a blank or broken image." },
+    ],
+  },
+  {
     version: "1.1.803",
     date: "2026-11-19",
     changes: [

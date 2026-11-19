@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Extend graphics refresh across shared game headings, panels, tabs and hub artwork; preserve dense layouts and gameplay. Missing artwork uses destination icons.
+- [x] Verify Music, Character, Skin Store and Skills pages with no page errors; four hub navigation tests pass, mobile companion has no horizontal overflow, version 1.1.804. Signed-in data-rich pages and every individual page are not exhaustively verified with external account sessions unavailable.
+
 - [x] Improve clothing collection pictures and instrument store graphics; nine shared-renderer tests pass, desktop/mobile card controls verified, version 1.1.803. Local screenshot checks used original images because localhost does not serve hosted asset URLs; hosted delivery and signed-in store journey remain unverified.
 
 - [x] Continue clothing detail improvements with smaller surface-bound laces and eyelets on genre-pack footwear.

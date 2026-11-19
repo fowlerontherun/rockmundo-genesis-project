@@ -134,10 +134,12 @@
        Brand accent #7D4DFF (violet). Per-module hues still override
        --fm-accent for wayfinding, but --fm-brand stays violet everywhere. */
     /* Spec tokens (docs/ui-redesign-spec.md §1.1) */
-    --fm-bg: 257 14% 6%;         /* #0E0D12 */
-    --fm-panel: 260 14% 10%;     /* #17151D */
-    --fm-panel-2: 257 18% 13%;   /* #1F1C28 */
-    --fm-border: 257 14% 18%;    /* #2A2733 */
+    --fm-bg: 220 6% 7%;
+    --fm-panel: 220 5% 11%;
+    --fm-panel-2: 220 5% 15%;
+    --fm-border: 220 5% 23%;
+    --rm-panel-edge: inset 0 1px 0 hsl(var(--fm-fg) / 0.035);
+    --rm-featured-shade: linear-gradient(90deg, hsl(var(--fm-bg) / .94), hsl(var(--fm-bg) / .55) 50%, hsl(var(--fm-bg) / .08));
     --fm-fg: 270 18% 96%;        /* #F5F3F7 */
     --fm-fg-muted: 257 11% 63%;  /* #9B96A8 */
     --fm-fg-subtle: 257 8% 50%;  /* #7A7588 */
@@ -550,10 +552,15 @@
    on top of the FM panel base. Kept very low opacity so KPI panels
    and data tables remain perfectly legible. */
 .fm-module-bg {
-  background-image:
-    radial-gradient(60% 60% at 15% 0%,  hsl(var(--fm-mod-1) / 0.10), transparent 60%),
-    radial-gradient(50% 70% at 100% 100%, hsl(var(--fm-mod-2) / 0.09), transparent 65%),
-    linear-gradient(180deg, hsl(var(--fm-bg)) 0%, hsl(var(--fm-bg)) 100%);
+  background: hsl(var(--fm-bg));
+}
+
+.rm-game-panel { box-shadow: var(--rm-panel-edge); }
+.rm-page-heading { position: relative; }
+.rm-page-heading::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 56px; height: 2px; background: hsl(var(--fm-accent)); }
+.rm-featured-shade { background: var(--rm-featured-shade); }
+@media (max-width: 640px) {
+  .rm-featured-shade { background: linear-gradient(0deg, hsl(var(--fm-bg) / .96), hsl(var(--fm-bg) / .55) 60%, hsl(var(--fm-bg) / .15)); }
 }
 
 /* Subtle 1px diagonal scanline texture — invisible at distance but
