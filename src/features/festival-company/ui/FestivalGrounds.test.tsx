@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { FestivalGrounds } from "./FestivalGrounds";
@@ -77,7 +77,11 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
   const festivalDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/London", dateStyle: "short" }).format(new Date(now));
   const snapshot = {
     festivalLaunchId: launch, editionId: "edition", runtimeStatus: "live", gatesStatus: "open",
-    currentDay: festivalDate, updatedAt: now, attendanceBand: "busy", messages: [],
+    currentDay: festivalDate, updatedAt: now, attendanceBand: "busy", feedAvailable: true, messages: [{
+      id: "00000000-0000-4000-8000-000000000004", kind: "stage", status: "live",
+      stageId, stageName: "Main Stage", scheduleItemId: performance, observedAt: now,
+      message: "DO NOT RENDER PRIVATE PAYLOAD", backstage: "private", exactCrowd: 300,
+    }],
     performances: [{ id: performance, stageId, observedAt: now, artistName: "Shockmaster", stageName: "Main Stage",
       status: "live", delayMinutes: 0, scheduledStart: null, scheduledEnd: null }],
     stageCrowds: [{ stageId, stageName: "Main Stage", crowdBand: "busy",
@@ -88,7 +92,7 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
     <QueryClientProvider client={client}>
       <FestivalGrounds slug="festival" festivalLaunchId={launch} festivalEditionId={editionId}
         cancelled={false} stages={[{ id: stageId, name: "Main Stage", capacity: 5000 }]}
-        lineup={[]} timezone="Europe/London"
+        lineup={[{ id: performance, artistName: "Shockmaster", artistType: "band", genre: null, billingPosition: "headliner", festivalDate, stageName: "Main Stage", startsAt: null, endsAt: null }]} timezone="Europe/London"
         visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }}
         onViewTimetable={() => {}} />
     </QueryClientProvider>
@@ -98,6 +102,9 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
     const lightweight = screen.getByRole("checkbox", { name: "Lightweight stage view" });
     if ((lightweight as HTMLInputElement).checked) fireEvent.click(lightweight);
     expect(await screen.findByText("Confirmed stage activity")).toBeVisible();
+    expect(screen.getByText("Performance live · Main Stage")).toBeVisible();
+    expect(screen.queryByText(/DO NOT RENDER/)).toBeNull();
+    expect(screen.queryByText(/300/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Open 3D stage" }));
     expect(await screen.findByTestId("outdoor-view")).toHaveTextContent("Main Stage · Shockmaster · busy");
 
@@ -114,8 +121,48 @@ it("passes live artist and crowd only from the selected edition's fresh snapshot
 
     view.rerender(grounds("other-edition"));
     expect(screen.queryByTestId("outdoor-view")).toBeNull();
+    expect(screen.queryByText("Performance live · Main Stage")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Open 3D stage" }));
     expect(await screen.findByTestId("outdoor-view")).toHaveTextContent(/^Main Stage$/);
+  } finally {
+    view.unmount();
+    client.clear();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("hides cached events after a connection failure and replays a deduplicated official snapshot on retry", async () => {
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+  const client = new QueryClient();
+  const launch = "00000000-0000-4000-8000-000000000011";
+  const stageId = "00000000-0000-4000-8000-000000000012";
+  const itemId = "00000000-0000-4000-8000-000000000013";
+  const now = new Date().toISOString();
+  const festivalDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/London", dateStyle: "short" }).format(new Date(now));
+  const stageEvent = { id: "00000000-0000-4000-8000-000000000014", kind: "stage", status: "starting",
+    stageId, stageName: "Main Stage", scheduleItemId: itemId, observedAt: now };
+  const snapshot = { festivalLaunchId: launch, editionId: "current-edition", runtimeStatus: "live", gatesStatus: "open",
+    currentDay: festivalDate, updatedAt: now, attendanceBand: null, weather: null, stageCrowds: [], performances: [], feedAvailable: true,
+    messages: [stageEvent, stageEvent] };
+  publicExperience.mockReset().mockResolvedValueOnce(snapshot)
+    .mockRejectedValueOnce(new Error("festival_public_runtime_not_deployed"))
+    .mockResolvedValue(snapshot);
+  const view = render(
+    <QueryClientProvider client={client}>
+      <FestivalGrounds slug="live-festival" festivalLaunchId={launch} festivalEditionId="current-edition"
+        cancelled={false} stages={[{ id: stageId, name: "Main Stage", capacity: 1000 }]}
+        lineup={[]} timezone="Europe/London" onViewTimetable={() => {}}
+        visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }} />
+    </QueryClientProvider>,
+  );
+  try {
+    expect(await screen.findAllByText("Performance starting · Main Stage")).toHaveLength(1);
+    await act(async () => { await client.invalidateQueries({ queryKey: ["festival-public-canonical-edition", "live-festival"] }); });
+    expect(await screen.findByText("Festival updates are unavailable. Retry to reconnect.")).toBeVisible();
+    expect(screen.queryByText("Performance starting · Main Stage")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry live festival updates" }));
+    await waitFor(() => expect(screen.getAllByText("Performance starting · Main Stage")).toHaveLength(1));
+    expect(publicExperience).toHaveBeenCalledTimes(3);
   } finally {
     view.unmount();
     client.clear();
