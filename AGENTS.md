@@ -12,4 +12,5 @@
 - Uploaded garment GLBs live in the private curated-garments bucket, referenced by render_config.uploadedAssets per frame, and are published only via the admin RPC after client-side rule checks; this keeps unvalidated geometry out of the game.
 - Resolve curated trouser donors through the shared clothing resolver and paint textile patterns on skinned UVs, not detached panels; creator, previews and stage must use the same fitted garment.
 - Keep guitar fittings named and individually material-owned in the shared stage builder so saved hardware finishes cannot recolour strings or unrelated parts.
+- Render instrument store stills with the shared stage instrument builder, releasing WebGL resources after capture; product pictures must match equipped visuals.
 - University completion uses the saved enrollment deadline and an atomic, unique completion receipt independently of daily attendance; this prevents stuck courses and duplicate completion rewards.

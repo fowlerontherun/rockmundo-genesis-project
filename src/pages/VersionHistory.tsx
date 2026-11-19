@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.803",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Genre skin collection cards now show actual outfits on both character frames instead of placeholder graphics." },
+      { type: "improvement", description: "Instrument skin cards show rendered stage instruments with their selected paint and design instead of generic guitar icons and colour gradients." },
+    ],
+  },
+  {
     version: "1.1.802",
     date: "2026-11-19",
     changes: [

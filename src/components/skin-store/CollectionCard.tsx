@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight, Sparkles, Calendar, Gift } from "lucide-react";
 import { CountdownTimer } from "./CountdownTimer";
 import { SkinCollection } from "@/hooks/useSkinStore";
+import { collectionArtwork } from './collectionArtwork';
 
 interface CollectionCardProps {
   collection: SkinCollection;
@@ -35,16 +36,18 @@ export const CollectionCard = ({
 }: CollectionCardProps) => {
   const isLimited = !!collection.ends_at;
   const themeClass = themeColors[collection.theme || "monthly"] || themeColors.monthly;
+  const artwork = collection.banner_image_url || collectionArtwork(collection.name);
 
   return (
     <Card className="overflow-hidden hover:shadow-electric transition-all duration-300 group">
       {/* Banner Image */}
-      <div className="relative h-32 bg-gradient-primary">
-        {collection.banner_image_url ? (
+      <div className="relative aspect-[3/2] border-b bg-muted/30">
+        {artwork ? (
           <img
-            src={collection.banner_image_url}
+            src={artwork}
             alt={collection.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -66,7 +69,7 @@ export const CollectionCard = ({
         {/* Limited Time Badge */}
         {isLimited && (
           <div className="absolute top-2 right-2">
-            <CountdownTimer endDate={collection.ends_at!} />
+            {collection.ends_at && <CountdownTimer endDate={collection.ends_at} />}
           </div>
         )}
       </div>

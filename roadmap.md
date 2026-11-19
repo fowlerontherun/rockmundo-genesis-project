@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Improve clothing collection pictures and instrument store graphics; nine shared-renderer tests pass, desktop/mobile card controls verified, version 1.1.803. Local screenshot checks used original images because localhost does not serve hosted asset URLs; hosted delivery and signed-in store journey remain unverified.
+
 - [x] Continue clothing detail improvements with smaller surface-bound laces and eyelets on genre-pack footwear.
 - [x] Improve stage guitar/bass fret coverage, nut, inlays, saddles and saved hardware colours without changing crafting rules.
 - [x] Run clothing/instrument tests (25 pass), review desktop/mobile model previews with no page errors, and update version 1.1.802. Signed-in equip remains unverified because external account sessions are unavailable.
