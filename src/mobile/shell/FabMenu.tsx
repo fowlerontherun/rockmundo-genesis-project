@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, CalendarDays, CalendarPlus, Inbox, MessageSquare, Share2, Sparkles, GraduationCap } from "lucide-react";
+import { Plus, X, CalendarDays, CalendarPlus, Inbox, MessageSquare, Share2, Sparkles, GraduationCap, Music2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -13,12 +13,13 @@ const companionActions = [
   { key: "chat", label: "Game Chat", icon: <MessageSquare className="h-5 w-5" />, to: "/mobile/chat" },
   { key: "progression", label: "Spend XP / AP", icon: <Sparkles className="h-5 w-5" />, to: "/mobile/progression" },
   { key: "education", label: "Education", icon: <GraduationCap className="h-5 w-5" />, to: "/mobile/education" },
+  { key: "festivals", label: "Festivals", icon: <Music2 className="h-5 w-5" />, to: "/mobile/festivals" },
   { key: "share", label: "Share", icon: <Share2 className="h-5 w-5" />, to: "/social/share-studio" },
 ];
 
 export const FabMenu = () => {
   const { t } = useTranslation();
-  const labels: Record<string, string> = { schedule: t("playerControls.mySchedule"), book: t("playerControls.bookActivity"), inbox: t("nav.inbox"), chat: t("playerControls.gameChat"), progression: t("playerControls.spendPoints"), education: "Education", share: t("common.share") };
+  const labels: Record<string, string> = { schedule: t("playerControls.mySchedule"), book: t("playerControls.bookActivity"), inbox: t("nav.inbox"), chat: t("playerControls.gameChat"), progression: t("playerControls.spendPoints"), education: "Education", festivals: "Festivals", share: t("common.share") };
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return <>

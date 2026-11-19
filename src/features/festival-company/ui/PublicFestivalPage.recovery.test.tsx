@@ -33,7 +33,7 @@ const festival = {
 };
 const ticket = { id: "ticket", festivalSlug: "festival", ticketReference: "CHARACTER-A-TICKET", ticketType: "weekend", productClass: "admission", status: "valid" };
 let client: QueryClient;
-const page = () => <MemoryRouter><QueryClientProvider client={client}><PublicFestivalPage publicSlug="festival" /></QueryClientProvider></MemoryRouter>;
+const page = (entry = "/world/festivals/festival") => <MemoryRouter initialEntries={[entry]}><QueryClientProvider client={client}><PublicFestivalPage publicSlug="festival" /></QueryClientProvider></MemoryRouter>;
 const openWallet = async () => { fireEvent.click(await screen.findByRole("button", { name: /My tickets/ })); return screen.findByRole("tabpanel", { name: "Tickets" }); };
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -41,6 +41,23 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); client.clear(); vi.clearAllMocks(); });
 describe("public festival recovery with real query hooks", () => {
+  it("offers a verified ticket shortcut and moves keyboard focus to the selected section", async () => {
+    render(page());
+    fireEvent.click(await screen.findByRole("button", { name: "See tickets and prices" }));
+    expect(await screen.findByRole("tabpanel", { name: "Tickets" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Tickets" })).toHaveFocus();
+  });
+  it("opens a directly linked festival section without requiring desktop-sized navigation", async () => {
+    render(page("/world/festivals/festival?tab=information&ref=friend"));
+    expect(await screen.findByRole("tabpanel", { name: "Information" })).toBeVisible();
+    expect(screen.getByRole("tablist", { name: "Festival sections" })).toBeInTheDocument();
+  });
+  it("does not advertise available tickets after the edition is cancelled", async () => {
+    mocks.festival.mockResolvedValue({ ...festival, launchStatus: "cancelled_before_event" });
+    render(page());
+    expect(await screen.findByRole("button", { name: "Explore the line-up" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "See tickets and prices" })).not.toBeInTheDocument();
+  });
   it("retries failed detail reads instead of presenting not-found", async () => {
     mocks.festival.mockRejectedValueOnce(new Error("network")); render(page());
     expect(await screen.findByText("Festival details could not be loaded.")).toBeVisible();
