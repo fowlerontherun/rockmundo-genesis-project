@@ -184,10 +184,21 @@ export function buildGuitar(bass = false) {
   const guard = new T.Mesh(new T.CircleGeometry(0.175, 24), matte(bass ? '#101113' : '#e0d2aa', 0.28)); guard.name = 'instrument-pickguard'; guard.scale.set(0.75, 1.4, 1); guard.position.set(0.075, -0.005, 0.125); root.add(guard);
   const length = bass ? 0.81 : 0.68;
   box(root, [0.09, length, 0.045], [0, 0.3 + length / 2, 0.09], neck).name = 'instrument-neck';
-  box(root, [0.082, length, 0.012], [0, 0.3 + length / 2, 0.12], matte('#30271f', 0.45)).name = 'fretboard';
+  const nutY = .3 + length;
+  const scaleLength = nutY + .19;
+  const heelY = nutY - scaleLength * (1 - Math.pow(2, -22 / 12)) - .012;
+  box(root, [0.082, nutY - heelY, 0.012], [0, (nutY + heelY) / 2, 0.12], matte('#30271f', 0.45)).name = 'fretboard';
+  box(root, [.084, .009, .015], [0, nutY, .134], matte('#e8e1ce')).name = 'instrument-nut';
   for (let fret = 1; fret <= 22; fret++) {
-    const y = .3 + length - (length + .49) * (1 - Math.pow(2, -fret / 12));
-    rod(root, [-.041, y, .13], [.041, y, .13], .002, chrome);
+    const y = nutY - scaleLength * (1 - Math.pow(2, -fret / 12));
+    rod(root, [-.041, y, .13], [.041, y, .13], .002, chrome).name = `instrument-fret-${fret}`;
+    if ([3, 5, 7, 9, 12, 15, 17, 19, 21].includes(fret)) {
+      const previous = nutY - scaleLength * (1 - Math.pow(2, -(fret - 1) / 12));
+      for (const x of fret === 12 ? [-.02, .02] : [0]) {
+        const dot = new T.Mesh(new T.CircleGeometry(.006, 10), matte('#ded9ca'));
+        dot.position.set(x, (previous + y) / 2, .128); dot.name = 'instrument-inlay'; root.add(dot);
+      }
+    }
   }
   for (const y of [-0.04, 0.11]) box(root, [0.14, 0.037, 0.025], [0, y, 0.15], black.clone()).name = `instrument-pickup-${y}`;
   box(root, [0.14, 0.05, 0.025], [0, -0.19, 0.15], chrome.clone()).name = 'instrument-hardware-bridge';
@@ -195,9 +206,14 @@ export function buildGuitar(bass = false) {
   for (let i = 0; i < (bass ? 4 : 6); i++) {
     const x = -0.03 + i * 0.06 / (bass ? 3 : 5);
     rod(root, [x, -0.19, 0.17], [x, 0.3 + length, 0.14], bass ? .0015 : .001, chrome);
-    cylinder(root, 0.013, 0.013, 0.045, [0.095, 0.33 + length + i * 0.034, 0.085], chrome.clone(), 8).rotation.z = Math.PI / 2;
+    box(root, [.008, .025, .009], [x, -.19, .168], chrome.clone()).name = `instrument-hardware-saddle-${i}`;
+    const tuner = cylinder(root, 0.013, 0.013, 0.045, [0.095, 0.33 + length + i * 0.034, 0.085], chrome.clone(), 8);
+    tuner.rotation.z = Math.PI / 2; tuner.name = `instrument-hardware-tuner-${i}`;
   }
-  for (const y of [-0.17, -0.25]) cylinder(root, 0.018, 0.018, 0.02, [0.18, y, 0.145], chrome, 12).rotation.x = Math.PI / 2;
+  for (const [index, y] of [-0.17, -0.25].entries()) {
+    const knob = cylinder(root, 0.018, 0.018, 0.02, [0.18, y, 0.145], chrome.clone(), 12);
+    knob.rotation.x = Math.PI / 2; knob.name = `instrument-hardware-knob-${index}`;
+  }
   root.traverse(child => { if (child instanceof T.Mesh) child.castShadow = true; });
   root.scale.setScalar(0.7); batchStaticMeshes(root); return root;
 }

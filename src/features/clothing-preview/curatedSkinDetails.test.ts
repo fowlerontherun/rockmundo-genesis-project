@@ -49,7 +49,7 @@ function addFootSurface(root: T.Group, foot: T.Bone, side: 'L' | 'R') {
   mesh.position.copy(foot.position);
   root.add(mesh);
   root.updateMatrixWorld(true);
-  mesh.bind(new T.Skeleton([foot]), new T.Matrix4());
+  mesh.bind(new T.Skeleton([foot]), mesh.matrixWorld.clone());
   root.updateMatrixWorld(true);
   return mesh;
 }
@@ -70,7 +70,9 @@ describe('curated punk detail skins', () => {
     const root = new T.Group();
     const rig = bones();
     for (const bone of rig.values()) root.add(bone);
-    addBodySurface(root, rig.get('Spine2')!);
+    const chest = rig.get('Spine2');
+    if (!chest) throw new Error('Missing chest');
+    addBodySurface(root, chest);
 
     addCuratedSkinDetails(root, rig, clothing([
       'clothing.punk.safety-pin-tee',
@@ -125,8 +127,11 @@ describe('curated punk detail skins', () => {
     const root = new T.Group();
     const rig = bones();
     for (const bone of rig.values()) root.add(bone);
-    addFootSurface(root, rig.get('Foot.L')!, 'L');
-    addFootSurface(root, rig.get('Foot.R')!, 'R');
+    const left = rig.get('Foot.L');
+    const right = rig.get('Foot.R');
+    if (!left || !right) throw new Error('Missing feet');
+    addFootSurface(root, left, 'L');
+    addFootSurface(root, right, 'R');
 
     addCuratedSkinDetails(root, rig, clothing([
       'clothing.starter.canvas-trainers',
@@ -154,4 +159,21 @@ describe('curated punk detail skins', () => {
     });
   });
 
+  it.each(['indie', 'electronic', 'metal', 'jazz'])('adds fitted laces for %s genre footwear before the first render', genre => {
+    const root = new T.Group();
+    const rig = bones();
+    for (const bone of rig.values()) root.add(bone);
+    for (const side of ['L', 'R'] as const) {
+      const foot = rig.get(`Foot.${side}`);
+      if (!foot) throw new Error('Missing foot');
+      addFootSurface(root, foot, side);
+    }
+    addCuratedSkinDetails(root, rig, clothing([`clothing.genre.${genre}.footwear`]));
+    const prefix = ['indie', 'electronic'].includes(genre) ? 'curated-genre-trainer' : 'curated-genre-boot';
+    for (const side of ['l', 'r']) {
+      const group = root.getObjectByName(`${prefix}-laces-${side}`);
+      expect(group).toBeTruthy();
+      expect(group?.userData.surfaceBound).toBe(true);
+    }
+  });
 });

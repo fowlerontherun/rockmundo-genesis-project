@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.802",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Genre-pack trainers and boots now have foot-bound laces and eyelets; shoe attachment uses up-to-date rig positions." },
+      { type: "improvement", description: "Stage guitars and basses now have properly covered frets, nut, inlays and individual bridge saddles; tuners and knobs match saved hardware colours." },
+      { type: "fix", description: "Additional pickup, black-chrome, brass and fretboard selections now retain their workshop appearance on stage, including clean ebony without inlays." },
+    ],
+  },
+  {
     version: "1.1.801",
     date: "2026-11-19",
     changes: [

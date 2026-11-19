@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Continue clothing detail improvements with smaller surface-bound laces and eyelets on genre-pack footwear.
+- [x] Improve stage guitar/bass fret coverage, nut, inlays, saddles and saved hardware colours without changing crafting rules.
+- [x] Run clothing/instrument tests (25 pass), review desktop/mobile model previews with no page errors, and update version 1.1.802. Signed-in equip remains unverified because external account sessions are unavailable.
+
 - [x] Review the production avatar creator and shared clothing fit; improve genre pack discovery and stage previews.
 - [x] Add four genre packs with twelve published garments through the existing paid-set catalogue, preserving ownership and stage compatibility.
 - [x] Test garment validation and shared rendering (40 tests pass), review desktop/mobile previews, update version 1.1.801 and commit. Authenticated purchase/equip checks unavailable with external account sessions; older wardrobe not fully clipping-certified.

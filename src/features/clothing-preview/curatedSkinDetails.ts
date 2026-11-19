@@ -120,6 +120,7 @@ function addShoeLaces(
   prefix: string,
 ) {
   const profile = avatarQualityProfile(quality);
+  root.updateMatrixWorld(true);
   for (const side of ['L', 'R'] as const) {
     const foot = findBone(bones, [`Foot.${side}`, `Foot_${side}`, side === 'L' ? 'LeftFoot' : 'RightFoot']);
     if (!foot) continue;
@@ -127,8 +128,8 @@ function addShoeLaces(
     const group = new T.Group();
     group.name = `${prefix}-laces-${side.toLowerCase()}`;
 
-    const width = .056;
-    const spacing = .025;
+    const width = .032;
+    const spacing = .012;
     for (let row = 0; row < rows; row++) {
       const y = (row - (rows - 1) / 2) * spacing;
       for (const direction of [-1, 1] as const) {
@@ -139,7 +140,7 @@ function addShoeLaces(
           new T.TubeGeometry(
             curve,
             quality === 'cinematic' ? 8 : quality === 'ultra' ? 6 : 4,
-            .0025,
+            .0015,
             Math.max(5, Math.floor(profile.accessorySegments / 3)),
             false,
           ),
@@ -152,8 +153,8 @@ function addShoeLaces(
       for (const x of [-width, width]) {
         const eyelet = new T.Mesh(
           new T.TorusGeometry(
-            .006,
-            .0018,
+            .0035,
+            .001,
             Math.max(5, Math.floor(profile.accessorySegments / 3)),
             Math.max(10, profile.accessorySegments),
           ),
@@ -419,6 +420,12 @@ export function addCuratedSkinDetails(
   if (keys.has('clothing.punk.biker-jacket')) addBikerJacketHardware(root, bones, quality);
   if (keys.has('clothing.starter.canvas-trainers')) addShoeLaces(root, bones, quality, 3, '#e7e1d8', 'curated-trainer');
   if (keys.has('clothing.punk.combat-boots')) addShoeLaces(root, bones, quality, 6, '#262626', 'curated-combat-boot');
+  if (keys.has('clothing.genre.indie.footwear') || keys.has('clothing.genre.electronic.footwear')) {
+    addShoeLaces(root, bones, quality, 3, '#e7e1d8', 'curated-genre-trainer');
+  }
+  if (keys.has('clothing.genre.metal.footwear') || keys.has('clothing.genre.jazz.footwear')) {
+    addShoeLaces(root, bones, quality, 4, '#262626', 'curated-genre-boot');
+  }
   if (keys.has('clothing.punk.double-eyelet-belt')) addEyeletBelt(root, bones, quality);
   if (keys.has('clothing.punk.wrist-cuffs')) addWristCuffs(root, bones, quality);
 }
