@@ -196,9 +196,11 @@ export const CityContent = ({
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" asChild>
-              <Link to={`/cities/${city.id}/scene-challenges`}>🎸 City Scene Challenges</Link>
-            </Button>
+            {city && (
+              <Button variant="outline" asChild>
+                <Link to={`/cities/${city.id}/scene-challenges`}>🎸 City Scene Challenges</Link>
+              </Button>
+            )}
             <Button variant="outline" asChild>
               <Link to="/cities">Back to cities</Link>
             </Button>
@@ -411,7 +413,7 @@ export default function City() {
   const { cityId } = useParams<CityRouteParams>();
   const [city, setCity] = useState<CityRecord | null>(null);
   const [details, setDetails] = useState<CityEnvironmentDetails | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);

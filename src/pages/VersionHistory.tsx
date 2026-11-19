@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.805",
+    date: "2026-11-19",
+    changes: [
+      { type: "fix", description: "Clicking the city in the header no longer crashes before city data loads; unavailable cities keep working retry and back navigation." },
+    ],
+  },
+  {
     version: "1.1.804",
     date: "2026-11-19",
     changes: [
