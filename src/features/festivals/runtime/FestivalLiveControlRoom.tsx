@@ -109,7 +109,10 @@ export function FestivalLiveControlRoom({
     return (
       <Card role="alert">
         <CardHeader><CardTitle>Festival Day unavailable</CardTitle></CardHeader>
-        <CardContent>The live Festival state could not be loaded.</CardContent>
+        <CardContent className="space-y-3">
+          <p>The live Festival state could not be loaded. No operating actions are available until it can be verified.</p>
+          <Button variant="outline" onClick={() => void query.refetch()}>Retry Festival Day</Button>
+        </CardContent>
       </Card>
     );
   }
@@ -131,6 +134,12 @@ export function FestivalLiveControlRoom({
           <CardContent className="space-y-5 pt-6">
             {readinessQuery.isLoading ? <p role="status">Checking Festival readiness…</p> : null}
             {readinessQuery.isError ? <p role="alert" className="text-destructive">Festival readiness could not be loaded.</p> : null}
+            {availability.isError ? (
+              <div role="alert" className="space-y-2 rounded-lg border border-destructive/40 p-3 text-sm">
+                <p>Live-day permission and availability checks failed. Starting or simulating the edition is temporarily disabled.</p>
+                <Button size="sm" variant="outline" onClick={() => void availability.refetch()}>Retry live-day checks</Button>
+              </div>
+            ) : availability.isPending ? <p role="status">Verifying live-day availability…</p> : null}
             {readiness ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -174,14 +183,14 @@ export function FestivalLiveControlRoom({
                 {availability.data?.canOpen && (
                   <Button
                     size="lg"
-                    disabled={readiness.blockers.some((blocker) => blocker.code !== "festival_not_due") || openMutation.isPending || runMutation.isPending}
+                    disabled={availability.isPending || readiness.blockers.some((blocker) => blocker.code !== "festival_not_due") || openMutation.isPending || runMutation.isPending}
                     onClick={() => openMutation.mutate(readiness.editionVersion)}
                   >Open festival gates</Button>
                 )}
                 {openMutation.isError && <p role="alert" className="text-sm text-destructive">
                   {(openMutation.error as { message?: string }).message ?? "Festival gates could not be opened."}
                 </p>}
-                <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending || openMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
+                <Button size="lg" disabled={availability.isPending || availability.isError || !readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending || openMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
                   <Play className="mr-2 h-4 w-4" />
                   {runMutation.isPending ? "Simulating Festival…" : "Simulate and complete edition"}
                 </Button>
@@ -205,10 +214,19 @@ export function FestivalLiveControlRoom({
     );
   }
 
-  return <FestivalDay runtime={runtime} />;
+  return <FestivalDay runtime={runtime} availability={availability} onUpdate={updateRuntime} />;
 }
 
-function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
+function FestivalDay({ runtime, availability, onUpdate }: {
+  runtime: FestivalRuntimeProjection;
+  availability: {
+    data?: { managed?: boolean; canAllocate?: boolean };
+    isPending: boolean;
+    isError: boolean;
+    refetch: () => unknown;
+  };
+  onUpdate: (runtime: FestivalRuntimeProjection) => void;
+}) {
   const occupancy = runtime.attendance.capacity
     ? Math.round((runtime.attendance.onsite / runtime.attendance.capacity) * 100)
     : 0;
@@ -309,9 +327,19 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         </Card>
       </div>
 
-      {availability.data?.managed && (
-        <CanonicalLiveDayOperations runtime={runtime} canAllocate={availability.data.canAllocate} onUpdate={updateRuntime} />
-      )}
+      {availability.isPending ? <p role="status">Verifying live operating permissions…</p> : null}
+      {availability.isError ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 p-3 text-sm">
+          <p>Live operating permissions could not be verified. Controls are unavailable, but the last confirmed Festival report remains readable.</p>
+          <Button size="sm" variant="outline" onClick={() => void availability.refetch()}>Retry operating permissions</Button>
+        </div>
+      ) : null}
+      {!availability.isPending && !availability.isError && availability.data?.managed ? (
+        <CanonicalLiveDayOperations runtime={runtime} canAllocate={availability.data.canAllocate === true} onUpdate={onUpdate} />
+      ) : null}
+      {!availability.isPending && !availability.isError && availability.data && !availability.data.managed ? (
+        <p role="status" className="rounded-lg border p-3 text-sm">This edition has no canonical live-day operating session. Its existing Festival report is viewable, but the live-day controls are not available.</p>
+      ) : null}
 
       {["live", "gates_open", "paused"].includes(runtime.state) && (
         <CanonicalStageControl runtimeId={runtime.runtimeId} />
