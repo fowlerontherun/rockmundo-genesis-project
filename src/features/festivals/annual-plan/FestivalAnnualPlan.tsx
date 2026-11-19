@@ -45,6 +45,7 @@ import {
 } from "./repository";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { getAnnualPlanReadinessLabel, getReadinessAction } from "./readinessActions";
+import { FestivalPlanningOverlay } from "./FestivalPlanningOverlay";
 
 type PlanningSection = "when" | "festival" | "promotion" | "values";
 
@@ -250,6 +251,8 @@ export function FestivalAnnualPlan({
           </CardContent>
         ) : null}
       </Card>
+
+      <FestivalPlanningOverlay plan={data} unsavedChanges={dirty} onOpenSection={openPlanningSection} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <ChoiceCard
