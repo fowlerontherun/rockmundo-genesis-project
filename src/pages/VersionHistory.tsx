@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.816",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Friends list loads again instead of showing \"Friends page unavailable\"; band names on friend cards now resolve correctly." },
+    ],
+  },
+  {
     version: "1.1.815",
     date: "2026-11-20",
     changes: [
