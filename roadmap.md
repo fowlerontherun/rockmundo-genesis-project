@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Social continuation: corrected band-chat account/character IDs and malformed invitation UUID validation; added character-scoped room access, ended-scene write guards/history, message retry and live friend/invite refresh.
+- [x] Social continuation: personal Twaater recap drafts without scene details; 81 focused tests passed, version 1.1.812. Browser page has no errors; authenticated message/scene/publishing journeys remain unavailable with external unmanaged auth.
+
 - [x] Festival repair: protected counteroffers and booking-specific saved setlists/backstage choices; legacy contracts remain isolated.
 - [ ] Festival repair: live gates and performance effects blocked by missing canonical crowd/tick/action infrastructure; availability fails closed, final-local-day simulation guard restored.
 - [x] Festival repair: validate financial inputs; refresh readiness; show real act names, currencies and booking details.

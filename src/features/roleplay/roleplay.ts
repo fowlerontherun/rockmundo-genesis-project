@@ -37,6 +37,7 @@ const ERRORS: Record<string, string> = {
   scene_needs_1_to_5_guests: "Invite between 1 and 5 other players.",
   guest_unavailable: "One of those players can't be invited.",
   character_not_owned: "Switch to your own active character first.",
+  scene_ended: "This scene has ended. Open a new scene to continue.",
 };
 export function friendlyRoleplayError(message: string | undefined): string {
   const key = Object.keys(ERRORS).find((k) => message?.includes(k));

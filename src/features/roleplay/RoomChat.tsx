@@ -17,17 +17,20 @@ type Row = { id: string; profile_id: string; kind: RoomMessageKind; body: string
 
 const nameOf = (r: Row) => r.author?.display_name || r.author?.username || "Someone";
 
-export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title: string; subtitle?: string }) {
+export function RoomChat({ roomKey, title, subtitle, readOnly = false }: { roomKey: string; title: string; subtitle?: string; readOnly?: boolean }) {
   const { profileId } = useActiveProfile();
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [mode, setMode] = useState<"say" | "me" | "ooc">("say");
   const [sending, setSending] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
-  const key = ["social-room", roomKey];
+  const key = ["social-room", profileId, roomKey];
+  useEffect(() => { setText(""); setMode("say"); setSending(false); }, [profileId, roomKey]);
 
-  const { data: rows = [], isError } = useQuery({
+  const { data: rows = [], isError, isLoading, refetch } = useQuery({
     queryKey: key,
+    enabled: Boolean(profileId),
+    refetchInterval: 15000,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("social_room_messages")
         .select("id,profile_id,kind,body,created_at,author:profiles!social_room_messages_profile_id_fkey(display_name,username)")
@@ -38,19 +41,20 @@ export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title:
   });
 
   useEffect(() => {
+    if (!profileId) return;
     const ch = supabase.channel(`room-${roomKey}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "social_room_messages", filter: `room_key=eq.${roomKey}` },
         () => void qc.invalidateQueries({ queryKey: key }))
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomKey]);
+  }, [roomKey, profileId, qc]);
 
   useEffect(() => { bottom.current?.scrollIntoView({ block: "nearest" }); }, [rows.length]);
 
   const send = async () => {
     const parsed = parseChatInput(text, mode);
-    if (!parsed || !profileId) return;
+    if (!parsed || !profileId || sending || readOnly || isError) return;
     setSending(true);
     const { error } = await (supabase as any).rpc("post_social_room_message", { p_profile: profileId, p_room: roomKey, p_kind: parsed.kind, p_body: parsed.body });
     setSending(false);
@@ -60,6 +64,7 @@ export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title:
   };
 
   const interact = async (target: string, kind: string) => {
+    if (!profileId || readOnly) return;
     const { data, error } = await (supabase as any).rpc("perform_social_interaction", { p_actor: profileId, p_target: target, p_kind: kind, p_room: roomKey });
     if (error) return toast.error(friendlyRoleplayError(error.message));
     toast.success(data?.xp ? `${data.line} (+${data.xp} XP)` : data?.line ?? "Done");
@@ -85,9 +90,10 @@ export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title:
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
         <div className="h-80 space-y-1 overflow-y-auto rounded border bg-muted/20 p-2 text-xs" aria-live="polite">
-          {isError && <p className="text-destructive">You can't see this room right now.</p>}
-          {!isError && rows.length === 0 && <p className="text-muted-foreground">It's quiet in here. Say something, or try <code>/me</code> to act.</p>}
-          {rows.map((r) => (
+          {isError && <p className="text-destructive">You can't see this room right now. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></p>}
+          {isLoading && <p className="text-muted-foreground">Loading messages…</p>}
+          {!isLoading && !isError && rows.length === 0 && <p className="text-muted-foreground">It's quiet in here. Say something, or try <code>/me</code> to act.</p>}
+          {(!isError ? rows : []).map((r) => (
             <div key={r.id} className="group flex items-start gap-1">
               <p className={cn("flex-1 leading-snug",
                 r.kind === "me" && "italic text-primary",
@@ -101,11 +107,11 @@ export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title:
               {r.profile_id !== profileId && r.kind !== "system" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="opacity-60 hover:opacity-100" aria-label={`Actions for ${nameOf(r)}`}><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 opacity-60 hover:opacity-100" aria-label={`Actions for ${nameOf(r)}`}><MoreHorizontal className="h-3.5 w-3.5" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel className="text-xs">{nameOf(r)}</DropdownMenuLabel>
-                    {INTERACTIONS.map((i) => <DropdownMenuItem key={i.kind} className="text-xs" onClick={() => void interact(r.profile_id, i.kind)}>{i.emoji} {i.label}</DropdownMenuItem>)}
+                    {!readOnly && INTERACTIONS.map((i) => <DropdownMenuItem key={i.kind} className="text-xs" onClick={() => void interact(r.profile_id, i.kind)}>{i.emoji} {i.label}</DropdownMenuItem>)}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-xs" onClick={() => void report(r)}><Flag className="mr-1 h-3 w-3" />Report message</DropdownMenuItem>
                     <DropdownMenuItem className="text-xs text-destructive" onClick={() => void block(r)}><ShieldOff className="mr-1 h-3 w-3" />Block player</DropdownMenuItem>
@@ -116,17 +122,17 @@ export function RoomChat({ roomKey, title, subtitle }: { roomKey: string; title:
           ))}
           <div ref={bottom} />
         </div>
-        <div className="flex flex-nowrap gap-1">
+        {readOnly ? <p className="text-xs text-muted-foreground">This scene has ended.</p> : <div className="flex flex-wrap gap-1">
           {(["say", "me", "ooc"] as const).map((m) => (
             <Button key={m} size="sm" variant={mode === m ? "default" : "outline"} className="h-8 px-2 text-[11px]" onClick={() => setMode(m)}>
               {m === "say" ? "Say" : m === "me" ? "Action" : "OOC"}
             </Button>
           ))}
-          <Input className="h-8 text-xs" maxLength={500} value={text} onChange={(e) => setText(e.target.value)}
+          <Input disabled={sending || isError} className="h-8 min-w-24 flex-1 text-xs" maxLength={500} value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
             placeholder={mode === "me" ? "e.g. tunes up his guitar" : mode === "ooc" ? "Out of character…" : "Say something in character…"} />
-          <Button size="sm" className="h-8" disabled={sending || !text.trim() || !profileId} onClick={() => void send()} aria-label="Send"><Send className="h-3.5 w-3.5" /></Button>
-        </div>
+          <Button size="sm" className="h-8" disabled={sending || isError || !text.trim() || !profileId} onClick={() => void send()} aria-label="Send"><Send className="h-3.5 w-3.5" /></Button>
+        </div>}
       </CardContent>
     </Card>
   );

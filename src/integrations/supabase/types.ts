@@ -84692,6 +84692,7 @@ export type Database = {
         Returns: Json
       }
       snapshot_company_kpis: { Args: never; Returns: number }
+      social_active_room_access: { Args: { p_room: string }; Returns: boolean }
       spend_attribute_points_atomic: {
         Args: { p_attribute: string; p_cost: number; p_profile_id: string }
         Returns: undefined

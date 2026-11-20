@@ -23,13 +23,14 @@ export function DirectMessageThread({
   otherDisplayName,
   compact = false,
 }: Props) {
-  const { channelId, messages, isLoading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(
+  const { channelId, messages, isLoading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages, isError, retry, error } = useDirectMessages(
     myProfileId,
     otherProfileId,
   );
   const [draft, setDraft] = useState("");
   const [voiceOpen, setVoiceOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { setDraft(""); setVoiceOpen(false); }, [myProfileId, otherProfileId]);
 
   useEffect(() => {
     const viewport = scrollRef.current?.querySelector(
@@ -96,6 +97,7 @@ export function DirectMessageThread({
             {sendMessage.error instanceof Error ? sendMessage.error.message : "We couldn't send that message."}
           </p>
         )}
+        {isError && <div role="alert" className="mb-2 text-xs text-destructive">{error instanceof Error ? error.message : "Could not load this conversation."} <Button size="sm" variant="outline" onClick={() => void retry()}>Retry</Button></div>}
         <ScrollArea className={compact ? "min-h-0 flex-1" : "h-[360px]"} ref={scrollRef}>
           <div className="space-y-2 pr-3">
             {hasOlderMessages && (
@@ -110,7 +112,7 @@ export function DirectMessageThread({
               <div className="flex h-32 items-center justify-center text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
               </div>
-            ) : messages.length === 0 ? (
+            ) : isError ? null : messages.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Start the conversation with {otherDisplayName}.
               </p>

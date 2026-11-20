@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.812",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Band chat sends with the correct account and character identity, resolves character names and recovers missed messages after sending." },
+      { type: "fix", description: "Roleplay rooms and scene lists reset per character; ended scenes are read-only, and loading failures have retry controls." },
+      { type: "improvement", description: "Friend requests and invitations refresh live with a polling fallback; direct messages show loading failures and reset drafts when switching conversations." },
+      { type: "feature", description: "Ended private scenes can open a personal Twaater recap draft for review, without copying scene names, guests or private dialogue." },
+    ],
+  },
+  {
     version: "1.1.811",
     date: "2026-11-20",
     changes: [

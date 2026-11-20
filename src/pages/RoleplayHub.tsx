@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Drama, Plus, X } from "lucide-react";
@@ -15,18 +15,21 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RoomChat } from "@/features/roleplay/RoomChat";
 import { useRoleplaySettings } from "@/features/roleplay/RoleplayProfileCard";
+import { storePersonalSceneRecap } from "@/features/roleplay/sceneRecap";
 import { friendlyRoleplayError } from "@/features/roleplay/roleplay";
 
 function useCity(profileId: string | null) {
   return useQuery({ queryKey: ["rp-city", profileId], enabled: !!profileId, queryFn: async () => {
-    const { data } = await (supabase as any).from("profiles").select("current_city_id, city:cities!profiles_current_city_id_fkey(name)").eq("id", profileId).maybeSingle();
+    const { data, error } = await (supabase as any).from("profiles").select("current_city_id, city:cities!profiles_current_city_id_fkey(name)").eq("id", profileId).maybeSingle();
+    if (error) throw error;
     return data as { current_city_id: string | null; city: { name: string } | null } | null;
   } });
 }
 
 function CityRoom({ profileId }: { profileId: string }) {
-  const { data, isLoading } = useCity(profileId);
+  const { data, isLoading, isError, refetch } = useCity(profileId);
   if (isLoading) return <p className="text-xs text-muted-foreground">Loading…</p>;
+  if (isError) return <div role="alert" className="text-xs text-destructive">Could not load your city. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></div>;
   if (!data?.current_city_id) return <p className="text-xs text-muted-foreground">Travel to a city to join its room.</p>;
   return <RoomChat roomKey={`city:${data.current_city_id}`} title={`${data.city?.name ?? "City"} — street talk`} subtitle="Everyone in this city can read this. Messages fade after 24 hours." />;
 }
@@ -35,22 +38,30 @@ type Scene = { id: string; title: string; setting: string | null; status: string
 
 function Scenes({ profileId }: { profileId: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [title, setTitle] = useState(""); const [setting, setSetting] = useState("");
   const [search, setSearch] = useState(""); const [guests, setGuests] = useState<{ id: string; name: string }[]>([]);
-  const { data: scenes = [] } = useQuery({ queryKey: ["rp-scenes", profileId], queryFn: async () => {
-    const { data } = await (supabase as any).from("roleplay_scenes").select("id,title,setting,status,host_profile_id").order("created_at", { ascending: false }).limit(30);
+  const { data: scenes = [], isError: sceneError, isLoading: scenesLoading, refetch } = useQuery({ queryKey: ["rp-scenes", profileId], refetchInterval: 15000, queryFn: async () => {
+    const { data, error } = await (supabase as any).from("roleplay_scenes").select("id,title,setting,status,host_profile_id").order("created_at", { ascending: false }).limit(30);
+    if (error) throw error;
     return (data ?? []) as Scene[];
   } });
-  const { data: found = [] } = useQuery({ queryKey: ["rp-find", search], enabled: search.trim().length >= 2, queryFn: async () => {
-    const { data } = await (supabase as any).from("profiles").select("id,display_name,username").or(`display_name.ilike.%${search.replace(/[%,()]/g, "")}%,username.ilike.%${search.replace(/[%,()]/g, "")}%`).is("died_at", null).neq("id", profileId).limit(8);
+  const { data: found = [] } = useQuery({ queryKey: ["rp-find", profileId, search], enabled: search.trim().length >= 2, queryFn: async () => {
+    const { data, error } = await (supabase as any).from("profiles").select("id,display_name,username").or(`display_name.ilike.%${search.replace(/[%,()]/g, "")}%,username.ilike.%${search.replace(/[%,()]/g, "")}%`).is("died_at", null).neq("id", profileId).limit(8);
+    if (error) throw error;
     return (data ?? []) as { id: string; display_name: string | null; username: string | null }[];
   } });
   const create = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
     const { data, error } = await (supabase as any).rpc("create_roleplay_scene", { p_profile: profileId, p_title: title, p_setting: setting, p_invitees: guests.map((g) => g.id) });
     if (error) return toast.error(friendlyRoleplayError(error.message));
     setTitle(""); setSetting(""); setGuests([]); setOpen(data as string);
     void qc.invalidateQueries({ queryKey: ["rp-scenes", profileId] });
+    } finally { setBusy(false); }
   };
   const end = async (id: string) => {
     const { error } = await (supabase as any).rpc("end_roleplay_scene", { p_profile: profileId, p_scene: id });
@@ -58,7 +69,7 @@ function Scenes({ profileId }: { profileId: string }) {
     toast.success("Scene ended and saved to everyone's history.");
     void qc.invalidateQueries({ queryKey: ["rp-scenes", profileId] });
   };
-  const current = scenes.find((s) => s.id === open);
+  const current = !sceneError && scenes.find((s) => s.id === open);
   return (
     <div className="grid gap-3 lg:grid-cols-[280px_1fr]">
       <div className="space-y-3">
@@ -70,9 +81,11 @@ function Scenes({ profileId }: { profileId: string }) {
           {found.length > 0 && <div className="max-h-28 overflow-y-auto rounded border">{found.map((p) => (
             <button key={p.id} className="block w-full px-2 py-1 text-left text-xs hover:bg-muted" onClick={() => { if (guests.length < 5 && !guests.some((g) => g.id === p.id)) setGuests([...guests, { id: p.id, name: p.display_name || p.username || "Player" }]); setSearch(""); }}>{p.display_name || p.username}</button>))}</div>}
           <div className="flex flex-wrap gap-1">{guests.map((g) => <span key={g.id} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px]">{g.name}<button aria-label={`Remove ${g.name}`} onClick={() => setGuests(guests.filter((x) => x.id !== g.id))}><X className="h-3 w-3" /></button></span>)}</div>
-          <Button size="sm" className="w-full" disabled={title.trim().length < 3 || guests.length === 0} onClick={() => void create()}><Plus className="mr-1 h-3.5 w-3.5" />Open scene ({guests.length + 1}/6)</Button>
+          <Button size="sm" className="w-full" disabled={busy || title.trim().length < 3 || guests.length === 0} onClick={() => void create()}><Plus className="mr-1 h-3.5 w-3.5" />Open scene ({guests.length + 1}/6)</Button>
         </CardContent></Card>
-        <div className="space-y-1">{scenes.map((s) => (
+        {sceneError && <div role="alert" className="text-xs text-destructive">Could not load scenes. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></div>}
+        {scenesLoading && <p className="text-xs text-muted-foreground">Loading scenes…</p>}
+        <div className="space-y-1">{(!sceneError ? scenes : []).map((s) => (
           <button key={s.id} onClick={() => setOpen(s.id)} className={`block w-full rounded border p-2 text-left text-xs ${open === s.id ? "border-primary" : ""}`}>
             <span className="font-medium">{s.title}</span> <span className="text-muted-foreground">· {s.status === "open" ? "live" : "ended"}</span>
           </button>))}
@@ -80,7 +93,11 @@ function Scenes({ profileId }: { profileId: string }) {
       </div>
       {current ? <div className="space-y-2">
         {current.setting && <p className="rounded border p-2 text-xs italic">{current.setting}</p>}
-        <RoomChat roomKey={`scene:${current.id}`} title={current.title} subtitle="Only invited players can see this scene." />
+        <RoomChat roomKey={`scene:${current.id}`} title={current.title} subtitle="Only invited players can see this scene." readOnly={current.status !== "open"} />
+        {current.status === "ended" && <Button size="sm" variant="outline" onClick={() => {
+          try { storePersonalSceneRecap(profileId, current.status); navigate("/twaater"); }
+          catch { toast.error("Couldn't open a recap draft. Please try again."); }
+        }}>Draft personal recap on Twaater</Button>}
         {current.status === "open" && current.host_profile_id === profileId && <Button size="sm" variant="outline" onClick={() => void end(current.id)}>End scene & save to history</Button>}
       </div> : <p className="text-xs text-muted-foreground">Pick or start a scene.</p>}
     </div>
@@ -123,9 +140,9 @@ export default function RoleplayHub() {
       {!profileId ? <p className="text-xs text-muted-foreground">Choose a character to roleplay.</p> :
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v }, { replace: true })}>
         <TabsList className="overflow-x-auto"><TabsTrigger value="city">City room</TabsTrigger><TabsTrigger value="scenes">Scenes</TabsTrigger><TabsTrigger value="profile">My roleplay profile</TabsTrigger></TabsList>
-        <TabsContent value="city"><CityRoom profileId={profileId} /></TabsContent>
-        <TabsContent value="scenes"><Scenes profileId={profileId} /></TabsContent>
-        <TabsContent value="profile"><RoleplayProfileForm profileId={profileId} /></TabsContent>
+        <TabsContent value="city"><CityRoom key={profileId} profileId={profileId} /></TabsContent>
+        <TabsContent value="scenes"><Scenes key={profileId} profileId={profileId} /></TabsContent>
+        <TabsContent value="profile"><RoleplayProfileForm key={profileId} profileId={profileId} /></TabsContent>
       </Tabs>}
     </FMPageScaffold>
   );

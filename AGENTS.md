@@ -18,3 +18,8 @@
 - Render instrument store stills with the shared stage instrument builder, releasing WebGL resources after capture; product pictures must match equipped visuals.
 - Validate static hub responses as images and fall back to destination icons on load failure; SPA HTML fallback responses must never be treated as artwork.
 - University completion uses the saved enrollment deadline and an atomic, unique completion receipt independently of daily attendance; this prevents stuck courses and duplicate completion rewards.
+
+- Band chat stores the account UUID in user_id and the author character UUID in profile_id; never infer a legacy author from sibling characters.
+- Social room and scene caches include the active character, and shared social updates combine cleaned-up realtime listeners with visible-page polling for tables without publication.
+- Personal roleplay recap drafts carry the character identity and contain no private scene title, guests or dialogue; publishing stays in the normal Twaater composer.
+- Room access policies validate the active character through a private helper; write triggers lock open scenes so ended scenes cannot accept messages or interactions.
