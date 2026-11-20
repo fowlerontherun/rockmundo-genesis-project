@@ -828,3 +828,9 @@
     inset 0 0 0 2px hsl(var(--fm-bg) / 0.25);
   transform: rotate(-8deg);
 }
+
+/* Christmas cosmetics (src/features/seasonal/ChristmasDecorations.tsx) */
+@keyframes xmas-fall { 0% { transform: translate3d(0,-10px,0) rotate(0deg); opacity: 0; } 10% { opacity: .8; } 100% { transform: translate3d(30px,105vh,0) rotate(240deg); opacity: 0; } }
+@keyframes xmas-twinkle { 0%,100% { opacity: 1; filter: brightness(1.3); } 50% { opacity: .35; filter: brightness(.8); } }
+.xmas-flake { animation-name: xmas-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+.xmas-bulb { animation: xmas-twinkle 1.6s ease-in-out infinite; box-shadow: 0 0 6px currentColor; }

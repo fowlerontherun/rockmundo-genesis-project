@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.807",
+    date: "2026-11-20",
+    changes: [
+      { type: "improvement", description: "Front screen logo and favicon updated to the Christmas artwork." },
+      { type: "feature", description: "Christmas cosmetics: gentle snowfall and twinkling fairy lights across the game, with a player toggle. They switch off automatically on 7 January 2027 and can be disabled globally." },
+    ],
+  },
+  {
     version: "1.1.806",
     date: "2026-11-20",
     changes: [
