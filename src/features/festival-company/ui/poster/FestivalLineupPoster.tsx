@@ -1,24 +1,26 @@
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { festivalPosterTiers } from "./festivalPosterTiers";
+import { useFestivalArtworkBranding } from "../useFestivalArtworkBranding";
+import type { FestivalBranding } from "../../domain/festivalBranding";
 
-interface Props { name: string; place: string; dates: string; artists: string[]; }
+interface Props { name: string; place: string; dates: string; artists: string[]; editionId?: string | null; }
 
 function cssColor(token: string) {
   const v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-  return v ? `hsl(${v})` : "#fff";
+  return v ? (v.startsWith("#") ? v : `hsl(${v})`) : "transparent";
 }
 
-function downloadPoster({ name, place, dates, artists }: Props) {
+function downloadPoster({ name, place, dates, artists }: Props, branding: FestivalBranding) {
   const t = festivalPosterTiers(artists);
   const c = document.createElement("canvas");
   c.width = 1080; c.height = 1350;
   const ctx = c.getContext("2d");
   if (!ctx) return;
   const bg = ctx.createLinearGradient(0, 0, 0, c.height);
-  bg.addColorStop(0, cssColor("--background")); bg.addColorStop(1, cssColor("--primary"));
+  bg.addColorStop(0, cssColor(branding.theme ? `--festival-${branding.theme}-dark` : "--background")); bg.addColorStop(1, cssColor(branding.theme ? `--festival-${branding.theme}-mid` : "--primary"));
   ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height);
-  ctx.textAlign = "center"; ctx.fillStyle = cssColor("--foreground");
+  ctx.textAlign = "center"; ctx.fillStyle = cssColor(branding.theme ? `--festival-${branding.theme}-light` : "--foreground");
   let y = 150;
   const line = (text: string, size: number, weight = "800") => {
     ctx.font = `${weight} ${size}px sans-serif`;
@@ -38,22 +40,23 @@ function downloadPoster({ name, place, dates, artists }: Props) {
 }
 
 export function FestivalLineupPoster(props: Props) {
+  const branding = useFestivalArtworkBranding(props.editionId);
   const t = festivalPosterTiers(props.artists);
   if (!props.artists.length) return null;
   return (
     <section aria-label="Festival line-up poster" className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border bg-gradient-to-b from-background via-background to-primary/40 px-4 py-8 text-center shadow-lg">
-        <p className="text-3xl font-black uppercase tracking-tight">{props.name}</p>
-        <p className="text-xs text-muted-foreground">{props.place} · {props.dates}</p>
-        <div className="mt-6 space-y-2">
-          {t.headliners.map((a) => <p key={a} className="text-4xl font-black uppercase text-primary sm:text-5xl">{a}</p>)}
+      <div className={`relative overflow-hidden rounded-md border px-4 py-8 text-center shadow-lg ${branding.theme ? `festival-theme-${branding.theme} festival-theme-art festival-motif-${branding.motif}` : "bg-gradient-to-b from-background via-background to-primary/40"}`}>
+        <p className="relative break-words text-3xl font-black uppercase">{props.name}</p>
+        <p className="relative text-xs">{props.place} · {props.dates}</p>
+        <div className="relative mt-6 space-y-2">
+          {t.headliners.map((a) => <p key={a} className={`break-words text-4xl font-black uppercase sm:text-5xl ${branding.theme ? "festival-billing" : "text-primary"}`}>{a}</p>)}
           <div className="flex flex-wrap justify-center gap-x-4">
             {t.subHeadliners.map((a) => <p key={a} className="text-xl font-bold uppercase">{a}</p>)}
           </div>
-          {t.support.length > 0 && <p className="mx-auto max-w-2xl text-sm text-muted-foreground">{t.support.join(" · ")}</p>}
+          {t.support.length > 0 && <p className="mx-auto max-w-2xl text-sm">{t.support.join(" · ")}</p>}
         </div>
       </div>
-      <Button size="sm" variant="outline" onClick={() => downloadPoster(props)}><Download className="mr-1 h-4 w-4" />Download poster</Button>
+      <Button size="sm" variant="outline" onClick={() => downloadPoster(props, branding)}><Download className="mr-1 h-4 w-4" />Download poster</Button>
     </section>
   );
 }

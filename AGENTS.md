@@ -23,3 +23,4 @@
 - Social room and scene caches include the active character, and shared social updates combine cleaned-up realtime listeners with visible-page polling for tables without publication.
 - Personal roleplay recap drafts carry the character identity and contain no private scene title, guests or dialogue; publishing stays in the normal Twaater composer.
 - Room access policies validate the active character through a private helper; write triggers lock open scenes so ended scenes cannot accept messages or interactions.
+- Festival founding and annual setup share a five-step shell; edition branding uses version-checked private actions and atomic annual-plan saves, so cosmetic choices cannot alter gameplay or bypass locks.

@@ -2,9 +2,10 @@ import { useState } from "react";
 import type { FestivalPublicConfirmedAct, FestivalPublicEdition } from "../domain/festivalLaunch";
 import { festivalVisualIdentity } from "../domain/festivalVisualIdentity";
 import { isSafeSponsorLogoReference } from "./SponsorIdentity";
+import { useFestivalArtworkBranding } from "./useFestivalArtworkBranding";
 
 type FestivalBrandArtworkProps = {
-  festival: Pick<FestivalPublicEdition, "id" | "name" | "festivalType" | "vibe" | "scale" | "heroImageReference">;
+  festival: Pick<FestivalPublicEdition, "id" | "name" | "festivalType" | "vibe" | "scale" | "heroImageReference"> & { editionId?: string | null };
   variant?: "card" | "backdrop";
 };
 
@@ -13,6 +14,7 @@ type FestivalBrandArtworkProps = {
 export function FestivalBrandArtwork({ festival, variant = "card" }: FestivalBrandArtworkProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const { palette, motif, typeLabel, vibeLabel, scaleLabel } = festivalVisualIdentity(festival);
+  const branding = useFestivalArtworkBranding(festival.editionId);
   const imageUrl = festival.heroImageReference && isSafeSponsorLogoReference(festival.heroImageReference)
     ? festival.heroImageReference : null;
   const backdrop = variant === "backdrop";
@@ -20,12 +22,14 @@ export function FestivalBrandArtwork({ festival, variant = "card" }: FestivalBra
   return (
     <div
       aria-hidden="true"
-      className={`relative isolate overflow-hidden ${backdrop ? "absolute inset-0" : "h-44"}`}
-      style={{ background: `radial-gradient(ellipse at ${motif === 1 ? "80% 15%" : "15% 25%"}, ${palette.mid} 0%, transparent 65%), linear-gradient(125deg, ${palette.dark} 12%, ${palette.mid} 100%)` }}
+      className={`relative isolate overflow-hidden ${branding.theme ? `festival-theme-${branding.theme} festival-theme-art festival-motif-${branding.motif}` : ""} ${backdrop ? "absolute inset-0" : "h-44"}`}
+      style={branding.theme ? undefined : { background: `radial-gradient(ellipse at ${motif === 1 ? "80% 15%" : "15% 25%"}, ${palette.mid} 0%, transparent 65%), linear-gradient(125deg, ${palette.dark} 12%, ${palette.mid} 100%)` }}
     >
-      <div className="absolute -left-12 -top-16 h-60 w-60 rotate-12 rounded-full border-[24px] opacity-45" style={{ borderColor: palette.light }} />
-      <div className="absolute -bottom-28 right-2 h-56 w-56 rotate-45 border-[22px] opacity-50" style={{ borderColor: palette.accent, borderRadius: motif === 2 ? "12%" : "50%" }} />
-      <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `repeating-linear-gradient(${motif === 0 ? 120 : 50}deg, transparent 0px, transparent 27px, ${palette.light}33 28px, transparent 30px)` }} />
+      {!branding.theme && <>
+        <div className="absolute -left-12 -top-16 h-60 w-60 rotate-12 rounded-full border-[24px] opacity-45" style={{ borderColor: palette.light }} />
+        <div className="absolute -bottom-28 right-2 h-56 w-56 rotate-45 border-[22px] opacity-50" style={{ borderColor: palette.accent, borderRadius: motif === 2 ? "12%" : "50%" }} />
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `repeating-linear-gradient(${motif === 0 ? 120 : 50}deg, transparent 0px, transparent 27px, ${palette.light}33 28px, transparent 30px)` }} />
+      </>}
       {imageUrl && imageUrl !== failedUrl && <img
         src={imageUrl}
         alt=""

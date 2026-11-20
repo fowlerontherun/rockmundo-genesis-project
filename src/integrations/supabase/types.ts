@@ -23669,6 +23669,9 @@ export type Database = {
       }
       festival_editions_v2: {
         Row: {
+          brand_motif: string
+          brand_theme: string | null
+          branding_version: number
           city_id: string | null
           completed_at: string | null
           configuration_locked_at: string | null
@@ -23700,6 +23703,9 @@ export type Database = {
           vibe: string | null
         }
         Insert: {
+          brand_motif?: string
+          brand_theme?: string | null
+          branding_version?: number
           city_id?: string | null
           completed_at?: string | null
           configuration_locked_at?: string | null
@@ -23731,6 +23737,9 @@ export type Database = {
           vibe?: string | null
         }
         Update: {
+          brand_motif?: string
+          brand_theme?: string | null
+          branding_version?: number
           city_id?: string | null
           completed_at?: string | null
           configuration_locked_at?: string | null
@@ -79731,6 +79740,10 @@ export type Database = {
         Args: { p_edition_id: string; p_limit?: number }
         Returns: Json
       }
+      get_festival_edition_branding: {
+        Args: { p_edition_id: string }
+        Returns: Json
+      }
       get_festival_edition_budget_forecast: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
@@ -83633,6 +83646,16 @@ export type Database = {
         }
         Returns: Json
       }
+      save_festival_edition_branding: {
+        Args: {
+          p_company_id: string
+          p_edition_id: string
+          p_expected_version: number
+          p_motif: string
+          p_theme: string
+        }
+        Returns: Json
+      }
       save_festival_edition_ticket_plan: {
         Args: {
           p_capacity_allocations: Json
@@ -83655,6 +83678,17 @@ export type Database = {
           p_festival_edition_id: string
           p_idempotency_key: string
           p_sections: Json
+        }
+        Returns: Json
+      }
+      save_festival_edition_wizard: {
+        Args: {
+          p_branding: Json
+          p_expected_version: number
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
+          p_plan: Json
         }
         Returns: Json
       }

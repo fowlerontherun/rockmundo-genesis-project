@@ -421,7 +421,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
           <TabsContent value="lineup">
             <section aria-label="Confirmed festival line-up" className="space-y-4">
-              <FestivalLineupPoster name={f.name} place={[f.city, f.country].filter(Boolean).join(", ")} dates={formatFestivalEditionDate(f.startsAt, f.timezone)} artists={confirmedLineup.map((e) => e.artistName ?? "")} />
+              <FestivalLineupPoster editionId={f.editionId} name={f.name} place={[f.city, f.country].filter(Boolean).join(", ")} dates={formatFestivalEditionDate(f.startsAt, f.timezone)} artists={confirmedLineup.map((e) => e.artistName ?? "")} />
               <div>
                 <h2 className="text-xl font-bold">Confirmed line-up</h2>
                 <p className="text-sm text-muted-foreground">

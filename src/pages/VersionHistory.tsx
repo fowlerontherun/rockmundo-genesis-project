@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.818",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festival founding and annual editions now use five guided steps with six colour themes, three artwork motifs, a live preview and a final review." },
+      { type: "improvement", description: "Edition colours are saved safely with the annual plan and appear on public festival artwork and downloadable line-up posters; existing editions retain their original colours." },
+    ],
+  },
+  {
     version: "1.1.817",
     date: "2026-11-20",
     changes: [

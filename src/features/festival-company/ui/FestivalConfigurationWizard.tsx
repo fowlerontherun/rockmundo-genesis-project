@@ -23,6 +23,12 @@ import type {
   FestivalSiteType,
   FestivalVibe,
 } from "../domain/festivalConfiguration";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { FestivalSetupSteps } from "./FestivalSetupSteps";
+import { FestivalThemePicker, FestivalThemePreview } from "./FestivalThemePicker";
+import { defaultFestivalBranding, type FestivalBranding } from "../domain/festivalBranding";
+import { saveFestivalBranding } from "../data/festivalBrandingRepository";
 import { festivalConfigurationErrorMessage } from "../domain/festivalConfigurationErrors";
 
 const addDays = (startDate: string, days: number) => {
@@ -40,14 +46,22 @@ export function FestivalConfigurationWizard({
   const navigate = useNavigate();
   const query = useFestivalConfiguration(festivalCompanyId);
   const save = useSaveFestivalConfiguration();
-  const [publicName, setPublicName] = useState("");
+  const [step, setStep] = useState(0);
+  const [branding, setBranding] = useState<FestivalBranding>(defaultFestivalBranding);
+  const [finishing, setFinishing] = useState(false);
+  const [tagline, setTagline] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
+  const [vibe, setVibe] = useState<FestivalVibe | null>(null);
+  const [siteType, setSiteType] = useState<FestivalSiteType | null>(null);
+  const [environmentalPolicy, setEnvironmentalPolicy] = useState<FestivalEnvironmentalPolicy | null>(null);
+  const [publicName, setPublicName] = useState<string | null>(null);
   const [homeCityId, setHomeCityId] = useState("");
   const [festivalScale, setFestivalScale] = useState("");
   const [startDate, setStartDate] = useState("");
 
   const configuration = query.data;
   const initialName = configuration?.publicName || configuration?.legalCompanyName || "";
-  const name = publicName || initialName;
+  const name = publicName ?? initialName;
   const cityId = homeCityId || configuration?.homeCity?.id || "";
   const scaleKey = festivalScale || configuration?.festivalScale || "";
   const date = startDate || configuration?.plannedStartDate || "";
@@ -80,7 +94,7 @@ export function FestivalConfigurationWizard({
     Boolean(cityId) &&
     Boolean(scaleKey) &&
     Boolean(date) &&
-    !save.isPending;
+    !save.isPending && !finishing;
 
   const createFestival = () => {
     if (!canSubmit || !selectedScale) return;
@@ -91,14 +105,14 @@ export function FestivalConfigurationWizard({
     const draft: FestivalConfigurationDraft = {
       publicName: name.trim(),
       shortName: (configuration.shortName || name.trim()).slice(0, 24),
-      tagline: configuration.tagline || "",
-      description: configuration.description || "",
+      tagline: tagline ?? configuration.tagline ?? "",
+      description: description ?? configuration.description ?? "",
       homeCityId: cityId,
       festivalScale: selectedScale.key,
       annualMonth,
-      vibe: (configuration.vibe ?? "community") as FestivalVibe,
-      siteType: (configuration.siteType ?? "outdoor") as FestivalSiteType,
-      environmentalPolicy: (configuration.environmentalPolicy ??
+      vibe: (vibe ?? configuration.vibe ?? "community") as FestivalVibe,
+      siteType: (siteType ?? configuration.siteType ?? "outdoor") as FestivalSiteType,
+      environmentalPolicy: (environmentalPolicy ?? configuration.environmentalPolicy ??
         "standard") as FestivalEnvironmentalPolicy,
       plannedStartDate: date,
       plannedEndDate: addDays(date, durationDays),
@@ -114,8 +128,16 @@ export function FestivalConfigurationWizard({
         idempotencyKey: crypto.randomUUID(),
       },
       {
-        onSuccess: (canonical) => {
+        onSuccess: async (canonical) => {
           if (canonical.festivalEditionId) {
+            setFinishing(true);
+            try {
+              if (branding.theme !== null || branding.motif !== "spotlight") {
+                await saveFestivalBranding(festivalCompanyId, canonical.festivalEditionId, branding);
+              }
+            } catch {
+              toast.warning("Festival created. Re-select your colours in the annual plan; they could not be saved.");
+            } finally { setFinishing(false); }
             navigate(
               festivalRoutes.edition(
                 festivalCompanyId,
@@ -136,7 +158,7 @@ export function FestivalConfigurationWizard({
             <Tent className="h-5 w-5" /> Create your Festival
           </CardTitle>
           <CardDescription>
-            Start the Festival company with four decisions. Detailed annual choices can be changed later without repeating company setup.
+            Create your first annual edition.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -149,8 +171,10 @@ export function FestivalConfigurationWizard({
         </Alert>
       ) : null}
 
-      <Card>
-        <CardContent className="grid gap-5 pt-6 md:grid-cols-2">
+      <FestivalSetupSteps step={step} onChange={setStep} busy={save.isPending || finishing}
+        canContinue={step === 0 ? name.trim().length >= 3 : step === 1 ? Boolean(cityId && scaleKey && date) : true}>
+      <fieldset disabled={!configuration.canWrite || save.isPending || finishing} className="grid min-w-0 gap-5 md:grid-cols-2">
+      {step === 0 && <>
           <div className="space-y-2">
             <Label htmlFor="festival-name">Festival name</Label>
             <Input
@@ -166,6 +190,12 @@ export function FestivalConfigurationWizard({
             </p>
           </div>
 
+          <div className="space-y-2"><Label htmlFor="festival-founding-tagline">Tagline</Label><Input id="festival-founding-tagline" value={tagline ?? configuration.tagline} maxLength={160} onChange={event => setTagline(event.target.value)} /></div>
+          <div className="space-y-2 md:col-span-2"><Label htmlFor="festival-founding-description">Description</Label><Textarea id="festival-founding-description" value={description ?? configuration.description} maxLength={2000} onChange={event => setDescription(event.target.value)} /></div>
+          <div className="md:col-span-2"><FestivalThemePicker value={branding} onChange={setBranding} disabled={!configuration.canWrite}
+            name={name} place={selectedCity?.name ?? ""} dates={date} /></div>
+      </>}
+      {step === 1 && <>
           <div className="space-y-2">
             <Label htmlFor="festival-home-city">Home city</Label>
             <select
@@ -217,9 +247,28 @@ export function FestivalConfigurationWizard({
               You can change the annual plan before tickets go on sale.
             </p>
           </div>
-        </CardContent>
-      </Card>
-
+      </>}
+      {step === 2 && <>
+        {([
+          ["Crowd vibe", vibe ?? configuration.vibe ?? "community", configuration.vibes, (value: string) => setVibe(value as FestivalVibe)],
+          ["Site type", siteType ?? configuration.siteType ?? "outdoor", configuration.siteTypes, (value: string) => setSiteType(value as FestivalSiteType)],
+          ["Environmental approach", environmentalPolicy ?? configuration.environmentalPolicy ?? "standard", configuration.environmentalPolicies, (value: string) => setEnvironmentalPolicy(value as FestivalEnvironmentalPolicy)],
+        ] as const).map(([label, value, options, change]) => <div className="space-y-2" key={label}>
+          <Label htmlFor={`founding-${label}`}>{label}</Label>
+          <select id={`founding-${label}`} className="min-h-10 w-full rounded-md border bg-background px-3 py-2 text-sm" value={value} onChange={event => change(event.target.value)}>
+            {options.map(option => <option key={option.key} value={option.key}>{option.displayName}</option>)}
+          </select><p className="text-xs text-muted-foreground">{options.find(option => option.key === value)?.description}</p>
+        </div>)}
+      </>}
+      {step === 3 && <div className="space-y-4 md:col-span-2">
+        <h4 className="font-semibold">First edition budget</h4>
+        <p className="text-sm">{preview ?? "Select the starting size"}</p>
+        <p className="text-sm text-muted-foreground">Ticket prices, promotion and operating estimates become available in the annual edition after creation. Creating an edition does not open ticket sales.</p>
+      </div>}
+      </fieldset>
+      {step === 4 && <>
+      <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
+      <div className="space-y-4"><h4 className="text-xl font-bold">{name}</h4><p className="text-sm text-muted-foreground">{tagline ?? configuration.tagline}</p>
       <Card className="border-dashed">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -242,6 +291,8 @@ export function FestivalConfigurationWizard({
         </CardContent>
       </Card>
 
+      <p className="text-sm">{vibe ?? configuration.vibe ?? "community"} · {siteType ?? configuration.siteType ?? "outdoor"} · {environmentalPolicy ?? configuration.environmentalPolicy ?? "standard"}</p>
+      </div><FestivalThemePreview branding={branding} name={name} place={selectedCity?.name ?? ""} dates={date} /></div>
       {save.isError ? (
         <Alert variant="destructive">
           <AlertDescription>{festivalConfigurationErrorMessage(save.error)}</AlertDescription>
@@ -250,9 +301,10 @@ export function FestivalConfigurationWizard({
 
       <div className="flex justify-end">
         <Button type="button" size="lg" disabled={!canSubmit} onClick={createFestival}>
-          {save.isPending ? "Creating Festival…" : "Create Festival & start planning"}
+          {save.isPending || finishing ? "Creating Festival…" : "Create Festival & start planning"}
         </Button>
-      </div>
+      </div></>}
+      </FestivalSetupSteps>
     </section>
   );
 }

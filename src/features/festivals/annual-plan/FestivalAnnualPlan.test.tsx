@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FestivalAnnualPlan as AnnualPlan } from "./model";
-import { getFestivalAnnualPlan } from "./repository";
+import { getFestivalAnnualPlan, saveFestivalAnnualPlan } from "./repository";
 import { FestivalAnnualPlan } from "./FestivalAnnualPlan";
 
 vi.mock("./repository", () => ({
@@ -73,6 +73,24 @@ afterEach(() => {
 });
 
 describe("annual Festival readiness checklist", () => {
+  it("saves selected edition branding with the annual plan and its original version", async () => {
+    const { client } = renderPlan({ blockers: [] });
+    vi.mocked(saveFestivalAnnualPlan).mockResolvedValue({ ...plan, blockers: [], branding: { theme: "forest", motif: "sunburst", version: 1 } });
+    try {
+      fireEvent.click(await screen.findByRole("button", { name: /Forest Folk/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Sunburst" }));
+      fireEvent.click(screen.getByRole("button", { name: /5 Review/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Save Festival choices" }));
+      await waitFor(() => expect(saveFestivalAnnualPlan).toHaveBeenCalledWith(expect.objectContaining({
+        festivalCompanyId: plan.festivalCompanyId,
+        festivalEditionId: plan.festivalEditionId,
+        expectedVersion: 3,
+        branding: { theme: "forest", motif: "sunburst", version: 0 },
+        plan: expect.objectContaining({ startsOn: "2030-06-10", durationDays: 2 }),
+      })));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Festival choices saved" })).toBeDisabled());
+    } finally { client.clear(); }
+  });
   it("shows canonical blockers even if a stale score says 100%, and opens the right form", async () => {
     const { client } = renderPlan();
     try {
@@ -80,7 +98,7 @@ describe("annual Festival readiness checklist", () => {
       expect(screen.getByText(/100% · Action required/)).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Choose city" }));
       expect(screen.getByLabelText("Start date")).toBeInTheDocument();
-      expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+      await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled());
       expect(screen.getByRole("link", { name: "Review capacity licence" })).toHaveAttribute(
         "href", `/festival-company/${plan.festivalCompanyId}/upgrades`,
       );
