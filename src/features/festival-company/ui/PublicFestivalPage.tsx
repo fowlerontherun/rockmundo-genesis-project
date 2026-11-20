@@ -26,6 +26,7 @@ import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { FestivalGrounds } from "./FestivalGrounds";
 import { FestivalPublishedTimetable } from "./FestivalPublishedTimetable";
 import { FestivalVisitorGuide } from "./FestivalVisitorGuide";
+import { FestivalLineupPoster } from "./poster/FestivalLineupPoster";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
@@ -420,6 +421,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
           <TabsContent value="lineup">
             <section aria-label="Confirmed festival line-up" className="space-y-4">
+              <FestivalLineupPoster name={f.name} place={[f.city, f.country].filter(Boolean).join(", ")} dates={formatFestivalEditionDate(f.startsAt, f.timezone)} artists={confirmedLineup.map((e) => e.artistName ?? "")} />
               <div>
                 <h2 className="text-xl font-bold">Confirmed line-up</h2>
                 <p className="text-sm text-muted-foreground">

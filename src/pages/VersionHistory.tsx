@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.817",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festival line-ups now show a classic billing poster (headliner, sub-headliners, support) with a Download poster button to share." },
+    ],
+  },
+  {
     version: "1.1.816",
     date: "2026-11-20",
     changes: [
