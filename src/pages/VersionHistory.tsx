@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.808",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festive release bonus: releasing a song with Christmas, Xmas or Snow in the title during December (real or in-game) gives each band member 250 XP once per release." },
+      { type: "feature", description: "Game-wide popup announcement whenever a festive release earns the bonus; rules shown on the Christmas Charts page." },
+    ],
+  },
+  {
     version: "1.1.807",
     date: "2026-11-20",
     changes: [

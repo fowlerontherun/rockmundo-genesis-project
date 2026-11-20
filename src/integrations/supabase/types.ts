@@ -9008,6 +9008,51 @@ export type Database = {
           },
         ]
       }
+      christmas_release_bonuses: {
+        Row: {
+          artist_name: string
+          created_at: string
+          matched_title: string
+          recipients: number
+          release_id: string
+          release_title: string
+          xp_per_member: number
+        }
+        Insert: {
+          artist_name: string
+          created_at?: string
+          matched_title: string
+          recipients?: number
+          release_id: string
+          release_title: string
+          xp_per_member: number
+        }
+        Update: {
+          artist_name?: string
+          created_at?: string
+          matched_title?: string
+          recipients?: number
+          release_id?: string
+          release_title?: string
+          xp_per_member?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "christmas_release_bonuses_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "christmas_release_bonuses_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           climate_type: string | null
@@ -80645,6 +80690,7 @@ export type Database = {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
       }
+      is_festive_release_window: { Args: { p_at?: string }; Returns: boolean }
       is_label_team_member: {
         Args: { p_label_id: string; p_roles?: string[] }
         Returns: boolean

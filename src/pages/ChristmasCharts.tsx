@@ -159,7 +159,12 @@ const ChristmasCharts = () => {
         </Badge>
       }
     >
-
+      <Card className="mb-4 border-primary/30">
+        <CardContent className="flex items-start gap-3 p-4 text-sm">
+          <Snowflake className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p><strong>Festive release bonus:</strong> release a song with "Christmas", "Xmas" or "Snow" in its title during December (real or in-game) and every band member earns 250 XP. The whole game gets an announcement.</p>
+        </CardContent>
+      </Card>
 
       {!isDecember ? (
         /* Off-season message */

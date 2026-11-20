@@ -22,6 +22,7 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { BirthdayExperience } from "@/components/calendar/BirthdayExperience";
 import { FMShell } from "@/components/fm/FMShell";
 import { HalloweenLoginAnnouncement } from "@/features/seasonal/HalloweenEventNotice";
+import { ChristmasReleaseAnnouncement } from "@/features/seasonal/ChristmasReleaseAnnouncement";
 import { MobileShell } from "@/mobile/shell/MobileShell";
 import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
@@ -141,6 +142,7 @@ const Layout = () => {
       >
         <FestivalModeHome attendance={activeFestivalAttendance} />
         <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
       </FestivalModeShell>
     );
   }
@@ -179,6 +181,7 @@ const Layout = () => {
           <CharacterGate>
             <BirthdayExperience />
             <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
             <Outlet />
           </CharacterGate>
         </NoActiveCharacterGate>
@@ -201,6 +204,7 @@ const Layout = () => {
           <CharacterGate>
             <BirthdayExperience />
             <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
             <Breadcrumbs />
             <Outlet />
           </CharacterGate>
