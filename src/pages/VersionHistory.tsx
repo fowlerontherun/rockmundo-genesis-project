@@ -17,6 +17,16 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.811",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "New Roleplay page (Social → Roleplay & scenes): live in-character city chat, /me actions, out-of-character (( )) lines, and private scenes for up to 6 players that save to everyone's history when ended." },
+      { type: "feature", description: "Quick interactions from any chat (buy a drink, compliment, flirt, insult, offer to jam, challenge) change relationships, respect the other player's preferences and blocks, have a 1-hour cooldown and give 10 XP (max 100 a day)." },
+      { type: "feature", description: "Roleplay profile: mood, roleplay hooks and what you're open to (romance, rivalry, collabs), shown on player profiles." },
+      { type: "improvement", description: "Nightclub chat now uses the roleplay chat for everyone inside, with report and block on every message." },
+    ],
+  },
+  {
     version: "1.1.810",
     date: "2026-11-20",
     changes: [
