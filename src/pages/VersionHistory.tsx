@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.814",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Player profiles now show real bands, city, bio and career numbers for characters without saved privacy settings." },
+      { type: "feature", description: "Player profiles have visual stat tiles with meters and a career scoreboard (gigs, songs, releases, awards, achievements, XP)." },
+    ],
+  },
+  {
     version: "1.1.813",
     date: "2026-11-20",
     changes: [

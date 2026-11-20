@@ -261,10 +261,10 @@ export default function PlayerProfile() {
   };
 
   const statItems = [
-    { icon: Star, label: "Level", value: profile.level || 1 },
-    { icon: TrendingUp, label: "Fame", value: (profile.fame || 0).toLocaleString() },
-    { icon: Users, label: "Fans", value: (profile.fans || 0).toLocaleString() },
-    { icon: Music, label: "Bands", value: profile.bands.length.toLocaleString() },
+    { icon: Star, label: "Level", value: profile.level || 1, meter: Math.min(100, (profile.level || 1)) },
+    { icon: TrendingUp, label: "Fame", value: (profile.fame || 0).toLocaleString(), meter: Math.min(100, Math.log10((profile.fame || 0) + 1) * 20) },
+    { icon: Users, label: "Fans", value: (profile.fans || 0).toLocaleString(), meter: Math.min(100, Math.log10((profile.fans || 0) + 1) * 16) },
+    { icon: Music, label: "Bands", value: profile.bands.length.toLocaleString(), meter: Math.min(100, profile.bands.length * 25) },
   ];
 
   return (
@@ -316,18 +316,48 @@ export default function PlayerProfile() {
         {statItems.map(stat => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
-              <CardContent className="p-3 flex items-center gap-3">
-                <Icon className="h-5 w-5 text-primary flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="text-lg font-bold">{stat.value}</p>
+            <Card key={stat.label} className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card">
+              <Icon className="absolute -right-3 -bottom-3 h-20 w-20 text-primary/10" aria-hidden="true" />
+              <CardContent className="relative p-4">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Icon className="h-4 w-4 text-primary" />{stat.label}
+                </div>
+                <p className="mt-1 text-2xl font-black tabular-nums">{stat.value}</p>
+                <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
+                  <div className="h-1.5 rounded-full bg-primary" style={{ width: `${stat.meter}%` }} />
                 </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {profile.career_summary && (
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-primary" /> Career scoreboard</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+              {[
+                { label: "Gigs", value: profile.career_summary.gigs_performed, icon: Users },
+                { label: "Songs", value: profile.career_summary.songs_written, icon: Music },
+                { label: "Releases", value: profile.career_summary.recordings_released, icon: Star },
+                { label: "Awards", value: profile.career_summary.awards, icon: Star },
+                { label: "Achievements", value: profile.career_summary.achievements, icon: Star },
+                { label: "XP", value: profile.career_summary.experience, icon: TrendingUp },
+              ].map(item => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="rounded-lg border bg-muted/40 p-3 text-center">
+                    <Icon className="mx-auto h-4 w-4 text-primary" />
+                    <p className="mt-1 text-xl font-bold tabular-nums">{Number(item.value ?? 0).toLocaleString()}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
           {/* Bands */}
@@ -403,16 +433,9 @@ export default function PlayerProfile() {
             <ProfileInfoCard title="Employment"><EmploymentProfileCard employer={profile.career_summary?.current_employer} jobTitle={profile.career_summary?.current_job} /></ProfileInfoCard>
           </div>
 
-          <ProfileInfoCard title="Career Summary" icon={TrendingUp}>
-            <div className="grid gap-2 text-sm md:grid-cols-3">
-              <p>Bands joined: {profile.career_summary?.bands_joined ?? profile.bands.length}</p>
-              <p>Gigs performed: {profile.career_summary?.gigs_performed ?? 'Not available'}</p>
-              <p>Songs written: {profile.career_summary?.songs_written ?? 'Not available'}</p>
-              <p>Recordings released: {profile.career_summary?.recordings_released ?? 'Not available'}</p>
-              <p>Albums released: {profile.career_summary?.albums_released ?? 'Not available'}</p>
-              <p>Awards: {profile.career_summary?.awards ?? 'Not available'}</p>
-            </div>
-            {Array.isArray(profile.career_summary?.milestones) && profile.career_summary.milestones.length > 0 && (
+          {Array.isArray(profile.career_summary?.milestones) && profile.career_summary.milestones.length > 0 && (
+          <ProfileInfoCard title="Career milestones" icon={TrendingUp}>
+<>
               <section className="mt-3 space-y-2" aria-label="Published career milestones">
                 <h3 className="text-sm font-semibold">Career milestones</h3>
                 <ul className="space-y-1">
@@ -423,8 +446,9 @@ export default function PlayerProfile() {
                   ))}
                 </ul>
               </section>
-            )}
+</>
           </ProfileInfoCard>
+          )}
 
           <ProfileInfoCard title="Achievements and badges" icon={Star}>
             {profile.badges?.length ? <div className="flex flex-wrap gap-2">{profile.badges.map((badge: any) => <Badge key={badge.badge_key || badge.name}>{badge.label || badge.name}</Badge>)}</div> : <p className="text-sm text-muted-foreground">No public badges yet.</p>}
