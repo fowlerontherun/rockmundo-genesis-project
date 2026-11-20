@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.813",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Player profiles are viewable again: characters without saved social settings default to public instead of erroring." },
+      { type: "fix", description: "Completed activity notifications no longer fail when the account and character records disagree." },
+      { type: "fix", description: "Gig reminders and repertoire gig lists show the venue city instead of causing database errors." },
+    ],
+  },
+  {
     version: "1.1.812",
     date: "2026-11-20",
     changes: [

@@ -32,7 +32,7 @@ export const useGigDayReminders = () => {
 
       const { data: gigs } = await supabase
         .from("gigs")
-        .select("id, scheduled_date, venues!gigs_venue_id_fkey(name, city)")
+        .select("id, scheduled_date, venues!gigs_venue_id_fkey(name, cities:city_id(name))")
         .in("band_id", bandIds)
         .eq("status", "scheduled")
         .gte("scheduled_date", now.toISOString())
