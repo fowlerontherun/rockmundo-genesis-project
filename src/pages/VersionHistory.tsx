@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.809",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Christmas Charts now records past Christmas Number One winners for every finished year, not only when someone opened the page on Christmas Day." },
+    ],
+  },
+  {
     version: "1.1.808",
     date: "2026-11-20",
     changes: [

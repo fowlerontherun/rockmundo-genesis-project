@@ -108,11 +108,12 @@ const ChristmasCharts = () => {
   const { data: pastWinners = [], isLoading: winnersLoading } = useQuery({
     queryKey: ["christmas-number-ones-history", gameDate.gameYear, isDecember && gameDate.gameDay >= 25],
     queryFn: async () => {
-      if (isDecember && gameDate.gameDay >= 25) {
-        const { error: snapshotError } = await (supabase as any).rpc("get_or_create_christmas_number_one", {
-          p_game_year: gameDate.gameYear,
-        });
-        if (snapshotError) throw snapshotError;
+      // Record every concluded year, not just the one being viewed on Christmas Day,
+      // so missed years are filled in from their saved December sales.
+      const lastConcluded = isDecember && gameDate.gameDay >= 25 ? gameDate.gameYear : gameDate.gameYear - 1;
+      for (let year = 1; year <= lastConcluded; year++) {
+        const { error: snapshotError } = await (supabase as any).rpc("get_or_create_christmas_number_one", { p_game_year: year });
+        if (snapshotError) console.warn(`Christmas Number One for year ${year} could not be recorded:`, snapshotError.message);
       }
       const { data, error } = await supabase
         .from("christmas_number_ones" as any)
