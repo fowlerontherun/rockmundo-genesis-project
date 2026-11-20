@@ -18,6 +18,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllVenues } from '@/utils/fetchAllVenues';
 import type { Database } from '@/lib/supabase-types';
+import { resolveGigsTab } from '@/lib/gigsTab';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
@@ -66,12 +67,13 @@ const GigBooking = () => {
     next.delete('proposalId');
     setSearchParams(next, { replace: true });
   };
-  const [bookingTab, setBookingTab] = useState(searchParams.get('tab') === 'play-together' ? 'play-together' : 'book');
-  useEffect(() => { const requested = searchParams.get('tab'); setBookingTab(requested && ['book','upcoming','history','play-together'].includes(requested) ? requested : 'book'); }, [searchParams]);
+  const [bookingTab, setBookingTab] = useState(() => resolveGigsTab(searchParams.get('tab')));
+  useEffect(() => { setBookingTab(resolveGigsTab(searchParams.get('tab'))); }, [searchParams]);
   const changeBookingTab = (tab: string) => {
-    setBookingTab(tab);
+    const resolved = resolveGigsTab(tab);
+    setBookingTab(resolved);
     const next = new URLSearchParams(searchParams);
-    next.set('tab', tab);
+    next.set('tab', resolved);
     if (tab !== 'play-together') {
       next.delete('section');
       next.delete('proposalId');

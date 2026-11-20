@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.815",
+    date: "2026-11-20",
+    changes: [
+      { type: "improvement", description: "Gigs now open on Upcoming Gigs so you see what the band is playing next; Book, Gig History and Play Together still open straight from their links." },
+    ],
+  },
+  {
     version: "1.1.814",
     date: "2026-11-20",
     changes: [
