@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
 
-const page = readFileSync(fileURLToPath(new URL("../PublicFestivalPage.tsx", import.meta.url)), "utf8");
-const guide = readFileSync(fileURLToPath(new URL("../FestivalVisitorGuide.tsx", import.meta.url)), "utf8");
+const page = readFileSync(path.resolve(process.cwd(), "src/features/festival-company/ui/PublicFestivalPage.tsx"), "utf8");
+const guide = readFileSync(path.resolve(process.cwd(), "src/features/festival-company/ui/FestivalVisitorGuide.tsx"), "utf8");
 
 describe("public festival visitor display wiring", () => {
   it("#3960 never displays cached check-in text during wallet or eligibility errors", () => {
@@ -19,12 +19,12 @@ describe("public festival visitor display wiring", () => {
     expect(page).not.toContain("confirmedLineup.some((act) => act.startsAt && act.endsAt)");
   });
   it("#3962 wallet uses the issued-admission resolver after check-in", () => {
-    expect(page).toContain("const hasAdmissionTicket = hasIssuedFestivalAdmission(myFestivalTickets)");
+    expect(page).toContain("const hasAdmissionTicket = !walletError && !walletWaiting && hasIssuedFestivalAdmission(myFestivalTickets)");
     expect(page).not.toContain('"transferred", "used"].includes(ticket.status)');
   });
   it("#3963 ticket availability label prioritises ended festival dates", () => {
     expect(page).toContain("festivalVisitorSalesLabel(eventPhase, f.launchStatus)");
-    expect(page).toContain('eventPhase === "dates_ended" ? "closed"');
+    expect(page).toContain('eventPhase !== "dates_ended"');
   });
   it("#3964 all nine edition start/end date renderings use the supplied festival timezone", () => {
     expect(((page + guide).match(/formatFestivalEditionDate\(f\.(startsAt|endsAt), f\.timezone/g) ?? []).length).toBeGreaterThanOrEqual(6);

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { findUndefinedFestivalRouteComponents } from "./route-component-certification.mjs";
+import { resolveFestivalRoutes } from "./resolved-routes.mjs";
 
 const root = process.cwd();
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -53,8 +54,7 @@ for (const forbidden of ["festival_edition_settlement_lines", "festival_edition_
 
 const semantics = param => ({ festivalCompanyId: "festival_company_id", festivalCompanyIdentifier: "festival_company_slug_or_id", editionIdentifier: "annual_edition_id_or_year", companyId: "company_id", editionId: "annual_edition_id", festivalSlug: "festival_slug", participationId: "participation_id", sessionId: "performance_session_id", launchId: "launch_id", resultId: "legacy_festival_id", festivalId: "legacy_festival_id" })[param] || "unknown";
 const normalise = route => route.replace(/:[^/]+/g, ":parameter").replace(/\/$/, "");
-const routeMatches = [...app.matchAll(/<Route\s+path=(?:"([^"]*festival[^"]*)"|\{festivalRoutePatterns\.(\w+)\})\s+element=\{([^\n]+)/gi)]
-  .map(match => ({ raw: match[0], path: match[1] || festivalPatterns[match[2]], element: match[3], index: match.index }));
+const routeMatches = resolveFestivalRoutes(app, festivalPatterns);
 const activePatterns = new Map();
 for (const item of routeMatches) {
   const key = normalise(`/${item.path.replace(/^\//, "")}`);

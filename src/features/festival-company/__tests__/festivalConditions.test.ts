@@ -119,7 +119,7 @@ describe("Festival condition client contracts", () => {
 
     expect(() => parseFestivalActivityResolution({ ...completed, status: "rewarded" }))
       .toThrow("malformed_festival_activity_resolution");
-    expect(() => parseFestivalActivityResolution({ ...completed, activityType: "watch_act" }))
+    expect(() => parseFestivalActivityResolution({ ...completed, activityType: "invented_activity" }))
       .toThrow("malformed_festival_activity_resolution");
   });
 

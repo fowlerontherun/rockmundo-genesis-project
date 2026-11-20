@@ -112,6 +112,10 @@ export function FestivalAnnualPlan({
       await queryClient.invalidateQueries({
         queryKey: ["festival-company-editions", festivalCompanyId],
       });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["festival-run-readiness", festivalCompanyId, editionId] }),
+        queryClient.invalidateQueries({ queryKey: ["festival-live-day-availability", festivalCompanyId, editionId] }),
+      ]);
       toast.success("Festival plan saved");
     },
     onError: () => toast.error("Festival plan could not be saved"),

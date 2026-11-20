@@ -1,5 +1,11 @@
 # Roadmap
 
+- [x] Festival repair: protected counteroffers and booking-specific saved setlists/backstage choices; legacy contracts remain isolated.
+- [ ] Festival repair: live gates and performance effects blocked by missing canonical crowd/tick/action infrastructure; availability fails closed, final-local-day simulation guard restored.
+- [x] Festival repair: validate financial inputs; refresh readiness; show real act names, currencies and booking details.
+- [x] Festival repair: stale history/attendance recovery, shared mobile ticket/check-in page and persistent Festival Mode navigation.
+- [x] Festival repair: 46 focused tests and 3 route tests pass, active inventory certified, version 1.1.806. Full suite: 793 pass, 27 failures remain. Authenticated transactions unavailable with external unmanaged sessions; no claim of complete live performance restoration.
+
 - [x] Extend graphics refresh across shared game headings, panels, tabs and hub artwork; preserve dense layouts and gameplay. Missing artwork uses destination icons.
 - [x] Verify Music, Character, Skin Store and Skills pages with no page errors; four hub navigation tests pass, mobile companion has no horizontal overflow, version 1.1.804. Signed-in data-rich pages and every individual page are not exhaustively verified with external account sessions unavailable.
 

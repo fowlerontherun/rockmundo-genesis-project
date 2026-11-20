@@ -17,6 +17,17 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.806",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Festival ticket prices, capacities and artist fees reject invalid input instead of silently saving earlier or capped amounts; setup compatibility, currency display and retry states are corrected." },
+      { type: "fix", description: "Festival final results wait until the final city-local day has ended; owner readiness refreshes after planning and booking changes, and missing live infrastructure no longer prevents verified final simulation." },
+      { type: "improvement", description: "Festival lineup posters resolve actual band/solo names; booking cards link to their annual timetable; stale attendance and history are hidden after failed verification." },
+      { type: "feature", description: "Mobile festival details share guarded ticket purchases and check-in; Festival Mode sections persist in the address. Artists and owners can send protected counteroffers, and bands can save booking-specific setlists and backstage preparation choices." },
+      { type: "improvement", description: "Festival route certification distinguishes mobile and desktop parent paths. Live gates and performance effects remain unavailable until canonical safety infrastructure is installed." },
+    ],
+  },
+  {
     version: "1.1.805",
     date: "2026-11-19",
     changes: [

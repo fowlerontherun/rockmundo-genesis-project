@@ -31,6 +31,7 @@ import type {
 import type { FestivalArtistCandidate } from "../domain/festivalArtistWorkflows";
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
 import { suggestedFestivalResponseDeadline, validateFestivalResponseDeadline } from "../domain/festivalResponseDeadline";
+import { parseFestivalFee } from "../domain/festivalOwnerInputs";
 
 const billingLabel = (value: string) => value.replaceAll("_", " ");
 const invitedBilling = (message: string) => billingPositions.find((position) =>
@@ -85,11 +86,7 @@ const offerVersionFromAction = (value: unknown) => {
 
 const minorToMajorInput = (minor: number) => String(Math.max(0, minor) / 100);
 
-const majorInputToMinor = (value: string, fallbackMinor: number) => {
-  const major = Number(value);
-  if (!value.trim() || !Number.isFinite(major) || major < 0 || !/^\d+(?:\.\d{1,2})?$/.test(value.trim())) return Math.max(0, fallbackMinor);
-  return Math.round(major * 100);
-};
+const majorInputToMinor = (value: string, _fallbackMinor: number) => parseFestivalFee(value);
 
 export function SimplifiedFestivalLineupManager({
   festivalCompanyId,
@@ -147,6 +144,7 @@ export function SimplifiedFestivalLineupManager({
   const inviteArtist = useFestivalEditionArtistAction("sendInvitation");
   const createOffer = useFestivalEditionArtistAction("createOffer");
   const sendOffer = useFestivalEditionArtistAction("sendOffer");
+  const counterOffer = useFestivalArtistAction("counterOffer");
   const withdrawInvitation = useFestivalEditionArtistAction("withdrawInvitation");
   const withdrawOffer = useFestivalEditionArtistAction("withdrawOffer");
 
@@ -276,6 +274,7 @@ export function SimplifiedFestivalLineupManager({
       feeInputs[key] ?? minorToMajorInput(suggestedFeeMinor),
       suggestedFeeMinor,
     );
+    if (chosenFeeMinor === null) { toast.error("Enter the exact fee using at most two decimal places before sending an invitation."); return; }
     inviteArtist.mutate({
       festivalCompanyId,
       festivalEditionId,
@@ -306,13 +305,12 @@ export function SimplifiedFestivalLineupManager({
   const offerInvitation = (invitation: FestivalArtistInvitation) => {
     const key = `invitation:${invitation.id}`;
     const suggestedFeeMinor = invitation.suggestedFeeMinor ?? 0;
+    const feeMinor = majorInputToMinor(feeInputs[key] ?? minorToMajorInput(suggestedFeeMinor), suggestedFeeMinor);
+    if (feeMinor === null) { toast.error("Enter the exact fee using at most two decimal places before sending an offer."); return; }
     return createAndSendOffer({
       identity: invitation.identity,
       invitationId: invitation.id,
-      feeMinor: majorInputToMinor(
-        feeInputs[key] ?? minorToMajorInput(suggestedFeeMinor),
-        suggestedFeeMinor,
-      ),
+      feeMinor,
       setMinutes: invitation.suggestedSetMinutes ?? 60,
       requestedDates: invitation.suggestedDates,
       billingPosition: billingInputs[`invitation:${invitation.id}`] ?? invitedBilling(invitation.message),
@@ -710,6 +708,14 @@ export function SimplifiedFestivalLineupManager({
                   {" · expires "}{deadlineLabel(offer.responseDeadline)}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
+                  {["sent", "countered"].includes(offer.status) ? <div className="flex flex-wrap items-center gap-2">
+                    <Input aria-label={`Revised fee for ${nameFor(offer.identity)}`} inputMode="decimal" value={feeInputs[`offer:${offer.id}`] ?? minorToMajorInput(offer.offeredFeeMinor)} onChange={event => setFeeInputs(current => ({ ...current, [`offer:${offer.id}`]: event.target.value }))} />
+                    <Button size="sm" variant="outline" disabled={!data.canWrite || counterOffer.isPending || parseFestivalFee(feeInputs[`offer:${offer.id}`] ?? minorToMajorInput(offer.offeredFeeMinor)) === null} onClick={() => {
+                      const feeMinor = parseFestivalFee(feeInputs[`offer:${offer.id}`] ?? minorToMajorInput(offer.offeredFeeMinor));
+                      if (feeMinor === null) return;
+                      counterOffer.mutate({ p_offer_id: offer.id, p_expected_version: offer.offerVersion, p_terms: { feeMinor, setMinutes: offer.setMinutes }, p_idempotency_key: crypto.randomUUID() });
+                    }}>Revise counteroffer</Button>
+                  </div> : null}
                   {offer.status === "draft" || offer.status === "countered" ? (
                     <Button
                       size="sm"

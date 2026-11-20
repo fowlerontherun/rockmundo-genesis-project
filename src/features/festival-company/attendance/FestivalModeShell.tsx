@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { type ReactNode } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BugReportButton } from "@/components/bug-report/BugReportButton";
@@ -67,7 +67,8 @@ export const FestivalModeShell = ({ attendance, children, supportContent, isMobi
   const leaveEarly = useLeaveFestivalEarly();
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<FestivalModeSection>("home");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSection = festivalSections.find(section => section.id === searchParams.get("festivalTab"))?.id ?? "home";
   const supportRoute = isFestivalModeSupportPath(location.pathname);
 
   const confirmLeave = () => {
@@ -76,8 +77,10 @@ export const FestivalModeShell = ({ attendance, children, supportContent, isMobi
   };
 
   const selectFestivalSection = (section: FestivalModeSection) => {
-    setActiveSection(section);
-    if (supportRoute) navigate("/", { replace: false });
+    const next = new URLSearchParams(searchParams);
+    next.set("festivalTab", section);
+    if (supportRoute) navigate(`/?${next.toString()}`, { replace: false });
+    else setSearchParams(next);
   };
 
   const festivalContent = (() => {

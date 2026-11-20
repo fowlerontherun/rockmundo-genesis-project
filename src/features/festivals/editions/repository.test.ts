@@ -19,6 +19,7 @@ const validResult = {
       endsOn: "2026-08-12",
       preferredMonth: 8,
       countryCode: "GB",
+      currencyCode: "GBP",
       cityId: "33333333-3333-4333-8333-333333333333",
       vibe: "alternative",
       siteType: "outdoor",

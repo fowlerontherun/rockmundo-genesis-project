@@ -18,6 +18,8 @@ import {
 } from "../application/useFestivalArtistWorkflows";
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
 import type { FestivalArtistOpportunity } from "../domain/festivalArtistWorkflows";
+import { parseFestivalFee } from "../domain/festivalOwnerInputs";
+import { FestivalBookingPreparation } from "./FestivalBookingPreparation";
 
 
 
@@ -125,6 +127,8 @@ export default function FestivalArtistOpportunitiesPage() {
   const respondInvitation = useFestivalArtistAction("respondInvitation");
   const withdrawInvitation = useFestivalArtistAction("withdrawInvitation");
   const respondOffer = useFestivalArtistAction("respondOffer");
+  const counterOffer = useFestivalArtistAction("counterOffer");
+  const [counterFees, setCounterFees] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [artist, setArtist] = useState("");
   const [error, setError] = useState("");
@@ -554,6 +558,14 @@ export default function FestivalArtistOpportunitiesPage() {
                       below.
                     </p>
                   ) : null}
+                  {status === "sent" ? <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <label className="space-y-1 text-xs">Counteroffer fee ({currency})<Input aria-label={`Counteroffer fee for ${row.id}`} inputMode="decimal" value={counterFees[String(row.id)] ?? (fee / 100).toFixed(2)} onChange={event => setCounterFees(current => ({ ...current, [String(row.id)]: event.target.value }))} /></label>
+                    <Button variant="outline" disabled={counterOffer.isPending || parseFestivalFee(counterFees[String(row.id)] ?? (fee / 100).toFixed(2)) === null} onClick={() => {
+                      const feeMinor = parseFestivalFee(counterFees[String(row.id)] ?? (fee / 100).toFixed(2));
+                      if (feeMinor === null) return;
+                      void run(() => counterOffer.mutateAsync({ p_offer_id: row.id, p_expected_version: number(row, "offerVersion", "offer_version", 1), p_terms: { feeMinor, setMinutes }, p_idempotency_key: id(`counter:${row.id}:${feeMinor}:${number(row, "offerVersion", "offer_version", 1)}`) }));
+                    }}>Send counteroffer</Button>
+                  </div> : null}
                 </article>
               );
             })
@@ -586,6 +598,9 @@ export default function FestivalArtistOpportunitiesPage() {
               const provisionalDate = dateLabel(
                 value(row, "provisionalDate", "provisional_date"),
               );
+              const startsAt = text(row, "startsAt", "starts_at") || text(row, "scheduledStart", "scheduled_start");
+              const stageName = text(row, "stageName", "stage_name");
+              const companyId = text(row, "festivalCompanyId", "festival_company_id");
 
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
@@ -610,10 +625,15 @@ export default function FestivalArtistOpportunitiesPage() {
                     {billing ? ` · ${statusLabel(billing)}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {provisionalDate
+                    {status === "scheduled"
+                      ? `Scheduled${startsAt && !Number.isNaN(Date.parse(startsAt)) ? ` · ${new Date(startsAt).toLocaleString("en-GB", { timeZone: "UTC" })} UTC` : " · See the published festival timetable for stage times"}${stageName ? ` · ${stageName}` : ""}.`
+                      : status === "confirmed" ? `Booking confirmed${provisionalDate ? ` · ${provisionalDate}` : ""}. Stage times will be published in the festival timetable.`
+                      : provisionalDate
                       ? `Provisional performance date ${provisionalDate}. The game will create the final running order automatically.`
                       : "The game will assign the performance to the automatic running order."}
                   </p>
+                  {companyId ? <Button size="sm" variant="outline" asChild className="mt-2"><Link to={`/world/festivals/${encodeURIComponent(companyId)}${text(row, "festivalEditionId", "festival_edition_id") ? `/editions/${encodeURIComponent(text(row, "festivalEditionId", "festival_edition_id"))}` : ""}?tab=timetable`}>View festival timetable</Link></Button> : null}
+                  {text(row, "artistType", "artist_type") === "band" && ["confirmed", "awaiting_schedule", "scheduled"].includes(status) ? <FestivalBookingPreparation bookingId={String(row.id)} /> : null}
                 </article>
               );
             })

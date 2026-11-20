@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MobileFestivals, { MobileFestivalDetail } from "./MobileFestivals";
+import MobileFestivals, { MobileFestivalPublishedGuide } from "./MobileFestivals";
 
 const mocks = vi.hoisted(() => ({ directory: vi.fn(), detail: vi.fn(), retry: vi.fn() }));
 vi.mock("@/features/festival-company/application/useFestivalLaunch", () => ({
@@ -25,7 +25,7 @@ const edition = {
 const view = (entry = "/mobile/festivals") => render(
   <MemoryRouter initialEntries={[entry]}><Routes>
     <Route path="/mobile/festivals" element={<MobileFestivals />} />
-    <Route path="/mobile/festivals/:festivalCompanyIdentifier" element={<MobileFestivalDetail />} />
+    <Route path="/mobile/festivals/:festivalCompanyIdentifier" element={<MobileFestivalPublishedGuide />} />
   </Routes></MemoryRouter>,
 );
 

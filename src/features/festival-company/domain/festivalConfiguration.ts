@@ -262,16 +262,16 @@ export function parseFestivalConfiguration(
   )
     return malformed();
   const scales = value.scales.map(parseScale);
-  const cities = value.cities.map(parseCity);
-  if (scales.some(entry => entry === null) || cities.some(entry => entry === null)) return malformed();
+  const cities = value.cities.map(parseCity).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  if (scales.some(entry => entry === null) || (value.cities.length > 0 && cities.length === 0)) return malformed();
   const vibes = parseCatalogueList(value.vibes, fallbackVibes);
   const siteTypes = parseCatalogueList(value.siteTypes, fallbackSiteTypes);
   const environmentalPolicies = parseCatalogueList(
     value.environmentalPolicies,
     fallbackEnvironmentalPolicies,
   );
-  if (!(value.annualMonth === null || (Number.isInteger(value.annualMonth) && (value.annualMonth as number) >= 1 && (value.annualMonth as number) <= 12))) return malformed();
-  if (!(value.editionYear === null || (Number.isInteger(value.editionYear) && (value.editionYear as number) >= 1))) return malformed();
+  if (!(value.annualMonth === undefined || value.annualMonth === null || (Number.isInteger(value.annualMonth) && (value.annualMonth as number) >= 1 && (value.annualMonth as number) <= 12))) return malformed();
+  if (!(value.editionYear === undefined || value.editionYear === null || (Number.isInteger(value.editionYear) && (value.editionYear as number) >= 1))) return malformed();
   const homeCity = value.homeCity === null ? null : parseCity(value.homeCity);
   const festivalScale = value.festivalScale;
   const start = value.plannedStartDate;

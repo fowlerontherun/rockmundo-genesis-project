@@ -38,10 +38,10 @@ const date = (value: string | null) =>
     : "Dates not set";
 
 const statusLabel = (status: string) => status.replaceAll("_", " ");
-const money = (minor: number) =>
+const money = (minor: number, currencyCode: string) =>
   new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "GBP",
+    currency: currencyCode,
     maximumFractionDigits: 0,
   }).format(minor / 100);
 
@@ -107,8 +107,8 @@ function EditionCard({
           <p className="flex items-center gap-2">
             <WalletCards className="h-4 w-4 text-muted-foreground" />
             <strong>
-              {edition.estimatedOperatingCostMinor
-                ? money(edition.estimatedOperatingCostMinor)
+              {edition.estimatedOperatingCostMinor !== null && edition.estimatedOperatingCostMinor !== undefined
+                ? money(edition.estimatedOperatingCostMinor, edition.currencyCode)
                 : "Cost not calculated"}
             </strong>
           </p>

@@ -173,5 +173,5 @@ export async function getCanonicalLiveDayAvailability(companyId: string, edition
     p_company_id: companyId,
     p_edition_id: editionId,
   });
-  return z.object({ canOpen: z.boolean(), managed: z.boolean(), canAllocate: z.boolean() }).parse(value);
+  return z.object({ canOpen: z.boolean(), managed: z.boolean(), canAllocate: z.boolean(), liveDaySupported: z.boolean().optional() }).parse(value);
 }
