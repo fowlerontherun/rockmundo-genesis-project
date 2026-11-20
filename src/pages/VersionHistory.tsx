@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.810",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Career Overview loads again: band memberships link to bands through two connections, so the lookup now names the exact one." },
+    ],
+  },
+  {
     version: "1.1.809",
     date: "2026-11-20",
     changes: [
