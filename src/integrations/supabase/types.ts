@@ -74231,6 +74231,10 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      _simplified_festival_run_readiness_before_final_day_guard: {
+        Args: { p_festival_company_id: string; p_festival_edition_id: string }
+        Returns: Json
+      }
       _simplified_festival_run_readiness_pre_operating_ceiling: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
@@ -77072,17 +77076,27 @@ export type Database = {
             Returns: string
           }
       coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
-      counter_festival_artist_offer: {
-        Args: {
-          p_expected_version?: number
-          p_fee_minor: number
-          p_idempotency_key?: string
-          p_message?: string
-          p_offer_id: string
-          p_set_minutes?: number
-        }
-        Returns: Json
-      }
+      counter_festival_artist_offer:
+        | {
+            Args: {
+              p_expected_version: number
+              p_idempotency_key: string
+              p_offer_id: string
+              p_terms: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_expected_version?: number
+              p_fee_minor: number
+              p_idempotency_key?: string
+              p_message?: string
+              p_offer_id: string
+              p_set_minutes?: number
+            }
+            Returns: Json
+          }
       counter_festival_offer: {
         Args: {
           p_change_summary?: string
@@ -78246,6 +78260,15 @@ export type Database = {
         }
         Returns: Json
       }
+      festival_booking_preparation: {
+        Args: {
+          p_backstage_choice?: string
+          p_booking_id: string
+          p_expected_version?: number
+          p_song_ids?: string[]
+        }
+        Returns: Json
+      }
       festival_booking_slots: {
         Args: { p_edition_id: string }
         Returns: {
@@ -79160,6 +79183,10 @@ export type Database = {
         Returns: Json
       }
       get_banking_dashboard: { Args: never; Returns: Json }
+      get_canonical_festival_live_day_availability: {
+        Args: { p_company_id: string; p_edition_id: string }
+        Returns: Json
+      }
       get_city_scene_band_supporters: {
         Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
         Returns: Json
