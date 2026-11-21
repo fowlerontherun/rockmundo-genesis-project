@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FestivalConfigurationWizard } from "./FestivalConfigurationWizard";
@@ -42,7 +42,7 @@ describe("guided festival founding", () => {
       expectedVersion: 3,
       configuration: expect.objectContaining({ publicName: "Shock Festival", tagline: "Loud in London", plannedStartDate: "2030-06-10", complete: true }),
     }));
-    await mocks.mutate.mock.calls[0][1].onSuccess({ festivalEditionId: edition });
+    await act(async () => { await mocks.mutate.mock.calls[0][1].onSuccess({ festivalEditionId: edition }); });
     await waitFor(() => expect(mocks.branding).toHaveBeenCalledWith(company, edition, { theme: "indie", motif: "stripes", version: 0 }));
   });
   it("does not allow a read-only character to create an edition", () => {

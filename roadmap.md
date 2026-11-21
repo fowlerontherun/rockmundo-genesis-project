@@ -1,7 +1,8 @@
 # Roadmap
 
-- [ ] Festival wizard: guided founding and annual-edition steps, persistent themes/motifs, shared artwork and poster colours, protected saving and review.
-- [ ] Festival wizard: run focused tests, verify available preview, update version/history and commit; authenticated checks depend on the external account service.
+- [x] Festival wizard: guided founding and annual-edition steps, persistent themes/motifs, shared artwork and poster colours, protected saving and review; version 1.1.818.
+- [x] Festival wizard: 55 focused tests passed across overlapping runs; desktop/mobile visual fixture completed theme selection, review and saved-result feedback without page errors or horizontal overflow. Build OK; changes committed.
+- [ ] Festival wizard: real signed-in founding/annual save verification is blocked by the external unmanaged account service; browser fixture checks are not authenticated gameplay verification. New migrations introduced no remaining security warnings; existing project-wide findings remain separate.
 
 - [x] Social continuation: corrected band-chat account/character IDs and malformed invitation UUID validation; added character-scoped room access, ended-scene write guards/history, message retry and live friend/invite refresh.
 - [x] Social continuation: personal Twaater recap drafts without scene details; 81 focused tests passed, version 1.1.812. Browser page has no errors; authenticated message/scene/publishing journeys remain unavailable with external unmanaged auth.
