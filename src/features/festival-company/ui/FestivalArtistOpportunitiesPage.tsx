@@ -73,7 +73,8 @@ const canCancelBooking = (
   now = new Date(),
 ) => {
   const status = text(row, "status", "status");
-  if (!["awaiting_schedule", "confirmed", "scheduled"].includes(status)) return false;
+  // Published stage assignments need the separate canonical cancellation flow.
+  if (!["awaiting_schedule", "confirmed"].includes(status)) return false;
 
   const artistType = text(row, "artistType", "artist_type");
   const allowed = artistType === "band"

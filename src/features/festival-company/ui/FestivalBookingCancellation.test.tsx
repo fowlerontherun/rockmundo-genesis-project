@@ -106,11 +106,11 @@ describe("Festival gig cancellation", () => {
     expect(screen.queryByRole("button", { name: "Cancel festival gig" })).toBeNull();
   });
 
-  it("allows withdrawal of a future scheduled performance", () => {
+  it("reserves cancellation of future scheduled performances for the canonical stage workflow", () => {
     state.status = "scheduled";
     state.scheduledStart = "2099-10-01T17:00:00Z";
     open();
-    expect(screen.getByRole("button", { name: "Cancel festival gig" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cancel festival gig" })).toBeNull();
   });
 
   it("prevents duplicate cancellation requests", () => {
