@@ -6,6 +6,26 @@
 
 @layer base {
   :root {
+    /* Seasonal festival scenery and shared Three.js material roles. */
+    --festival-outdoor-spring-sky: #acd3e6;
+    --festival-outdoor-summer-sky: #80c6e5;
+    --festival-outdoor-autumn-sky: #c0bbc7;
+    --festival-outdoor-winter-sky: #bbcedb;
+    --festival-outdoor-overcast: #7e939f;
+    --festival-outdoor-night: #101923;
+    --festival-outdoor-spring-ground: #73915a;
+    --festival-outdoor-summer-ground: #667e40;
+    --festival-outdoor-autumn-ground: #85734c;
+    --festival-outdoor-winter-ground: #6d7773;
+    --festival-outdoor-spring-foliage: #a9ba78;
+    --festival-outdoor-summer-foliage: #4f8055;
+    --festival-outdoor-autumn-foliage: #c88b45;
+    --festival-outdoor-winter-foliage: #7c8f88;
+    --festival-outdoor-mud: #655c4e;
+    --festival-outdoor-snow: #e1eef1;
+    --festival-outdoor-rain: #bbd5e3;
+    --festival-outdoor-lamp: #ffe0a1;
+    --festival-outdoor-accent: var(--festival-accent, var(--festival-electric-accent));
     --festival-electric-dark: #111820; --festival-electric-mid: #087a89; --festival-electric-light: #b8fff3; --festival-electric-accent: #f4ff62;
     --festival-vintage-dark: #262126; --festival-vintage-mid: #a64240; --festival-vintage-light: #fcefc4; --festival-vintage-accent: #c9ebaf;
     --festival-indie-dark: #131b2c; --festival-indie-mid: #bc263a; --festival-indie-light: #faf4ef; --festival-indie-accent: #82c8ff;
@@ -860,3 +880,11 @@
 .festival-motif-stripes::before { background: repeating-linear-gradient(135deg, transparent 0 28px, var(--festival-accent) 28px 32px); }
 .festival-motif-sunburst::before { background: repeating-conic-gradient(from 0deg at 50% 80%, transparent 0deg 15deg, var(--festival-accent) 15deg 20deg); }
 .festival-theme-art .festival-billing { color: var(--festival-accent); }
+
+.festival-season-spring { --festival-season-ground: var(--festival-outdoor-spring-ground); --festival-season-leaf: var(--festival-outdoor-spring-foliage); }
+.festival-season-summer { --festival-season-ground: var(--festival-outdoor-summer-ground); --festival-season-leaf: var(--festival-outdoor-summer-foliage); }
+.festival-season-autumn { --festival-season-ground: var(--festival-outdoor-autumn-ground); --festival-season-leaf: var(--festival-outdoor-autumn-foliage); }
+.festival-season-winter { --festival-season-ground: var(--festival-outdoor-winter-ground); --festival-season-leaf: var(--festival-outdoor-winter-foliage); }
+.festival-season-stage { border-bottom: 4px solid var(--festival-season-ground); }
+.festival-season-leaf { color: var(--festival-season-leaf); }
+.festival-season-snow { background: var(--festival-outdoor-snow); }

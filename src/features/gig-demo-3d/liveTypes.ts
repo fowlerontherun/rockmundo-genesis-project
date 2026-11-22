@@ -5,6 +5,7 @@ import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
+import type { FestivalSeasonalAtmosphere } from '@/features/festival-company/domain/festivalSeasonalAtmosphere';
 
 export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'woodwind' | 'percussion' | 'other' | 'fan';
 export interface ConcertPerformer {
@@ -66,6 +67,8 @@ export interface ConcertOptions {
   externalClock: boolean;
   /** Local daytime presentation for a verified outdoor stage view. */
   outdoorDaylight?: boolean;
+  /** Festival-only cosmetic scenery; never affects scoring, scheduling or settlement. */
+  outdoorAtmosphere?: FestivalSeasonalAtmosphere;
   /** Single-performer nightclub DJ presentation; never enables scoring. */
   djClub?: boolean;
   /** Optional broadcast presentation metadata; ignored by normal gig scenes. */

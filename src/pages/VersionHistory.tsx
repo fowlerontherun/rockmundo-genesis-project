@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.819",
+    date: "2026-11-21",
+    changes: [
+      { type: "feature", description: "Outdoor festival stages now follow each edition’s game season with spring greenery, summer fields, autumn foliage and winter lights, plus saved theme-colour bunting." },
+      { type: "improvement", description: "City seasonal outlooks and fresh festival conditions shape stage skies, ground and rain or snow; lightweight views and reduced motion remain supported without changing rewards or results." },
+    ],
+  },
+  {
     version: "1.1.818",
     date: "2026-11-20",
     changes: [

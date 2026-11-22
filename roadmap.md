@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Seasonal festival stages: edition-date scenery, city seasonal weather and fresh runtime overrides; cosmetic only, with lightweight and reduced-motion support.
+- [ ] Verify seasonal rules, stage rendering and desktop/mobile views; update version and commit.
+
 - [x] Festival wizard: guided founding and annual-edition steps, persistent themes/motifs, shared artwork and poster colours, protected saving and review; version 1.1.818.
 - [x] Festival wizard: 55 focused tests passed across overlapping runs; desktop/mobile visual fixture completed theme selection, review and saved-result feedback without page errors or horizontal overflow. Build OK; changes committed.
 - [ ] Festival wizard: real signed-in founding/annual save verification is blocked by the external unmanaged account service; browser fixture checks are not authenticated gameplay verification. New migrations introduced no remaining security warnings; existing project-wide findings remain separate.
