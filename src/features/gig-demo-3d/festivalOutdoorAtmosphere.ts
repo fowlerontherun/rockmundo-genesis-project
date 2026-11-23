@@ -19,7 +19,8 @@ export function buildFestivalOutdoorAtmosphere(scene: T.Scene, profile: VenuePro
     surfaces.sky.color.copy(sky);
     surfaces.ground.color.copy(color(atmosphere.ground === "snow" ? "snow" : wet ? "mud" : `${atmosphere.season}-ground`));
     surfaces.ground.roughness = wet ? .38 : .95;
-    surfaces.foliage.color.copy(color(`${atmosphere.season}-foliage`));
+    // The shared outdoor field and tree crowns share this material.
+    surfaces.foliage.color.copy(color(atmosphere.ground === "snow" ? "snow" : wet ? "mud" : `${atmosphere.season}-foliage`));
   }
   const root = new T.Group(); root.name = "festival-seasonal-dressing"; scene.add(root);
   const accent = new T.MeshStandardMaterial({ color: color("accent"), side: T.DoubleSide });

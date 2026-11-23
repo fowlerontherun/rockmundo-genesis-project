@@ -51,7 +51,7 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Festival grounds · visual stage directory</p>
           <p className="text-xs text-muted-foreground">Illustrative arrangement only — not a walking map</p>
-          {!lightweight && <p className="mt-1 text-xs font-medium" role="status">{lightingLabel} · Fixed clock-based effect, not actual sunrise or weather</p>}
+          {!lightweight && <p className="mt-1 text-xs font-medium" role="status">{lightingLabel}{atmosphere ? ` · ${festivalSeasonLabels[atmosphere.season]}` : ""} · Illustrative scenery, not a live forecast</p>}
         </div>
         <span className="rounded-full border bg-background/80 px-3 py-1 text-xs">{stages.length} stages</span>
       </div>
