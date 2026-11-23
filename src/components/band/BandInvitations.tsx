@@ -86,14 +86,15 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
     enabled: !!userId && !!profileId,
   });
 
-  const { data: activeMembership, isLoading: isMembershipLoading, isError: membershipError, refetch: retryMembership } = useQuery<ActiveMembership | null>({
+  const { data: activeMembership, isLoading: isMembershipLoading, isError: membershipError, error: membershipLookupError, refetch: retryMembership } = useQuery<ActiveMembership | null>({
     queryKey: ["active-band-membership", profileId],
     queryFn: async () => {
       if (!profileId) return null;
 
       const { data, error } = await supabase
         .from("band_members")
-        .select("band_id, bands:band_id(name, status, is_solo_artist)")
+        // band_members has two FKs to bands; an implicit join is ambiguous in PostgREST.
+        .select("band_id, bands:bands!band_members_band_id_fkey(name, status, is_solo_artist)")
         .eq("profile_id", profileId)
         .eq("member_status", "active")
         .eq("is_touring_member", false)
@@ -203,6 +204,7 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
   if (membershipError) {
     return <Card role="alert"><CardHeader><CardTitle>Band membership check unavailable</CardTitle></CardHeader>
       <CardContent className="space-y-2"><p>Invitation acceptance is blocked until your current membership is verified.</p>
+        <p className="text-sm text-destructive" role="status">{membershipLookupError?.message || "The membership lookup failed. Please retry."}</p>
         <Button variant="outline" size="sm" onClick={() => void retryMembership()}>Retry membership</Button>
       </CardContent></Card>;
   }
