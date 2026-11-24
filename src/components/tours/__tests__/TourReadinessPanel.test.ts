@@ -3,7 +3,7 @@ import { summarizeSupportCoverage } from '@/lib/tourReadiness';
 import type { TourSupportAssignment } from '@/features/support-bands/tourManagementApi';
 
 const now = Date.parse('2026-11-24T12:00:00.000Z');
-const assignment = (id: string, date: string, status: string | null): TourSupportAssignment => ({
+const assignment = (id: string, date: string, status: TourSupportAssignment['support_status']): TourSupportAssignment => ({
   gig_id: id, scheduled_date: date, scheduled_end: null, venue_id: 'v', venue_name: 'Venue',
   city_id: 'c', city_name: 'City', support_slot_id: status ? id : null,
   support_band_id: status ? 'support' : null, support_band_name: status ? 'Support' : null,
