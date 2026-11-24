@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTourWizard } from '@/hooks/useTourWizard';
-import { TOUR_SCOPE_REQUIREMENTS, VENUE_SIZE_REQUIREMENTS, CONTINENTS, TOUR_BUS_DAILY_COST } from '@/lib/tourTypes';
+import { TOUR_SCOPE_REQUIREMENTS, VENUE_SIZE_REQUIREMENTS, CONTINENTS, TOUR_BUS_DAILY_COST, VENUE_TYPES } from '@/lib/tourTypes';
 import { StartingCitySelector } from './StartingCitySelector';
 import { VenueFilters } from './VenueFilters';
 import { TicketPricingSlider } from './TicketPricingSlider';
@@ -17,9 +17,11 @@ import { StageEquipmentBuilder } from './StageEquipmentBuilder';
 import { TourVehiclePicker } from './TourVehiclePicker';
 import { TourBudgetSummary } from './TourBudgetSummary';
 import { TicketOperatorSelector } from '@/components/gig/TicketOperatorSelector';
-import { calculateTotalHaulWeight, getHaulRequirement } from '@/lib/tourStageComponents';
+import { calculateTotalHaulWeight, getHaulRequirement, DEFAULT_STAGE_SELECTIONS } from '@/lib/tourStageComponents';
 import { Calendar, MapPin, Music, Bus, Plane, Check, Lock, AlertCircle, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { moveTourWizard, TOUR_WIZARD_FLOW, wizardFlowPosition, type TourPlanningMode } from '@/lib/tourWizardFlow';
 
 interface TourWizardProps {
   bandId: string;
@@ -31,10 +33,40 @@ interface TourWizardProps {
 const EMPTY_ROUTE: string[] = [];
 
 export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComplete, onCancel }: TourWizardProps) {
-  const wizard = useTourWizard({ bandId, initialRouteCityIds });
-  const visibleStep = wizard.currentStep >= 8 ? wizard.currentStep : wizard.currentStep + 1;
-  const visibleStepCount = wizard.totalSteps - 1;
+  const [mode, setMode] = useState<TourPlanningMode>('quick');
+  const [quickDefaultsApplied, setQuickDefaultsApplied] = useState(false);
+  const wizard = useTourWizard({ bandId, initialRouteCityIds, quickMode: mode === 'quick' });
+  const visibleStep = wizardFlowPosition(mode, wizard.currentStep) + 1;
+  const visibleStepCount = TOUR_WIZARD_FLOW[mode].length;
   const progress = (visibleStep / visibleStepCount) * 100;
+  const stepLabel = mode === 'quick' && wizard.currentStep === 3
+    ? 'Suggested route & venues'
+    : wizard.stepNames[wizard.currentStep];
+
+  useEffect(() => {
+    if (mode !== 'quick' || !wizard.band || quickDefaultsApplied) return;
+    wizard.updateState({
+      maxVenueCapacity: wizard.maxAllowedCapacity,
+      venueTypes: [...VENUE_TYPES],
+      selectedVenueIds: [],
+      customTicketPrice: null,
+      ticketOperatorId: null,
+      stageComponents: DEFAULT_STAGE_SELECTIONS,
+      vehicleTier: 'rusty_van',
+    });
+    setQuickDefaultsApplied(true);
+  }, [mode, quickDefaultsApplied, wizard.band, wizard.maxAllowedCapacity, wizard.updateState]);
+
+  const changeMode = (nextMode: TourPlanningMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    if (nextMode === 'quick') {
+      wizard.setScope('country');
+      wizard.updateState({ selectedCountries: initialRouteCityIds.length ? wizard.state.selectedCountries : [] });
+      setQuickDefaultsApplied(false);
+    }
+    wizard.goToStep(0);
+  };
 
   const handleBook = () => {
     wizard.bookTour(undefined, {
@@ -49,12 +81,17 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
           <div>
             <CardTitle>Plan Your Tour</CardTitle>
             <CardDescription>
-              Step {visibleStep} of {visibleStepCount}: {wizard.stepNames[wizard.currentStep]}
+              Step {visibleStep} of {visibleStepCount}: {stepLabel}
             </CardDescription>
           </div>
           <Badge variant="outline">{wizard.band?.name || 'Loading...'}</Badge>
         </div>
         <Progress value={progress} className="mt-4" />
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Tour creation mode">
+          <Button type="button" size="sm" variant={mode === 'quick' ? 'default' : 'outline'} aria-pressed={mode === 'quick'} onClick={() => changeMode('quick')}>Quick Tour</Button>
+          <Button type="button" size="sm" variant={mode === 'custom' ? 'default' : 'outline'} aria-pressed={mode === 'custom'} onClick={() => changeMode('custom')}>Custom Tour</Button>
+          <span className="self-center text-xs text-muted-foreground">{mode === 'quick' ? 'Recommended settings; 3 steps' : 'Full control; 8 steps'}</span>
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -217,6 +254,20 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
         {/* Step 3: Venues */}
         {wizard.currentStep === 3 && (
           <div className="space-y-4">
+            {mode === 'quick' && <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <p className="font-medium">Suggested venues for your tour</p>
+              <p className="text-sm text-muted-foreground">RockMundo matches eligible venues to your band's size, then orders stops geographically. Review the full itinerary before booking.</p>
+              <div className="space-y-1">
+                <Label>Touring country</Label>
+                <Select value={wizard.state.selectedCountries.length === 1 ? wizard.state.selectedCountries[0] : ''}
+                  onValueChange={country => wizard.updateState({ selectedCountries: [country], selectedVenueIds: [], venueCountryFilter: null, venueCityFilter: null })}>
+                  <SelectTrigger aria-label="Quick Tour country"><SelectValue placeholder="Choose a country" /></SelectTrigger>
+                  <SelectContent>{wizard.availableCountries?.map(country => <SelectItem key={country} value={country}>{country}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">Need another country, larger venues or specific cities? Switch to Custom Tour for detailed route controls.</p>
+            </div>}
+            {mode === 'custom' && <>
             <VenueFilters
               selectedCountries={wizard.state.selectedCountries}
               countryFilter={wizard.state.venueCountryFilter}
@@ -264,6 +315,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
                 ))}
               </div>
             </div>
+            </>}
             
             <p className="text-sm text-muted-foreground">
               {wizard.venuesLoading ? 'Loading...' : `${wizard.venueMatches.length} of ${wizard.requestedShowCount} gig dates have eligible venues`}
@@ -367,11 +419,11 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
 
         {/* Navigation */}
         <div className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={wizard.currentStep === 0 ? onCancel : wizard.prevStep}>
+          <Button variant="outline" onClick={wizard.currentStep === 0 ? onCancel : () => wizard.goToStep(moveTourWizard(mode, wizard.currentStep, -1))}>
             {wizard.currentStep === 0 ? 'Cancel' : 'Previous'}
           </Button>
-          {wizard.currentStep < wizard.totalSteps - 1 ? (
-            <Button onClick={wizard.nextStep} disabled={!wizard.canProceed}>Continue</Button>
+          {wizard.currentStep !== 8 ? (
+            <Button onClick={() => wizard.goToStep(moveTourWizard(mode, wizard.currentStep, 1))} disabled={!wizard.canProceed}>Continue</Button>
           ) : (
             <Button onClick={handleBook} disabled={!wizard.canProceed || wizard.isBooking || wizard.routeCitiesLoading || wizard.venuesLoading || wizard.routeValidationError}>
               {wizard.isBooking ? 'Booking...' : `Book Tour ($${wizard.costEstimate.netUpfrontCost.toLocaleString()})`}

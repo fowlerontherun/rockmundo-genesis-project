@@ -47,6 +47,7 @@ import { findUnmatchedRouteStops, orderRouteVenues } from '@/utils/tourAtlasRout
 export interface UseTourWizardOptions {
   bandId?: string;
   initialRouteCityIds?: string[];
+  quickMode?: boolean;
 }
 
 type CreatedTourGig = Pick<
@@ -122,6 +123,31 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     },
     enabled: !!profileId,
   });
+
+  // Keep the player's current city as a convenient starting point. The player
+  // may change this in either mode without altering their real location.
+  useEffect(() => {
+    if (!playerProfile?.current_city_id) return;
+    setState(prev => prev.startingCityId ? prev : { ...prev, startingCityId: playerProfile.current_city_id });
+  }, [playerProfile?.current_city_id]);
+
+  const { data: quickStartingCountry } = useQuery({
+    queryKey: ['tour-quick-start-country', state.startingCityId],
+    enabled: !!options.quickMode && !!state.startingCityId && routeCityIds.length === 0,
+    queryFn: async () => {
+      if (!state.startingCityId) return null;
+      const { data, error } = await supabase.from('cities').select('country').eq('id', state.startingCityId).single();
+      if (error) throw error;
+      return data?.country ?? null;
+    },
+  });
+
+  // Quick Tour begins with one familiar country; manually chosen countries
+  // and ordered Atlas routes always take precedence over this suggestion.
+  useEffect(() => {
+    if (!options.quickMode || !quickStartingCountry || routeCityIds.length > 0) return;
+    setState(prev => prev.selectedCountries.length > 0 ? prev : { ...prev, selectedCountries: [quickStartingCountry] });
+  }, [options.quickMode, quickStartingCountry, routeCityIds.length]);
 
   // Fetch available countries based on scope
   const { data: availableCountries } = useQuery({
