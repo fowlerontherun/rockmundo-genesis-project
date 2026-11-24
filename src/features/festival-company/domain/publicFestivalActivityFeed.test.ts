@@ -24,6 +24,8 @@ describe("canonical public festival activity feed", () => {
 
   it("does not reveal unpublished artist names, raw payloads or mismatched stages", () => {
     expect(read([original], "2026-11-19", stage, [])).toEqual([expect.objectContaining({ artistName: null })]);
+    expect(read([original], "2026-11-19", stage, [{ ...lineup[0], festivalDate: "2026-11-20" }]))
+      .toEqual([expect.objectContaining({ artistName: null })]);
     expect(read([{ ...original, stageName: "Other Stage" }])).toEqual([]);
     expect(read([{ ...original, stageId: "123e4567-e89b-42d3-a456-426614174099" }])).toEqual([]);
     expect(read([{ ...original, kind: "incident", message: "Secret security report" }])).toEqual([]);
@@ -34,8 +36,15 @@ describe("canonical public festival activity feed", () => {
     expect(read([{ ...original, observedAt: "2026-11-19T19:02:00.000Z" }])).toEqual([]);
     expect(read([{ ...original, id: "forged" }])).toEqual([]);
     expect(read([{ ...original, status: "settled" }])).toEqual([]);
+    expect(read([{ ...original, observedAt: "2026-11-19T18:50:00" }])).toEqual([]);
+    expect(read([{ ...original, observedAt: "2026-11-19" }])).toEqual([]);
     expect(read([original], "2026-11-20")).toEqual([]);
     expect(read([original], "", stage)).toEqual([]);
+  });
+
+  it("uses the festival-local day for explicitly offset provider observations", () => {
+    expect(read([{ ...original, observedAt: "2026-11-19T19:50:00+01:00" }])).toHaveLength(1);
+    expect(read([{ ...original, observedAt: "2026-11-20T00:50:00+06:00" }])).toHaveLength(1);
   });
 
   it("sorts replayed events by source time and caps the rendering budget", () => {

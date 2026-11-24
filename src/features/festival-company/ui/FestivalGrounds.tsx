@@ -109,7 +109,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const currentRuntimeDay = freshness === "current" && Boolean(localDate) && verifiedLive?.currentDay === localDate;
   const weatherState = currentRuntimeDay ? reportedWeatherState : null;
   const groundCondition = currentRuntimeDay && typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
-  const duringEdition = !cancelled && startsAt && endsAt && now >= Date.parse(startsAt) && now <= Date.parse(endsAt);
+  const duringEdition = Boolean(!cancelled && startsAt && endsAt && now >= Date.parse(startsAt) && now <= Date.parse(endsAt));
   const atmosphereDate = duringEdition ? new Date(now).toISOString() : startsAt;
   const seasonal = useFestivalSeasonalAtmosphere(city, country, atmosphereDate);
   const atmosphere = seasonal.date ? festivalAtmosphere(seasonal.date.season, seasonal.weather, weatherState, groundCondition) : undefined;
@@ -197,7 +197,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
             {mapOpen && (
               <FestivalGroundsMap stages={stages} selectedStageId={selectedStage?.id}
                 visitorInformation={visitorInformation} stageCrowds={stageCrowds}
-                weatherState={weatherState} localHour={localHour}
+                weatherState={weatherState} localHour={currentRuntimeDay ? localHour : undefined}
                 onSelectStage={(id) => {
                   setSelectedStageId(id);
                   document.getElementById("festival-stage-details")?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
@@ -210,11 +210,11 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
         <div className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "❔"}</span>
           <div>
-            <h3 className="font-semibold">Festival site conditions</h3>
-            <p className="text-sm">{weatherState ? weatherNames[weatherState] : atmosphere?.condition ? `${conditionLabels[atmosphere.condition]}${atmosphere.temperature !== null ? ` · ${atmosphere.temperature}°C` : ""}` : livePending || seasonal.pending ? "Checking festival site conditions…" : "Weather information unavailable"}</p>
+            <h3 className="font-semibold">{duringEdition ? "Festival site conditions" : "Seasonal festival outlook"}</h3>
+            <p className="text-sm">{weatherState ? weatherNames[weatherState] : duringEdition ? livePending ? "Checking festival site conditions…" : "Verified site weather unavailable" : atmosphere?.condition ? `${conditionLabels[atmosphere.condition]}${atmosphere.temperature !== null ? ` · ${atmosphere.temperature}°C` : ""}` : seasonal.pending ? "Checking seasonal outlook…" : "Seasonal outlook unavailable"}</p>
             {groundCondition && <p className="text-xs text-muted-foreground">Ground: {groundCondition.replaceAll("_", " ")}</p>}
             {atmosphere && <p className="mt-1 text-sm font-medium">{getSeasonEmoji(atmosphere.season)} {festivalSeasonLabels[atmosphere.season]} · {city}</p>}
-            <p className="text-xs text-muted-foreground">{weatherState ? "Festival runtime conditions, not a live forecast." : "Seasonal outlook · game calendar"}</p>
+            <p className="text-xs text-muted-foreground">{weatherState ? "Festival runtime conditions, not a live forecast." : duringEdition ? "No verified runtime weather; no forecast is being presented as a live report." : "Seasonal outlook · game calendar, not verified site weather"}</p>
           </div>
         </div>
       </div>

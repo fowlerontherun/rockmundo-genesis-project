@@ -29,6 +29,8 @@ it("keeps the lightweight directory usable during loading, failure and retry", a
       <FestivalGrounds slug="festival" festivalLaunchId="launch" festivalEditionId="edition"
         cancelled={false} stages={[stage, { ...stage, id: "second", name: "Second Stage" }]}
         lineup={[]} timezone="Europe/London"
+        startsAt={new Date(Date.now() - 60_000).toISOString()}
+        endsAt={new Date(Date.now() + 60_000).toISOString()}
         visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }}
         onViewTimetable={onViewTimetable} />
     </QueryClientProvider>,
@@ -58,6 +60,8 @@ it("keeps the lightweight directory usable during loading, failure and retry", a
 
     await act(async () => rejectRuntime(new Error("festival_public_runtime_not_deployed")));
     expect(await screen.findByText(/Official live updates are unavailable/)).toBeVisible();
+    expect(screen.getByText("Verified site weather unavailable")).toBeVisible();
+    expect(screen.getByText(/No verified runtime weather; no forecast/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "View full timetable" }));
     expect(onViewTimetable).toHaveBeenCalledOnce();
 
