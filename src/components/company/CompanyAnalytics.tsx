@@ -126,13 +126,13 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
       const amt = Number(t.amount) || 0;
       const type = String(t.transaction_type || "").toLowerCase();
       const cat = String(t.category || "").toLowerCase();
-      if (type === "funding" || cat === "funding" || cat === "loan" || cat === "capital") {
+      if (["funding", "investment", "transfer_in"].includes(type) || ["funding", "loan", "capital", "owner_transfer"].includes(cat)) {
         row.funding += Math.abs(amt);
       } else if (type === "tax" || cat === "tax") {
         row.taxes += Math.abs(amt);
-      } else if (cat === "wages" || cat === "payroll" || cat === "salary") {
+      } else if (type === "salary" || cat === "wages" || cat === "payroll" || cat === "salary") {
         row.wages += Math.abs(amt);
-      } else if (type === "expense" || amt < 0) {
+      } else if (type === "expense") {
         row.expenses += Math.abs(amt);
       }
     }
@@ -143,7 +143,7 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
       row.taxes += Number(c.amount) || 0;
     }
     for (const row of map.values()) {
-      row.net = row.demandRevenue + row.funding - row.expenses - row.taxes - row.wages;
+      row.net = row.demandRevenue - row.expenses - row.taxes - row.wages;
     }
     return Array.from(map.values());
   }, [data]);

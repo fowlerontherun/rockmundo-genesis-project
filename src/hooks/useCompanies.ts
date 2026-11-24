@@ -4,6 +4,9 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import type { Company, CreateCompanyInput, CompanyFinancialSummary } from "@/types/company";
 import { COMPANY_CREATION_COSTS } from "@/types/company";
+import { foundCompany } from "@/lib/api/companyFounding";
+import { closeCompany } from "@/lib/api/companyClosure";
+import { loadCompanyTransactionsSince, isCompanyOperatingIncome, isCompanyOperatingExpense } from "@/hooks/useCompanyFinance";
 
 export const useCompanies = () => {
   const { userId } = useActiveProfile();
@@ -21,6 +24,7 @@ export const useCompanies = () => {
           parent_company:companies!parent_company_id(id, name)
         `)
         .eq("owner_id", userId)
+        .neq("status", "dissolved")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -108,6 +112,7 @@ export const useCompanySubsidiaries = (parentCompanyId: string | undefined) => {
           headquarters_city:cities!headquarters_city_id(id, name, country)
         `)
         .eq("parent_company_id", parentCompanyId)
+        .neq("status", "dissolved")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -129,90 +134,22 @@ export const useCreateCompany = () => {
   return useMutation({
     mutationFn: async (input: CreateCompanyInput & { profileId?: string }): Promise<Company> => {
       if (!userId) throw new Error("Not authenticated");
-
       if (input.company_type === "festival") {
         throw new Error("Festival companies must be founded through the secure VIP festival RPC.");
       }
-
-      const costs = COMPANY_CREATION_COSTS[input.company_type];
-      if (!costs) throw new Error("Invalid company type");
-
-      if (input.profileId) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", input.profileId)
-          .single();
-
-        if (profileError) throw profileError;
-        if (Number(profile.cash) < costs.creationCost) {
-          throw new Error(`Insufficient funds. Need $${costs.creationCost.toLocaleString()} to create this company.`);
-        }
-
-        const { error: deductError } = await supabase
-          .from("profiles")
-          .update({ cash: Number(profile.cash) - costs.creationCost })
-          .eq("id", input.profileId);
-
-        if (deductError) throw deductError;
-      }
-
-      const { data, error } = await supabase
-        .from("companies")
-        .insert({
-          owner_id: userId,
-          name: input.name,
-          company_type: input.company_type,
-          description: input.description || null,
-          headquarters_city_id: input.headquarters_city_id || null,
-          parent_company_id: input.parent_company_id || null,
-          balance: costs.startingBalance,
-          weekly_operating_costs: costs.weeklyOperatingCosts,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating company:", error);
-        if (input.profileId) {
-          const { data: currentProfile } = await supabase
-            .from("profiles")
-            .select("cash")
-            .eq("id", input.profileId)
-            .single();
-
-          if (currentProfile) {
-            await supabase
-              .from("profiles")
-              .update({ cash: Number(currentProfile.cash) + costs.creationCost })
-              .eq("id", input.profileId);
-          }
-        }
-        throw error;
-      }
-
-      await supabase.from("company_transactions").insert({
-        company_id: data.id,
-        transaction_type: "investment",
-        amount: costs.startingBalance,
-        description: "Initial capital investment",
-      });
-
-      await supabase.from("company_shareholders" as any).insert({
-        company_id: data.id,
-        user_id: userId,
-        shares: 100,
-      });
-
+      const result = await foundCompany({ ...input, company_type: input.company_type });
+      const { data, error } = await supabase.from("companies").select("*").eq("id", result.companyId).single();
+      if (error) throw error;
       return data as Company;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
       toast({
         title: "Company Created",
-        description: `${data.name} has been successfully registered with $${Number(data.balance).toLocaleString()} starting capital.`,
+        description: `${data.name} has been registered with £${Number(data.balance).toLocaleString()} owner-funded starting capital.`,
       });
     },
     onError: (error: Error) => {
@@ -230,7 +167,7 @@ export const useUpdateCompany = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Company> & { id: string }): Promise<Company> => {
+    mutationFn: async ({ id, ...updates }: Pick<Company, "id"> & Partial<Pick<Company, "name" | "description" | "logo_url">>): Promise<Company> => {
       const { data, error } = await supabase
         .from("companies")
         .update(updates as any)
@@ -284,8 +221,9 @@ export const useCompanyFinancialSummary = () => {
 
       const { data: companies, error: companiesError } = await supabase
         .from("companies")
-        .select("id, balance, weekly_operating_costs, company_type")
-        .eq("owner_id", userId);
+        .select("id, balance, weekly_operating_costs, company_type, parent_company_id")
+        .eq("owner_id", userId)
+        .neq("status", "dissolved");
 
       if (companiesError) throw companiesError;
 
@@ -306,7 +244,7 @@ export const useCompanyFinancialSummary = () => {
         }
       }
 
-      const subsidiaryCount = (companies || []).filter(c => c.company_type !== 'holding').length;
+      const subsidiaryCount = (companies || []).filter(c => c.parent_company_id !== null).length;
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
@@ -315,21 +253,11 @@ export const useCompanyFinancialSummary = () => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const { data: recentTxns } = await supabase
-          .from("company_transactions")
-          .select("amount")
-          .in("company_id", companyIds)
-          .gte("created_at", thirtyDaysAgo.toISOString());
-
-        monthlyIncome = (recentTxns || [])
-          .filter(t => Number(t.amount) > 0)
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        monthlyExpenses = Math.abs(
-          (recentTxns || [])
-            .filter(t => Number(t.amount) < 0)
-            .reduce((sum, t) => sum + Number(t.amount), 0)
-        );
+        const recentTxns = await loadCompanyTransactionsSince(companyIds, thirtyDaysAgo.toISOString());
+        monthlyIncome = recentTxns.filter(isCompanyOperatingIncome)
+          .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+        monthlyExpenses = recentTxns.filter(isCompanyOperatingExpense)
+          .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
       }
 
       let pendingTaxes = 0;
@@ -345,8 +273,8 @@ export const useCompanyFinancialSummary = () => {
         );
       }
 
-      const effectiveTaxRate = monthlyIncome > 0
-        ? pendingTaxes / monthlyIncome
+      const effectiveTaxRate = monthlyIncome - monthlyExpenses > 0
+        ? pendingTaxes / (monthlyIncome - monthlyExpenses)
         : 0;
 
       return {
@@ -372,7 +300,6 @@ export const useCloseSubsidiary = () => {
   return useMutation({
     mutationFn: async ({
       companyId,
-      profileId: inputProfileId,
       transferBalance = true
     }: {
       companyId: string;
@@ -381,75 +308,17 @@ export const useCloseSubsidiary = () => {
     }): Promise<void> => {
       if (!userId) throw new Error("Not authenticated");
 
-      const { data: company, error: companyError } = await supabase
-        .from("companies")
-        .select("id, name, balance, company_type, parent_company_id, owner_id")
-        .eq("id", companyId)
-        .single();
-
-      if (companyError || !company) throw new Error("Company not found");
-      if (company.owner_id !== userId) throw new Error("You don't own this company");
-      if (company.company_type === 'holding') throw new Error("Cannot close a holding company with subsidiaries");
-
-      const { count: contractCount } = await supabase
-        .from("artist_label_contracts")
-        .select("id", { count: "exact", head: true })
-        .eq("label_id", companyId)
-        .eq("status", "active");
-
-      if (contractCount && contractCount > 0) {
-        throw new Error("Cannot close company with active artist contracts");
-      }
-
-      if (transferBalance && Number(company.balance) > 0 && inputProfileId) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", inputProfileId)
-          .single();
-
-        if (!profileError && profile) {
-          await supabase
-            .from("profiles")
-            .update({ cash: Number(profile.cash) + Number(company.balance) })
-            .eq("id", inputProfileId);
-
-          await supabase.from("company_transactions").insert({
-            company_id: companyId,
-            transaction_type: "transfer_out",
-            amount: Number(company.balance),
-            description: "Closing liquidation - funds transferred to owner",
-          });
-        }
-      }
-
-      if (company.company_type === 'security') {
-        await supabase.from("security_firms").delete().eq("company_id", companyId);
-      } else if (company.company_type === 'factory') {
-        await supabase.from("merch_factories").delete().eq("company_id", companyId);
-      } else if (company.company_type === 'logistics') {
-        await supabase.from("logistics_companies").delete().eq("company_id", companyId);
-      }
-
-      await supabase.from("company_settings").delete().eq("company_id", companyId);
-      await supabase.from("company_transactions").delete().eq("company_id", companyId);
-      await supabase.from("company_tax_records").delete().eq("company_id", companyId);
-
-      const { error: deleteError } = await supabase
-        .from("companies")
-        .delete()
-        .eq("id", companyId);
-
-      if (deleteError) throw deleteError;
+      await closeCompany(companyId, transferBalance);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       queryClient.invalidateQueries({ queryKey: ["company-subsidiaries"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["company-financial-summary"] });
       toast({
         title: "Company Closed",
-        description: "The subsidiary has been successfully dissolved and any remaining funds have been transferred.",
+        description: "The subsidiary has been dissolved. Eligible funds were settled through the finance ledger.",
       });
     },
     onError: (error: Error) => {

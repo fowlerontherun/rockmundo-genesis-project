@@ -66,10 +66,13 @@ export function EmpireDashboard({ companyId, companyBalance }: EmpireDashboardPr
         const key = `${type}:${name}`;
         const existing = subsidiaryData.get(key) || { type, name, revenue: 0, expenses: 0, net: 0 };
         
-        if (tx.amount > 0) {
-          existing.revenue += tx.amount;
+        if (tx.transaction_type === "income" && tx.category !== "tax") {
+          existing.revenue += Math.abs(Number(tx.amount));
+        } else if (["expense", "salary"].includes(tx.transaction_type) && tx.category !== "tax") {
+          existing.expenses += Math.abs(Number(tx.amount));
         } else {
-          existing.expenses += Math.abs(tx.amount);
+          // Capital contributions, intercompany transfers, taxes and dividends are not operating P&L.
+          continue;
         }
         existing.net = existing.revenue - existing.expenses;
         subsidiaryData.set(key, existing);

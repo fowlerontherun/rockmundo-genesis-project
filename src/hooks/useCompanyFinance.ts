@@ -40,6 +40,27 @@ export const isCompanyOperatingIncome = (transaction: CompanyTransaction) =>
 export const isCompanyOperatingExpense = (transaction: CompanyTransaction) =>
   ["expense", "salary"].includes(transaction.transaction_type) && transaction.category !== "tax";
 
+/** Fetch the full period instead of silently dropping rows at the API page limit. */
+export async function loadCompanyTransactionsSince(companyIds: string[], since: string): Promise<CompanyTransaction[]> {
+  if (companyIds.length === 0) return [];
+  const all: CompanyTransaction[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("company_transactions")
+      .select("id, company_id, transaction_type, amount, description, category, created_at")
+      .in("company_id", companyIds)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data || []) as CompanyTransaction[];
+    all.push(...page);
+    if (page.length < pageSize) return all;
+  }
+}
+
 export const useCompanyBalance = (companyId: string | undefined) =>
   useQuery({
     queryKey: ["company-balance", companyId],
@@ -89,15 +110,7 @@ export const useCompanyIncomeExpenses = (companyId: string | undefined) =>
 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { data, error } = await supabase
-        .from("company_transactions")
-        .select("*")
-        .eq("company_id", companyId)
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
-      const txns = (data || []) as CompanyTransaction[];
+      const txns = await loadCompanyTransactionsSince([companyId], thirtyDaysAgo.toISOString());
       const monthlyIncome = txns
         .filter(isCompanyOperatingIncome)
         .reduce((sum, transaction) => sum + Math.abs(Number(transaction.amount)), 0);
