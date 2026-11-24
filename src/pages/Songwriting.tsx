@@ -2272,6 +2272,7 @@ const Songwriting = () => {
 
                       {/* Instrument Selector */}
                       <SongwritingInstrumentSelector
+                        profileId={profileId}
                         selected={formState.instruments}
                         onChange={(instruments) =>
                           setFormState((previous) => ({

@@ -5,6 +5,10 @@ import { Guitar, Mic, Piano, Drum, Music } from "lucide-react";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 import { useMemo } from "react";
+import {
+  calculateSongwritingInstrumentBonus,
+  resolveSongwritingInstrumentSkill,
+} from "@/utils/songwritingInstrumentSkills";
 
 // Instrument definitions from skill tree - basic tier slugs
 // alsoMatch contains legacy/alternate slugs that should also count for this instrument's level
@@ -29,8 +33,8 @@ const SONGWRITING_INSTRUMENTS = [
   // Drums & Percussion
   { slug: "instruments_basic_rock_drums", label: "Rock Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
   { slug: "instruments_basic_jazz_drums", label: "Jazz Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
-  { slug: "instruments_basic_latin_percussion", label: "Latin Percussion", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
-  { slug: "instruments_basic_cajon", label: "Cajon", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
+  { slug: "instruments_basic_latin_percussion", label: "Latin Percussion", icon: "drums", alsoMatch: ["basic_percussions"] },
+  { slug: "instruments_basic_cajon", label: "Cajon", icon: "drums", alsoMatch: ["basic_percussions"] },
   // Vocals
   { slug: "instruments_basic_vocal_performance", label: "Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing", "lead_vocals_mastery"] },
   { slug: "instruments_basic_rapping", label: "Rapping", icon: "vocals", alsoMatch: ["vocals", "rapping"] },
@@ -62,6 +66,7 @@ const getIconForType = (iconType: string) => {
 };
 
 interface SongwritingInstrumentSelectorProps {
+  profileId: string | null;
   selected: string[];
   onChange: (instruments: string[]) => void;
   disabled?: boolean;
@@ -69,7 +74,7 @@ interface SongwritingInstrumentSelectorProps {
 
 export const SongwritingInstrumentSelector = (props: SongwritingInstrumentSelectorProps) => {
   return (
-    <SkillSystemProvider>
+    <SkillSystemProvider key={props.profileId ?? "no-profile"} profileId={props.profileId}>
       <SongwritingInstrumentSelectorInner {...props} />
     </SkillSystemProvider>
   );
@@ -80,19 +85,11 @@ const SongwritingInstrumentSelectorInner = ({
   onChange,
   disabled,
 }: SongwritingInstrumentSelectorProps) => {
-  const { progress } = useSkillSystem();
+  const { progress, loading, error } = useSkillSystem();
 
-  const getSkillLevel = (slug: string): number => {
-    // A generic family skill does not prove mastery of every specialist instrument.
-    const slugsToCheck = [slug];
-    let maxLevel = 0;
-    for (const s of slugsToCheck) {
-      const skill = progress?.find((p) => p.skill_slug === s);
-      if (skill && (skill.current_level ?? 0) > maxLevel) {
-        maxLevel = skill.current_level ?? 0;
-      }
-    }
-    return maxLevel;
+  const getSkill = (slug: string) => {
+    const instrument = SONGWRITING_INSTRUMENTS.find((entry) => entry.slug === slug);
+    return instrument ? resolveSongwritingInstrumentSkill(instrument, progress) : null;
   };
 
   const toggleInstrument = (slug: string) => {
@@ -104,18 +101,10 @@ const SongwritingInstrumentSelectorInner = ({
     }
   };
 
-  const totalBonus = useMemo(() => {
-    let bonus = 0;
-    selected.forEach((slug, i) => {
-      const level = getSkillLevel(slug);
-      if (i < 4) {
-        bonus += Math.min(30, level * 1.5);
-      } else {
-        bonus += Math.min(15, level * 0.75);
-      }
-    });
-    return Math.round(bonus);
-  }, [selected, progress]);
+  const totalBonus = useMemo(
+    () => calculateSongwritingInstrumentBonus(selected, SONGWRITING_INSTRUMENTS, progress),
+    [selected, progress],
+  );
 
   return (
     <div className="space-y-2">
@@ -124,20 +113,23 @@ const SongwritingInstrumentSelectorInner = ({
           <Guitar className="h-4 w-4 text-primary" />
           Featured Instruments
         </Label>
-        {selected.length > 0 && (
+        {selected.length > 0 && !loading && !error && (
           <Badge variant="secondary" className="text-xs">
             +{totalBonus} quality bonus
           </Badge>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Select instruments featured in this song. Higher skill levels = better quality.
+        Select instruments featured in this song. Specialist skills give the full bonus;
+        older general skills count for half on one instrument per family.
       </p>
+      {error && <p role="alert" className="text-xs text-destructive">Could not load character skills. Reopen songwriting to retry.</p>}
       <ScrollArea className="h-[200px] rounded-md border p-2">
         <div className="grid grid-cols-2 gap-1.5">
           {SONGWRITING_INSTRUMENTS.map((instrument) => {
             const isSelected = selected.includes(instrument.slug);
-            const level = getSkillLevel(instrument.slug);
+            const skill = getSkill(instrument.slug);
+            const level = skill?.level ?? 0;
             return (
               <button
                 key={instrument.slug}
@@ -152,8 +144,12 @@ const SongwritingInstrumentSelectorInner = ({
               >
                 {getIconForType(instrument.icon)}
                 <span className="flex-1 truncate text-xs">{instrument.label}</span>
-                <Badge variant={level > 0 ? "default" : "outline"} className="text-[10px] px-1 py-0 h-4">
-                  Lv.{level}
+                <Badge
+                  title={skill?.source === "general" ? "General instrument experience (half bonus)" : undefined}
+                  variant={level > 0 ? "default" : "outline"}
+                  className="text-[10px] px-1 py-0 h-4"
+                >
+                  {loading ? "…" : skill?.source === "general" ? `General ${level}` : `Lv.${level}`}
                 </Badge>
               </button>
             );
