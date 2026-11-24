@@ -83,9 +83,9 @@ const CompanyTypeIcon = ({ type }: { type: CompanyType }) => {
 };
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-GB', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'GBP',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -153,7 +153,8 @@ export const CreateCompanyDialog = ({
 
   const playerCash = Number(profile?.cash ?? 0);
   const costs = selectedType ? COMPANY_CREATION_COSTS[selectedType] : null;
-  const canAfford = costs ? playerCash >= costs.creationCost : false;
+  const requiredCash = costs ? costs.creationCost + costs.startingBalance : 0;
+  const canAfford = costs ? playerCash >= requiredCash : false;
 
   const onSubmit = async (data: FormData) => {
     await createCompany.mutateAsync({
@@ -204,10 +205,14 @@ export const CreateCompanyDialog = ({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Starting Capital:</span>
-                    <span className="font-bold text-emerald-500">
+                    <span className="text-sm text-muted-foreground">Owner-Funded Starting Capital:</span>
+                    <span className="font-bold text-destructive">
                       {formatCurrency(costs.startingBalance)}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-sm font-medium">Total Cash Required:</span>
+                    <span className="font-bold">{formatCurrency(requiredCash)}</span>
                   </div>
                   <div className="border-t pt-2 flex items-center justify-between">
                     <span className="text-sm font-medium">Your Cash:</span>
@@ -219,7 +224,7 @@ export const CreateCompanyDialog = ({
                     <Alert variant="destructive" className="py-2">
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription className="text-xs">
-                        Insufficient funds! Need {formatCurrency(costs.creationCost - playerCash)} more.
+                        Insufficient funds! Need {formatCurrency(requiredCash - playerCash)} more.
                       </AlertDescription>
                     </Alert>
                   )}
