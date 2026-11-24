@@ -8,6 +8,8 @@ describe("mobile route registry", () => {
     expect(getMobileRouteMeta("/mobile/progression")?.bottomNav).toBe("progression");
     expect(getMobileRouteMeta("/mobile/education")?.bottomNav).toBe("education");
     expect(getMobileRouteMeta("/mobile/university/uni-123")?.bottomNav).toBe("education");
+    expect(getMobileRouteMeta("/mobile/festivals")?.section).toBe("festivals");
+    expect(getMobileRouteMeta("/mobile/festivals/summer-fest")?.bottomNav).toBe("schedule");
     expect(getMobileRouteMeta("/mobile/world")).toBeUndefined();
   });
   it("contains unsupported actions back to schedule", () => {
@@ -17,6 +19,8 @@ describe("mobile route registry", () => {
     expect(resolveCompanionPath("/skills")).toBe("/mobile/progression");
     expect(resolveCompanionPath("/education")).toBe("/mobile/education");
     expect(resolveCompanionPath("/university/uni-123")).toBe("/mobile/university/uni-123");
+    expect(resolveCompanionPath("/world/festivals")).toBe("/mobile/festivals");
+    expect(resolveCompanionPath("/world/festivals/summer-fest")).toBe("/mobile/festivals/summer-fest");
   });
   it("opens real in-game notification actions instead of schedule", () => {
     expect(resolveNotificationActionPath("/festivals?tab=offers")).toBe("/festivals?tab=offers");
@@ -26,12 +30,13 @@ describe("mobile route registry", () => {
     expect(resolveNotificationActionPath("/skills")).toBe("/mobile/progression");
     expect(resolveNotificationActionPath("/education?tab=find&method=books")).toBe("/mobile/education?tab=find&method=books");
     expect(resolveNotificationActionPath("/university/uni-123")).toBe("/mobile/university/uni-123");
+    expect(resolveNotificationActionPath("/world/festivals/summer-fest?tab=lineup")).toBe("/mobile/festivals/summer-fest?tab=lineup");
     expect(resolveNotificationActionPath("https://evil.example/path")).toBeNull();
     expect(resolveNotificationActionPath("//evil.example/path")).toBeNull();
   });
   it("reports the reduced scope", () => {
-    expect(mobileRouteAuditSummary.authenticatedRoutesAudited).toBe(6);
-    expect(mobileRouteAuditSummary.dedicatedMobilePatterns).toBe(6);
+    expect(mobileRouteAuditSummary.authenticatedRoutesAudited).toBe(8);
+    expect(mobileRouteAuditSummary.dedicatedMobilePatterns).toBe(8);
     expect(mobileRouteAuditSummary.containedFallbackPatterns).toBe(0);
     expect(getMobileDestination("/unknown")).toBe("schedule");
   });

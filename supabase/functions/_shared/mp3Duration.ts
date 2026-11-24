@@ -1,3 +1,5 @@
+export const MIN_GENERATED_MP3_SECONDS = 60;
+
 /**
  * Calculate playback length from MPEG Layer III audio frames, not file size.
  * Supports MPEG-1, MPEG-2 and MPEG-2.5 (CBR and VBR). Returns null when

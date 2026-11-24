@@ -1,3 +1,4 @@
+import { canonicalStageStates } from "./canonicalStageEventModel";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import {
@@ -20,6 +21,7 @@ export const festivalRunReadinessSchema = z.object({
   scheduledFor: z.string().nullable(),
   stageCount: z.number().int().nonnegative(),
   confirmedActs: z.number().int().nonnegative(),
+  confirmedPlayerActs: z.number().int().nonnegative().optional(),
   npcFillEnabled: z.boolean(),
   activeLicence: z.record(z.unknown()).nullable(),
   licensedStageLimit: z.number().int().positive().nullable().optional(),
@@ -34,7 +36,11 @@ export type FestivalRunReadiness = z.infer<
 >;
 
 async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await (supabase as any).rpc(name, args);
+  const call = supabase.rpc.bind(supabase) as (
+    rpcName: string,
+    rpcArgs: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }>;
+  const { data, error } = await call(name, args);
   if (error) throw error;
   return data as T;
 }
@@ -75,42 +81,8 @@ export async function runSimplifiedFestival(
   return runtimeProjectionSchema.parse(value);
 }
 
-// Retained for historical schedule-backed Festival runtimes and admin tooling.
-export async function prepareEditionRuntime(
-  companyId: string,
-  editionId: string,
-  expectedEditionVersion: number,
-  expectedScheduleRevision: string,
-) {
-  return rpc("prepare_festival_edition_runtime", {
-    p_festival_company_id: companyId,
-    p_edition_id: editionId,
-    p_expected_edition_version: expectedEditionVersion,
-    p_expected_schedule_revision: expectedScheduleRevision,
-    p_idempotency_key: crypto.randomUUID(),
-  });
-}
-
-export async function transitionEditionRuntime(
-  runtimeId: string,
-  expectedVersion: number,
-  action: string,
-  reason?: string,
-) {
-  return rpc("transition_festival_edition_runtime", {
-    p_runtime_id: runtimeId,
-    p_expected_version: expectedVersion,
-    p_action: action,
-    p_reason: reason ?? null,
-    p_idempotency_key: crypto.randomUUID(),
-  });
-}
-
-
 /** Only confirmation evidence from the canonical annual-edition runtime. */
-const canonicalStageStatusSchema = z.enum([
-  "ready", "starting", "live", "delayed", "completed", "cancelled",
-]);
+const canonicalStageStatusSchema = z.enum(canonicalStageStates);
 export const canonicalStageControlSchema = z.object({
   runtimeId: z.string().uuid(),
   editionId: z.string().uuid(),
@@ -152,4 +124,54 @@ export async function confirmCanonicalStageAction(input: {
     p_idempotency_key: input.idempotencyKey,
     p_expected_runtime_version: input.expectedRuntimeVersion,
   });
+}
+
+export async function startCanonicalFestivalLiveDay(input: {
+  companyId: string;
+  editionId: string;
+  editionVersion: number;
+  requestId: string;
+}): Promise<FestivalRuntimeProjection> {
+  const value = await rpc<unknown>("start_canonical_festival_live_day", {
+    p_festival_company_id: input.companyId,
+    p_festival_edition_id: input.editionId,
+    p_expected_edition_version: input.editionVersion,
+    p_idempotency_key: input.requestId,
+  });
+  return runtimeProjectionSchema.parse(value);
+}
+
+export type LiveDayAction = "start_live" | "pause" | "resume" | "close" | "finish" | "cancel" | "tick";
+
+export interface LiveDayRequest {
+  runtimeId: string;
+  version: number;
+  requestId: string;
+  action: LiveDayAction;
+  arrivals?: number;
+  departures?: number;
+  stageCounts?: Record<string, number>;
+  otherZones?: number;
+}
+
+export async function advanceCanonicalFestivalLiveDay(input: LiveDayRequest): Promise<FestivalRuntimeProjection> {
+  const value = await rpc<unknown>("advance_canonical_festival_live_day", {
+    p_runtime_id: input.runtimeId,
+    p_expected_version: input.version,
+    p_request_id: input.requestId,
+    p_action: input.action,
+    p_arrivals: input.arrivals ?? 0,
+    p_departures: input.departures ?? 0,
+    p_stage_counts: input.stageCounts ?? {},
+    p_other_zones: input.otherZones ?? 0,
+  });
+  return runtimeProjectionSchema.parse(value);
+}
+
+export async function getCanonicalLiveDayAvailability(companyId: string, editionId: string) {
+  const value = await rpc<unknown>("get_canonical_festival_live_day_availability", {
+    p_company_id: companyId,
+    p_edition_id: editionId,
+  });
+  return z.object({ canOpen: z.boolean(), managed: z.boolean(), canAllocate: z.boolean(), liveDaySupported: z.boolean().optional() }).parse(value);
 }

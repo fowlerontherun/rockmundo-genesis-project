@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,10 @@ export function FestivalApplicationDialog({
   const eligible = bands?.filter((b) => b.canApply) ?? [];
   const initialBand = bandId ?? (eligible.length === 1 ? eligible[0].id : "");
   const [selectedBand, setSelectedBand] = useState(initialBand);
+  // The dialog can be reopened after switching active bands.
+  useEffect(() => {
+    if (open) setSelectedBand(initialBand);
+  }, [open, initialBand]);
   const [message, setMessage] = useState("");
   const [fee, setFee] = useState("");
   const [duration, setDuration] = useState("45");
@@ -57,10 +61,11 @@ export function FestivalApplicationDialog({
     edition?.id ?? "new",
     fingerprint,
   );
-  const { data: applications = [] } = useFestivalApplications(
+  const applicationsQuery = useFestivalApplications(
     selectedBand,
     edition?.id,
   );
+  const applications = applicationsQuery.data ?? [];
   const { submitApplication } = useFestivalApplicationActions(
     selectedBand,
     edition?.id,
@@ -73,11 +78,16 @@ export function FestivalApplicationDialog({
     if (!selectedBand) e.push("Choose a band.");
     if (message.length > 1000)
       e.push("Message must be 1000 characters or fewer.");
-    if (Number(fee) < 0) e.push("Requested fee cannot be negative.");
+    if (fee && (!Number.isFinite(Number(fee)) || Number(fee) < 0))
+      e.push("Requested fee must be a non-negative number.");
     if (!currency || currency === "XXX")
       e.push("No supported currency is configured for this edition.");
-    if (Number(duration) < 15 || Number(duration) > 180)
+    if (!Number.isInteger(Number(duration)) || Number(duration) < 15 || Number(duration) > 180)
       e.push("Set duration must be between 15 and 180 minutes.");
+    if (selectedBand && applicationsQuery.isPending)
+      e.push("Checking for existing applications. Please wait.");
+    if (applicationsQuery.isError)
+      e.push("Existing applications could not be verified. Retry before submitting.");
     if (existing)
       e.push(
         `This band already has an active application (${existing.status}).`,
@@ -90,7 +100,7 @@ export function FestivalApplicationDialog({
     )
       e.push("The application window is not open.");
     return e;
-  }, [currency, duration, edition, existing, message.length, selectedBand]);
+  }, [applicationsQuery.isError, applicationsQuery.isPending, currency, duration, edition, existing, message.length, selectedBand]);
   const submit = async () => {
     if (!edition || errors.length) return;
     try {
@@ -193,6 +203,11 @@ export function FestivalApplicationDialog({
             Preferred slot
             <Input value={slot} onChange={(e) => setSlot(e.target.value)} />
           </Label>
+          {applicationsQuery.isError && (
+            <Button size="sm" variant="outline" onClick={() => void applicationsQuery.refetch()}>
+              Retry application check
+            </Button>
+          )}
           {errors.length ? (
             <div
               role="alert"

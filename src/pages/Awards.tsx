@@ -54,18 +54,18 @@ export default function Awards() {
   const { data: calendar } = useGameCalendar();
   const currentGameYear = calendar?.gameYear ?? new Date().getFullYear();
 
+  const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
   const {
     shows, showsLoading, nominations, wins, invites,
     fetchShowNominations, fetchVoteCountForShow,
     submitNomination, castVote, attendRedCarpet, attendRedCarpetAsync, respondToInvite,
     isSubmitting, isVoting, isAttending, isRespondingInvite,
-  } = useAwards(profileId ?? undefined, userBand?.id);
+  } = useAwards(profileId ?? undefined, userBand?.id, showCeremonyDialog);
 
   const [selectedShow, setSelectedShow] = useState<AwardShow | null>(null);
   const [showVotingDialog, setShowVotingDialog] = useState(false);
   const [showRedCarpetDialog, setShowRedCarpetDialog] = useState(false);
   const [showNominateDialog, setShowNominateDialog] = useState(false);
-  const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [voteAs, setVoteAs] = useState<"player" | "band">("player");
@@ -105,6 +105,7 @@ export default function Awards() {
     enabled: Boolean(selectedShow?.id && profileId && showCeremonyDialog),
   });
 
+  const ceremonyShow = shows.find((show) => show.id === selectedShow?.id) ?? selectedShow;
   const activeShows = shows.filter(s => s.status !== 'completed');
   const completedShows = shows.filter(s => s.status === 'completed');
   const revealedWins = wins.filter((win) => shows.find((show) => show.id === win.award_show_id)?.status === 'completed');
@@ -362,23 +363,10 @@ export default function Awards() {
                         <CardDescription>Winners recorded by the awards settlement system.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        {resultsLoading && <p className="text-sm text-muted-foreground">Loading official results…</p>}
-                        {resultsError && <p role="alert" className="text-sm text-destructive">Results could not be loaded. Please retry.</p>}
-                        {!resultsLoading && !resultsError && winners.length === 0 && (
-                          <p className="text-sm text-muted-foreground">No prizes were issued for this ceremony.</p>
-                        )}
-                        {winners.map((win) => (
-                          <div key={win.id} className="flex items-start justify-between gap-3 rounded border p-3">
-                            <div>
-                              <p className="font-medium">{win.category_name}</p>
-                              <p className="text-sm">{win.winner_name}</p>
-                            </div>
-                            <div className="text-right text-xs text-muted-foreground">
-                              <p>+{win.fame_boost.toLocaleString()} fame</p>
-                              {win.prize_money > 0 && <p>${win.prize_money.toLocaleString()} prize</p>}
-                            </div>
-                          </div>
-                        ))}
+                        <PublishedAwardResults winners={winners} loading={resultsLoading} failed={resultsError} />
+                        <Button variant="outline" onClick={() => { setSelectedShow(show); setShowCeremonyDialog(true); }}>
+                          View ceremony results
+                        </Button>
                       </CardContent>
                     </Card>
                   </div>
@@ -618,10 +606,17 @@ export default function Awards() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-amber-500" />
-              {selectedShow?.show_name} — Ceremony
+              {ceremonyShow?.show_name} — Ceremony
             </DialogTitle>
           </DialogHeader>
-          {selectedShow && (redCarpetLoading ? (
+          {ceremonyShow?.status === "completed" && (
+            <PublishedAwardResults
+              winners={publishedResults.filter((win) => win.award_show_id === ceremonyShow.id)}
+              loading={resultsLoading}
+              failed={resultsError}
+            />
+          )}
+          {selectedShow && ceremonyShow?.status !== "completed" && (redCarpetLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : (
             <AwardCeremonyExperience
@@ -646,6 +641,35 @@ export default function Awards() {
         </DialogContent>
       </Dialog>
     </FMPageScaffold>
+  );
+}
+
+type PublishedAwardResult = Pick<AwardWin, "id" | "category_name" | "winner_name" | "fame_boost" | "prize_money">;
+
+function PublishedAwardResults({ winners, loading, failed }: {
+  winners: PublishedAwardResult[];
+  loading: boolean;
+  failed: boolean;
+}) {
+  if (loading) return <p role="status" className="text-sm text-muted-foreground">Loading official results…</p>;
+  if (failed) return <p role="alert" className="text-sm text-destructive">Results could not be loaded. Please retry.</p>;
+  if (winners.length === 0) return <p className="text-sm text-muted-foreground">No prizes were issued for this ceremony.</p>;
+
+  return (
+    <div className="space-y-2">
+      {winners.map((win) => (
+        <div key={win.id} className="flex items-start justify-between gap-3 rounded border p-3">
+          <div>
+            <p className="font-medium">{win.category_name}</p>
+            <p className="text-sm">{win.winner_name}</p>
+          </div>
+          <div className="text-right text-xs text-muted-foreground">
+            <p>+{win.fame_boost.toLocaleString()} fame</p>
+            {win.prize_money > 0 && <p>${win.prize_money.toLocaleString()} prize</p>}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

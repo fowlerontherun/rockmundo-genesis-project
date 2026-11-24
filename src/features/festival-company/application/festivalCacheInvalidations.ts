@@ -16,6 +16,8 @@ export const festivalLaunchInvalidations: readonly (readonly string[])[] = [
   ["festival-owner-npc-lineup"],
   ["festival-company-setup"],
   ["festival-company-editions"],
+  ["festival-run-readiness"],
+  ["festival-live-day-availability"],
   ["notifications"],
   ["mail"],
 ];
@@ -23,10 +25,13 @@ export const festivalLaunchInvalidations: readonly (readonly string[])[] = [
 export const festivalBookingInvalidations: readonly (readonly string[])[] = [
   ["festival-artist-programme"],
   ["festival-artist-candidates"],
+  ["band-festival-appearances"],
   ["festival-artist-opportunities"],
   ["festival-owner-npc-lineup"],
   ["festival-company-setup"],
   ["festival-company-editions"],
+  ["festival-run-readiness"],
+  ["festival-live-day-availability"],
   ["festival-launch"],
   ["public-festival"],
   ["public-festival-timetable"],

@@ -123,6 +123,7 @@ const CareerDashboardPage = () => {
         }
       } catch (err) {
         if (active) {
+          console.error("Career overview failed", err);
           setError(err instanceof Error ? err.message : "Failed to load career overview.");
         }
       } finally {

@@ -52,7 +52,9 @@ const AwardsAdmin = () => {
     show_date: "",
     venue_name: "",
     categories: "",
+    jury_weight: "0",
   });
+  const [typedNominee, setTypedNominee] = useState({ showId: "", category: "", type: "player", id: "" });
   const [bandSearch, setBandSearch] = useState("");
   const [selectedBand, setSelectedBand] = useState<{ id: string; name: string } | null>(null);
   const [inviteForm, setInviteForm] = useState({
@@ -99,6 +101,10 @@ const AwardsAdmin = () => {
       if (!showData.show_name.trim() || !showData.venue_name.trim() || !showData.show_date || !names.length) {
         throw new Error("Provide a name, venue, ceremony date and at least one award category.");
       }
+      const juryWeight = Number(showData.jury_weight);
+      if (!Number.isInteger(juryWeight) || juryWeight < 0 || juryWeight > 10) {
+        throw new Error("Jury ballot weight must be a whole number from 0 to 10.");
+      }
       const ceremonyDate = new Date(`${showData.show_date}T20:00:00Z`);
       if (Number.isNaN(ceremonyDate.getTime())) {
         throw new Error("Choose a valid ceremony date.");
@@ -110,7 +116,7 @@ const AwardsAdmin = () => {
           ceremony_date: ceremonyDate.toISOString(),
           venue: showData.venue_name.trim(),
           year: ceremonyDate.getUTCFullYear(),
-          categories: names.map((name) => ({ name })),
+          categories: names.map((name) => ({ name, ...(juryWeight > 0 ? { juryWeight } : {}) })),
           status: "nominations_open",
         }])
         .select()
@@ -122,12 +128,40 @@ const AwardsAdmin = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-award-shows"] });
       toast({ title: "Award Show Created" });
       setDialogOpen(false);
-      setNewShow({ show_name: "", show_date: "", venue_name: "", categories: "" });
+      setNewShow({ show_name: "", show_date: "", venue_name: "", categories: "", jury_weight: "0" });
     },
     onError: (error: Error) => {
       toast({ title: "Failed to create award show", description: error.message, variant: "destructive" });
     },
   });
+
+  const submitTypedNomination = useMutation({
+    mutationFn: async () => {
+      const client = supabase as unknown as {
+        rpc: (name: string, args: Record<string, string>) => Promise<{ error: Error | null }>;
+      };
+      const { error } = await client.rpc("award_admin_submit_typed_nomination", {
+        p_show_id: typedNominee.showId,
+        p_category: typedNominee.category,
+        p_nominee_type: typedNominee.type,
+        p_nominee_id: typedNominee.id.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-nominations"] });
+      void queryClient.invalidateQueries({ queryKey: ["award-show-nominations"] });
+      setTypedNominee((current) => ({ ...current, id: "" }));
+      toast({ title: "Nomination submitted for review" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to submit nomination", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const nominationShows = (shows as { id: string; show_name: string; status: string; categories: { name: string }[] }[])
+    .filter((show) => show.status === "nominations_open");
+  const nominationShow = nominationShows.find((show) => show.id === typedNominee.showId);
 
   const reviewNomination = useMutation({
     mutationFn: async ({ nominationId, decision }: { nominationId: string; decision: "shortlisted" | "rejected" }) => {
@@ -145,6 +179,31 @@ const AwardsAdmin = () => {
     },
     onError: (error: Error) => {
       toast({ title: "Nomination review failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const castJuryBallot = useMutation({
+    mutationFn: async ({ showId, nominationId }: { showId: string; nominationId: string }) => {
+      const awardsRpc = supabase as unknown as {
+        rpc(
+          name: "cast_award_jury_ballot",
+          args: { p_show_id: string; p_nomination_id: string },
+        ): PromiseLike<{ error: Error | null }>;
+      };
+      const { error } = await awardsRpc.rpc("cast_award_jury_ballot", {
+        p_show_id: showId,
+        p_nomination_id: nominationId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin-nominations"] });
+      void queryClient.invalidateQueries({ queryKey: ["award-show-nominations"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-awards-results-preview"] });
+      toast({ title: "Jury ballot recorded" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Jury ballot failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -266,6 +325,21 @@ const AwardsAdmin = () => {
                   onChange={(e) => setNewShow({ ...newShow, categories: e.target.value })}
                   placeholder="Best Album, Best Song, Best New Artist"
                 />
+              </div>
+              <div>
+                <Label htmlFor="award-jury-weight">Jury ballot weight</Label>
+                <Input
+                  id="award-jury-weight"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={newShow.jury_weight}
+                  onChange={(e) => setNewShow({ ...newShow, jury_weight: e.target.value })}
+                />
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Applies to each category. Use 0 to disable jury voting. A player ballot is worth one point.
+                </p>
               </div>
               <Button
                 onClick={() => createShow.mutate(newShow)}
@@ -435,6 +509,49 @@ const AwardsAdmin = () => {
         </TabsContent>
 
         <TabsContent value="nominations">
+          <Card className="mb-4">
+            <CardHeader><CardTitle>Add a character, song or album nomination</CardTitle></CardHeader>
+            <CardContent>
+              <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => {
+                event.preventDefault();
+                submitTypedNomination.mutate();
+              }}>
+                <Label>Show
+                  <select className="mt-1 block w-full rounded border bg-background p-2" required
+                    value={typedNominee.showId}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, showId: event.target.value, category: "" })}>
+                    <option value="">Choose an open show</option>
+                    {nominationShows.map((show) => <option key={show.id} value={show.id}>{show.show_name}</option>)}
+                  </select>
+                </Label>
+                <Label>Category
+                  <select className="mt-1 block w-full rounded border bg-background p-2" required
+                    value={typedNominee.category}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, category: event.target.value })}>
+                    <option value="">Choose a category</option>
+                    {(Array.isArray(nominationShow?.categories) ? nominationShow.categories : []).map(({ name }) => <option key={name}>{name}</option>)}
+                  </select>
+                </Label>
+                <Label>Nominee type
+                  <select className="mt-1 block w-full rounded border bg-background p-2"
+                    value={typedNominee.type}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, type: event.target.value, id: "" })}>
+                    <option value="player">Character</option>
+                    <option value="song">Song</option>
+                    <option value="album">Album</option>
+                  </select>
+                </Label>
+                <Label>Nominee ID
+                  <Input className="mt-1" required value={typedNominee.id}
+                    onChange={(event) => setTypedNominee({ ...typedNominee, id: event.target.value })} />
+                </Label>
+                <Button type="submit" disabled={!nominationShow || submitTypedNomination.isPending}>
+                  Submit nomination
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>All Nominations</CardTitle>
@@ -445,7 +562,7 @@ const AwardsAdmin = () => {
                   <TableRow>
                     <TableHead>Show</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Band</TableHead>
+                    <TableHead>Nominee</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -455,7 +572,7 @@ const AwardsAdmin = () => {
                     <TableRow key={nom.id}>
                       <TableCell>{nom.award_shows?.show_name}</TableCell>
                       <TableCell>{nom.category_name}</TableCell>
-                      <TableCell>{nom.bands?.name}</TableCell>
+                      <TableCell>{nom.nominee_name}</TableCell>
                       <TableCell>{nom.nominee_type}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-2">
@@ -463,6 +580,22 @@ const AwardsAdmin = () => {
                           {Number(nom.vote_count || 0) > 0 && nom.status === "pending" && (
                             <span className="text-xs text-amber-600">Legacy votes: shortlist to preserve ballots</span>
                           )}
+                          {nom.status === "shortlisted"
+                            && shows.some((show: { id: string; status: string; ceremony_date: string | null; categories: { name: string; juryWeight?: number }[] | null }) =>
+                              show.id === nom.award_show_id && show.status === "voting_open"
+                              && (!show.ceremony_date || Date.parse(show.ceremony_date) > Date.now())
+                              && Array.isArray(show.categories)
+                              && show.categories.some(category => category.name === nom.category_name && (category.juryWeight ?? 0) > 0))
+                            && (
+                              <Button size="sm" variant="outline" disabled={castJuryBallot.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`Cast your jury ballot for ${nom.nominee_name} in ${nom.category_name}? Your selection is final.`)) {
+                                    castJuryBallot.mutate({ showId: nom.award_show_id, nominationId: nom.id });
+                                  }
+                                }}>
+                                Cast jury ballot
+                              </Button>
+                            )}
                           {nom.status !== "winner" && nom.status !== "runner_up"
                             && shows.some((show: any) => show.id === nom.award_show_id && show.status === "nominations_open")
                             && (

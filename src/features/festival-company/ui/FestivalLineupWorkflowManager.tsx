@@ -11,6 +11,7 @@ import { useFestivalArtistProgramme } from "../application/useFestivalArtistProg
 import type { ArtistIdentity, FestivalArtistBooking } from "../domain/festivalArtistProgramme";
 import { FestivalOwnerNpcActsManager } from "./FestivalOwnerNpcActsManager";
 import { SimplifiedFestivalLineupManager } from "./SimplifiedFestivalLineupManager";
+import { festivalArtistIdentityKey, useFestivalArtistNames } from "./useFestivalArtistNames";
 
 const artistLabel = (identity: ArtistIdentity) => {
   if (identity.type === "band") return "Confirmed band";
@@ -32,6 +33,8 @@ export function FestivalLineupWorkflowManager({
     festivalCompanyId,
     festivalEditionId,
   );
+  const names = useFestivalArtistNames((query.data?.bookings ?? []).map(booking => booking.identity));
+  const displayArtist = (identity: ArtistIdentity) => names.data?.get(festivalArtistIdentityKey(identity)) ?? artistLabel(identity);
 
   if (query.isLoading) {
     return <p role="status">Loading Festival line-up…</p>;
@@ -83,7 +86,7 @@ export function FestivalLineupWorkflowManager({
               <div className="flex flex-wrap justify-center gap-2">
                 {headliners.map((booking) => (
                   <Badge key={booking.id} className="px-4 py-2 text-base">
-                    <Star className="mr-2 h-4 w-4" /> {artistLabel(booking.identity)}
+                    <Star className="mr-2 h-4 w-4" /> {displayArtist(booking.identity)}
                   </Badge>
                 ))}
               </div>
@@ -95,7 +98,7 @@ export function FestivalLineupWorkflowManager({
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {confirmed.filter((booking) => booking.billingPosition !== "headliner").map((booking) => (
               <div key={booking.id} className="rounded-md border bg-background/70 p-3 text-left">
-                <p className="font-semibold">{artistLabel(booking.identity)}</p>
+                <p className="font-semibold">{displayArtist(booking.identity)}</p>
                 <p className="text-xs capitalize text-muted-foreground">
                   {billingLabel(booking)} · {booking.setMinutes} min set
                 </p>

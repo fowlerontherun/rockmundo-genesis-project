@@ -26,12 +26,28 @@ export function validateGarmentScene(scene: T.Object3D, referenceBones: Set<stri
   scene.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
     const geometry = node.geometry as T.BufferGeometry;
+    const position = geometry.getAttribute('position');
+    if (!position?.count) errors.push(`Mesh "${node.name}" has no vertices.`);
+    else for (let vertex = 0; vertex < position.count; vertex++) {
+      if (![position.getX(vertex), position.getY(vertex), position.getZ(vertex)].every(Number.isFinite)) { errors.push(`Mesh "${node.name}" contains invalid vertex coordinates.`); break; }
+    }
     triangles += (geometry.index ? geometry.index.count : geometry.getAttribute('position')?.count ?? 0) / 3;
-    for (const m of Array.isArray(node.material) ? node.material : [node.material]) materials.add(m.name || m.uuid);
+    for (const m of Array.isArray(node.material) ? node.material : [node.material]) materials.add(m.uuid);
     if (GARMENT_UPLOAD_RULES.forbiddenMeshNames.test(node.name)) errors.push(`Mesh "${node.name}" looks like a body part. Garment files must not contain the avatar body.`);
     if (node instanceof T.SkinnedMesh) {
       skinnedMeshes += 1;
       node.skeleton.bones.forEach(b => { if (!referenceBones.has(b.name)) unknownBones.add(b.name); });
+      const indices = geometry.getAttribute('skinIndex'), weights = geometry.getAttribute('skinWeight');
+      if (!indices || !weights || indices.count !== position?.count || weights.count !== position?.count || indices.itemSize !== 4 || weights.itemSize !== 4) errors.push(`Mesh "${node.name}" needs four skin indices and weights per vertex.`);
+      else for (let vertex = 0; vertex < weights.count; vertex++) {
+        let total = 0, invalid = false;
+        for (let channel = 0; channel < 4; channel++) {
+          const weight = weights.getComponent(vertex, channel), bone = indices.getComponent(vertex, channel);
+          total += weight;
+          if (!Number.isFinite(weight) || weight < 0 || weight > 1 || !Number.isInteger(bone) || bone < 0 || bone >= node.skeleton.bones.length) invalid = true;
+        }
+        if (invalid || Math.abs(total - 1) > .01) { errors.push(`Mesh "${node.name}" has invalid or unnormalised skin weights; clothing would detach during animation.`); break; }
+      }
     } else {
       errors.push(`Mesh "${node.name || 'unnamed'}" is not skinned to the avatar skeleton.`);
     }

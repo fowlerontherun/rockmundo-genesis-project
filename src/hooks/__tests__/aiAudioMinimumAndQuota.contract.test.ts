@@ -8,7 +8,8 @@ const migration = read("supabase/migrations/20261018084500_ai_audio_weekly_limit
 
 describe("AI song minimum duration and weekly allowance", () => {
   it("accepts every complete MP3 at or above 60 seconds without a maximum duration", () => {
-    expect(webhook).toContain("const minSeconds = 60");
+    expect(webhook).toContain("const minSeconds = MIN_GENERATED_MP3_SECONDS");
+    expect(read("supabase/functions/_shared/mp3Duration.ts")).toContain("MIN_GENERATED_MP3_SECONDS = 60");
     expect(webhook).toContain("if (actualSeconds < minSeconds)");
     expect(webhook).toContain("const acceptedAudioBytes = audioBytes");
     expect(webhook).not.toContain("const maxSeconds = 90");

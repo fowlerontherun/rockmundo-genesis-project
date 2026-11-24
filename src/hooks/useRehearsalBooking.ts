@@ -28,10 +28,10 @@ interface BookRehearsalParams {
   scheduledStart: Date;
   // Kept for compatibility with the existing page/dialog contract. The server
   // now recalculates all of these values authoritatively.
-  totalCost: number;
-  chemistryGain: number;
-  xpEarned: number;
-  familiarityGained: number;
+  totalCost?: number;
+  chemistryGain?: number;
+  xpEarned?: number;
+  familiarityGained?: number;
   roomName: string;
   roomLocation: string;
   profileId?: string;

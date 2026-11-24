@@ -1,6 +1,7 @@
 import { Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ChristmasDecorations } from "@/features/seasonal/ChristmasDecorations";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, matchPath, useLocation } from "react-router-dom";
@@ -60,6 +61,8 @@ const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
 const MobileProgression = lazyWithRetry(() => import("./mobile/pages/MobileProgression"));
 const MobileEducation = lazyWithRetry(() => import("./mobile/pages/MobileEducation"));
+const MobileFestivals = lazyWithRetry(() => import("./mobile/pages/MobileFestivals"));
+const MobileFestivalDetail = lazyWithRetry(() => import("./mobile/pages/MobileFestivals").then((module) => ({ default: module.MobileFestivalDetail })));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
@@ -78,6 +81,7 @@ const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
 const ShareStudio = lazyWithRetry(() => import("./pages/ShareStudio"));
+const RoleplayHub = lazyWithRetry(() => import("./pages/RoleplayHub"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
@@ -508,6 +512,7 @@ function App() {
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
+                      <ChristmasDecorations />
                         <PageTitle />
               <ErrorBoundary>
                 <Suspense
@@ -534,6 +539,8 @@ function App() {
                     <Route path="chat" element={<MobileSocial />} />
                     <Route path="progression" element={<MobileProgression />} />
                     <Route path="education" element={<MobileEducation />} />
+                    <Route path="festivals" element={<MobileFestivals />} />
+                    <Route path="festivals/:festivalCompanyIdentifier" element={<MobileFestivalDetail />} />
                     <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="*" element={<Navigate to="/mobile" replace />} />
                   </Route>
@@ -823,6 +830,7 @@ function App() {
                     <Route path="social/activities/:activityId" element={<SocialActivityDetail />} />
                     <Route path="social/recruitment" element={<BandRecruitmentDiscovery />} />
                     <Route path="social/share-studio" element={<ShareStudio />} />
+                    <Route path="social/roleplay" element={<RoleplayHub />} />
                     <Route path="social/twaater" element={<PreserveQueryRedirect to="/twaater" />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
                     <Route path="twaater/analytics" element={<TwaaterAnalytics />} />

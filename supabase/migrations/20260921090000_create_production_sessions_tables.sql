@@ -1,11 +1,12 @@
+-- Session user_id / engineer_id are auth account IDs, not unique profile IDs.
 -- Create tables for tracking recording, mixing, and mastering sessions along with uploaded tracks
 CREATE TABLE IF NOT EXISTS public.recording_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   stage TEXT NOT NULL CHECK (stage IN ('recording', 'mixing', 'mastering')),
   status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed')),
-  engineer_id UUID REFERENCES public.profiles(user_id) ON DELETE SET NULL,
+  engineer_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   engineer_name TEXT,
   scheduled_start TIMESTAMPTZ,
   started_at TIMESTAMPTZ,
@@ -26,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.production_tracks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES public.recording_sessions(id) ON DELETE CASCADE,
   song_id UUID NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   stage TEXT NOT NULL CHECK (stage IN ('recording', 'mixing', 'mastering')),
   name TEXT NOT NULL,
   take_number INTEGER NOT NULL DEFAULT 1 CHECK (take_number > 0),

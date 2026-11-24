@@ -39,12 +39,14 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useBuySkinCollectionSet, useConfirmSkinSetReturn, SKIN_SET_PRICE_LABEL } from "@/hooks/useSkinCollectionSet";
 import { SkinMarketTab } from "@/components/skin-store/SkinMarketTab";
 import { Store } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const SkinStore = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(() =>
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "market" ? "market" : "featured",
+    typeof window !== "undefined" && ['market', 'collections', 'owned', 'browse', 'instruments', 'new'].includes(new URLSearchParams(window.location.search).get("tab") ?? '') ? new URLSearchParams(window.location.search).get("tab") ?? 'featured' : "featured",
   );
+  const [packSearch, setPackSearch] = useState('');
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<ClothingItem | null>(null);
   const [previewInstrument, setPreviewInstrument] = useState<InstrumentSkinItem | null>(null);
@@ -149,7 +151,7 @@ const SkinStore = () => {
       }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 lg:w-auto lg:inline-grid">
+        <TabsList className="flex w-full justify-start overflow-x-auto whitespace-nowrap">
           <TabsTrigger value="market" className="gap-1.5">
             <Store className="h-4 w-4 hidden sm:inline" />
             <span>Market</span>
@@ -252,11 +254,12 @@ const SkinStore = () => {
         </TabsContent>
 
         <TabsContent value="collections" className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Genre skin packs</h2><Input aria-label="Search skin packs" placeholder="Search genre or pack" className="w-full sm:w-64" value={packSearch} onChange={event => setPackSearch(event.target.value)} /></div>
           {collectionsLoading ? (
             <div className="text-center py-12">Loading collections...</div>
           ) : collections.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collections.map((collection) => (
+              {collections.filter(collection => `${collection.name} ${collection.theme ?? ''} ${collection.description ?? ''}`.toLowerCase().includes(packSearch.trim().toLowerCase())).map((collection) => (
                 <CollectionCard
                   key={collection.id}
                   collection={collection}
@@ -268,6 +271,7 @@ const SkinStore = () => {
           ) : (
             <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground">No collections available.</p></CardContent></Card>
           )}
+          {!collectionsLoading && collections.length > 0 && !collections.some(collection => `${collection.name} ${collection.theme ?? ''} ${collection.description ?? ''}`.toLowerCase().includes(packSearch.trim().toLowerCase())) && <p className="text-sm text-muted-foreground">No matching packs.</p>}
         </TabsContent>
 
         <TabsContent value="collection" className="space-y-6">

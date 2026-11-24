@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getFestivalBranding } from "@/features/festival-company/data/festivalBrandingRepository";
+import type { FestivalBranding } from "@/features/festival-company/domain/festivalBranding";
 import {
   festivalAnnualPlanSchema,
   type FestivalAnnualPlan,
@@ -32,7 +34,7 @@ export async function getFestivalAnnualPlan(
   if (error) throw new Error(error.message ?? "festival_annual_plan_unavailable");
   const parsed = festivalAnnualPlanSchema.safeParse(data);
   if (!parsed.success) throw new Error("malformed_festival_annual_plan_result");
-  return parsed.data;
+  return { ...parsed.data, branding: await getFestivalBranding(festivalEditionId) };
 }
 
 export async function saveFestivalAnnualPlan(input: {
@@ -41,15 +43,17 @@ export async function saveFestivalAnnualPlan(input: {
   expectedVersion: number;
   plan: FestivalAnnualPlanDraft;
   idempotencyKey: string;
+  branding?: FestivalBranding;
 }): Promise<FestivalAnnualPlan> {
   const { data, error } = await festivalRpc(
-    "save_festival_edition_annual_plan",
+    input.branding ? "save_festival_edition_wizard" : "save_festival_edition_annual_plan",
     {
       p_festival_company_id: input.festivalCompanyId,
       p_festival_edition_id: input.festivalEditionId,
       p_expected_version: input.expectedVersion,
       p_plan: input.plan,
       p_idempotency_key: input.idempotencyKey,
+      ...(input.branding ? { p_branding: input.branding } : {}),
     },
   );
 

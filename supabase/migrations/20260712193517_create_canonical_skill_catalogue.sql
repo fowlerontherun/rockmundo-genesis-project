@@ -1,6 +1,10 @@
 -- Canonical skills and relationships catalogue. Idempotent and progress-preserving.
 
+-- Existing older skill definitions lack this prerequisite field, but both
+-- the canonical seed below and September legacy-unlock reconciliation read it.
+-- A fresh profile starts with no level prerequisite unless configured later.
 ALTER TABLE public.skill_definitions
+  ADD COLUMN IF NOT EXISTS default_unlock_level integer NOT NULL DEFAULT 0 CHECK (default_unlock_level >= 0),
   ADD COLUMN IF NOT EXISTS category text,
   ADD COLUMN IF NOT EXISTS subcategory text,
   ADD COLUMN IF NOT EXISTS tier text NOT NULL DEFAULT 'basic',

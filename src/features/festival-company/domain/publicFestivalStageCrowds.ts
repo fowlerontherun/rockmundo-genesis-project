@@ -26,7 +26,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * Only accept snapshots dated to the festival day reported by the same
  * public endpoint. Older revisions of the RPC omitted festivalDate and
  * must fail closed instead of displaying stale data as current.
- * Duplicate stage names still fail closed to avoid ambiguous snapshots.
+ * Match observations to the published stage UUID, independently of its name.
  * These values remain reported snapshots, not live headcounts.
  */
 export function readPublicFestivalStageCrowds(
@@ -63,14 +63,7 @@ export function readPublicFestivalStageCrowds(
     });
   }
 
-  const counts = new Map<string, number>();
-  for (const item of candidates) {
-    const key = item.stageName.toLocaleLowerCase("en-GB");
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return candidates.filter(
-    (item) => counts.get(item.stageName.toLocaleLowerCase("en-GB")) === 1,
-  );
+  return candidates;
 }
 
 export const festivalCrowdBandLabels: Record<AttendanceBand, string> = {
@@ -97,24 +90,6 @@ export const festivalCrowdMoodLabels: Record<FestivalCrowdState, string> = {
 };
 
 /**
- * Public stage IDs and runtime stage IDs belong to different namespaces.
- * Match by name only when it uniquely identifies a runtime stage.
- */
-export function filterPublicFestivalStageCrowdsForUniqueStages(
-  crowds: readonly PublicFestivalStageCrowd[],
-  stages: readonly { name: string }[],
-): PublicFestivalStageCrowd[] {
-  const nameCounts = new Map<string, number>();
-  for (const stage of stages) {
-    const name = stage.name.trim().toLocaleLowerCase("en-GB");
-    nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
-  }
-  return crowds.filter((crowd) =>
-    nameCounts.get(crowd.stageName.trim().toLocaleLowerCase("en-GB")) === 1,
-  );
-}
-
-/**
  * A verified festival-wide runtime update does not certify that *each* stage
  * observation is recent. Expired rows must never animate a currently busy
  * stage merely because a different part of the festival ticked recently.
@@ -122,7 +97,7 @@ export function filterPublicFestivalStageCrowdsForUniqueStages(
 export function filterFreshPublicFestivalStageCrowds(
   crowds: readonly PublicFestivalStageCrowd[],
   now: number,
-  maxAgeMs = 30 * 60_000,
+  maxAgeMs = 10 * 60_000,
 ): PublicFestivalStageCrowd[] {
   if (!Number.isFinite(now) || !Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return [];
   const stageIds = new Map<string, number>();
@@ -133,6 +108,6 @@ export function filterFreshPublicFestivalStageCrowds(
     if (stageIds.get(crowd.stageId) !== 1) return false;
     const observed = Date.parse(crowd.lastCalculatedAt);
     const age = now - observed;
-    return Number.isFinite(observed) && age >= -2 * 60_000 && age <= maxAgeMs;
+    return Number.isFinite(observed) && age >= -60_000 && age <= maxAgeMs;
   });
 }

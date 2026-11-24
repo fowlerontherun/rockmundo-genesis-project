@@ -11,7 +11,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border border-fm-border bg-fm-panel text-fm-fg",
+      "rm-game-panel rounded-lg border border-fm-border bg-fm-panel text-fm-fg",
       className,
     )}
     {...props}
@@ -24,7 +24,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
     <div
       ref={ref}
       className={cn(
-        "flex flex-col gap-0.5 px-3 py-2 bg-fm-panel-2 border-b border-fm-border",
+        "flex flex-col gap-0.5 px-3 py-2 bg-fm-panel-2 border-b border-fm-border rounded-t-[inherit]",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
     <h3
       ref={ref}
       className={cn(
-        "text-[13px] font-medium tracking-tight text-fm-fg leading-tight",
+        "text-[13px] font-semibold tracking-normal text-fm-fg leading-snug",
         className,
       )}
       {...props}

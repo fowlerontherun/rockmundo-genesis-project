@@ -33,7 +33,7 @@ export const upsertScheduleItem = (input: { editionId: string; revisionId: strin
     p_revision_id: input.revisionId,
     p_item: item,
     p_expected_version: input.expectedVersion ?? null,
-    p_idempotency_key: input.idempotencyKey ?? `item:${input.revisionId}:${Date.now()}`,
+    p_idempotency_key: input.idempotencyKey ?? `item:${crypto.randomUUID()}`,
   });
 };
 export const previewScheduleTemplate = (input: { editionId: string; stageId: string; date: string; template: string; openingTime: string; curfew: string }) => rpc<any>("festival_schedule_preview_template", { p_edition_id: input.editionId, p_stage_id: input.stageId, p_festival_date: input.date, p_template: input.template, p_opening_time: input.openingTime, p_curfew: input.curfew });

@@ -28,9 +28,9 @@ export const PageHeader = ({
   const navigate = useNavigate();
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn("rm-page-heading flex flex-col gap-2 border-b border-fm-border pb-3", className)}>
       {/* Breadcrumb row (spec §2.1) — back · section · description */}
-      <div className="flex items-center gap-2 text-[12px] text-fm-fg-muted">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-fm-fg-muted">
         {backTo && (
           <Button
             variant="ghost"
@@ -46,24 +46,20 @@ export const PageHeader = ({
           <span className="text-fm-accent font-medium">{eyebrow}</span>
         )}
         {eyebrow && subtitle && <span className="text-fm-fg-subtle">·</span>}
-        {subtitle && <span className="truncate">{subtitle}</span>}
+        {subtitle && <span className="min-w-0 break-words">{subtitle}</span>}
       </div>
 
       {/* Title row — icon chip + h1 left, single primary action right */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {Icon && (
             <div
-              className="h-[34px] w-[34px] grid place-items-center rounded-[10px] shrink-0"
-              style={{
-                background: "hsl(var(--fm-accent) / 0.15)",
-                color: "hsl(var(--fm-accent))",
-              }}
+              className="h-10 w-10 grid place-items-center rounded-md border border-fm-accent/30 bg-fm-accent/10 text-fm-accent shrink-0"
             >
               <Icon className="h-[18px] w-[18px]" />
             </div>
           )}
-          <h1 className="text-[20px] font-medium tracking-tight text-fm-fg truncate leading-tight font-display">
+          <h1 className="text-[22px] font-semibold tracking-normal text-fm-fg break-words leading-tight font-display">
             {title}
           </h1>
         </div>

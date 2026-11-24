@@ -193,7 +193,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions."auto-start-gigs"]
-verify_jwt = false
+verify_jwt = true
 
 [functions.festival-performance-worker]
 verify_jwt = false

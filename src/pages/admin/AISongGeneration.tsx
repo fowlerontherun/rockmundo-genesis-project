@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -31,7 +31,7 @@ import {
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
-import { audioDurationReviewStatus, buildAudioDurationReviewCsv, formatAudioDuration, readAudioDuration } from "@/lib/audioDurationAudit";
+import { audioGenerationMinimumStatus, audioDurationReviewStatus, buildAudioDurationReviewCsv, formatAudioDuration, readAudioDuration } from "@/lib/audioDurationAudit";
 
 type Song = {
   id: string;
@@ -65,21 +65,19 @@ export default function AISongGeneration() {
   } | null>(null);
   const [boostAmount, setBoostAmount] = useState<number>(10);
   const [boostingSongId, setBoostingSongId] = useState<string | null>(null);
-  const [audioAudit, setAudioAudit] = useState<Record<string, number | null>>({});
+  const [auditedRecordings, setAuditedRecordings] = useState<Record<string, { url: string; seconds: number | null }>>({});
   const [audioAuditing, setAudioAuditing] = useState(false);
-  const [auditChecked, setAuditChecked] = useState(0);
   const [audioAuditPage, setAudioAuditPage] = useState(0);
   const audioAuditPageSize = 30;
   const auditRunRef = useRef(0);
   const auditAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
-    // Invalidate an old asynchronous metadata scan on page changes so late
-    // audio events cannot contaminate the new page's export or badges.
+    // Invalidate an old asynchronous MP3 scan on page changes so late
+    // download results cannot contaminate the new page's export or badges.
     auditRunRef.current += 1;
     auditAbortRef.current?.abort();
     auditAbortRef.current = null;
-    setAudioAudit({});
-    setAuditChecked(0);
+    setAuditedRecordings({});
     setAudioAuditing(false);
     return () => { auditRunRef.current += 1; auditAbortRef.current?.abort(); };
   }, [audioAuditPage]);
@@ -133,6 +131,16 @@ export default function AISongGeneration() {
     },
   });
 
+  const audioAudit = useMemo(() => {
+    const current: Record<string, number | null> = {};
+    for (const song of recentAudioSongs ?? []) {
+      const result = auditedRecordings[song.id];
+      if (result && result.url === song.audio_url) current[song.id] = result.seconds;
+    }
+    return current;
+  }, [recentAudioSongs, auditedRecordings]);
+  const auditChecked = Object.keys(audioAudit).length;
+
   const auditRecentAudio = async () => {
     if (audioAuditing || !recentAudioSongs?.length) return;
     const run = ++auditRunRef.current;
@@ -141,16 +149,16 @@ export default function AISongGeneration() {
     auditAbortRef.current = controller;
     const songsOnPage = [...recentAudioSongs];
     setAudioAuditing(true);
-    setAudioAudit({});
-    setAuditChecked(0);
+    setAuditedRecordings({});
     try {
-      // Read-only playback metadata checks. Never generate/pay for audio here.
+      // Read-only frame checks.
       for (const song of songsOnPage) {
         if (run !== auditRunRef.current) break;
-        const duration = song.audio_url ? await readAudioDuration(song.audio_url, 12000, controller.signal) : null;
+        if (!song.audio_url) continue;
+        const duration = await readAudioDuration(song.audio_url, 12000, controller.signal);
         if (controller.signal.aborted || run !== auditRunRef.current) break;
-        setAudioAudit(previous => ({ ...previous, [song.id]: duration }));
-        setAuditChecked(count => count + 1);
+        const url = song.audio_url;
+        setAuditedRecordings(previous => ({ ...previous, [song.id]: { url, seconds: duration } }));
       }
     } finally {
       if (run === auditRunRef.current) {
@@ -247,6 +255,7 @@ export default function AISongGeneration() {
           if (progress.status === "completed") toast.success("Generated song audio is ready");
           else toast.error(progress.error || "AI audio generation failed");
           queryClient.invalidateQueries({queryKey:["admin-songs-for-generation"]});
+          queryClient.invalidateQueries({queryKey:["admin-recent-generated-audio"]});
         }
       } catch(error) {
         if (active) console.error("[admin-song-generation] Unable to fetch provider status:",error);
@@ -606,7 +615,7 @@ export default function AISongGeneration() {
               <CardHeader>
                 <CardTitle>Recent generated audio duration audit</CardTitle>
                 <CardDescription>
-                  Inspect recordings in batches of 30, ordered by generation date, and compare browser-reported playback with the planned song length. No audio is modified.
+                  Check MP3 frames in batches of 30 and compare playback duration with the planned song length. No audio is modified.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -627,9 +636,9 @@ export default function AISongGeneration() {
                    </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A recording is flagged for review if browser-reported duration is less than 80% of
-                  the planned song length (minimum 30 seconds). Unknown means the browser could not read
-                  reliable metadata. Current audio is preserved until a replacement passes validation.
+                  New AI recordings require at least 60 seconds. The planned-length review separately
+                  flags recordings below 80% of the in-game song length, with a 30-second floor.
+                  Unverifiable files could not be downloaded or validated as complete MP3s.
                 </p>
                 <div className="overflow-x-auto">
                   <Table>
@@ -638,7 +647,8 @@ export default function AISongGeneration() {
                         <TableHead>Song</TableHead>
                         <TableHead>Planned</TableHead>
                         <TableHead>Audio</TableHead>
-                        <TableHead>Health</TableHead>
+                        <TableHead>Generation minimum</TableHead>
+                        <TableHead>Planned-length review</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -647,11 +657,17 @@ export default function AISongGeneration() {
                         const checked = Object.prototype.hasOwnProperty.call(audioAudit, song.id);
                         const actual = audioAudit[song.id] ?? null;
                         const health = audioDurationReviewStatus(actual, song.duration_seconds);
+                        const minimum = audioGenerationMinimumStatus(actual);
                         return (
                           <TableRow key={song.id}>
                             <TableCell className="font-medium">{song.title}</TableCell>
                             <TableCell>{formatAudioDuration(song.duration_seconds)}</TableCell>
                             <TableCell>{checked ? formatAudioDuration(actual) : "Not checked"}</TableCell>
+                            <TableCell>
+                              {!checked ? "—" : minimum === "UNVERIFIABLE" ? "Unverifiable" :
+                                minimum === "BELOW_MINIMUM" ? <Badge variant="destructive">Below 60 seconds</Badge> :
+                                <Badge variant="secondary">Meets 60 seconds</Badge>}
+                            </TableCell>
                             <TableCell>
                               {!checked ? <Badge variant="secondary">Not checked</Badge> :
                                 health === "UNVERIFIABLE" ? <Badge variant="outline">Unverifiable</Badge> :
@@ -670,7 +686,7 @@ export default function AISongGeneration() {
                         );
                       })}
                       {!recentAudioSongs?.length && (
-                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">
                           No recent generated audio available
                         </TableCell></TableRow>
                       )}

@@ -71,7 +71,7 @@ export interface AwardWin {
   won_at: string;
 }
 
-export const useAwards = (userId?: string, bandId?: string) => {
+export const useAwards = (userId?: string, bandId?: string, watchCeremony = false) => {
   const queryClient = useQueryClient();
 
 
@@ -81,6 +81,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
   // Fetch all award shows
   const { data: shows = [], isLoading: showsLoading } = useQuery({
     queryKey: ["award-shows"],
+    refetchInterval: watchCeremony ? 15_000 : false,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("award_shows")
@@ -93,8 +94,8 @@ export const useAwards = (userId?: string, bandId?: string) => {
   });
 
   // Browser callers pass a character profile ID, NOT auth.users.id.
-  // Nomination/win rows store the authenticated account ID and/or band ID.
-  // Resolve the account inside each query instead of comparing to profileId.
+  // Nominations and legacy wins store account and band IDs. New solo wins
+  // also store their exact character profile.
   const { data: nominations = [], isLoading: nominationsLoading } = useQuery({
     queryKey: ["award-nominations", userId, bandId],
     queryFn: async () => {
@@ -119,6 +120,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
 
   const { data: wins = [], isLoading: winsLoading } = useQuery({
     queryKey: ["award-wins", userId, bandId],
+    refetchInterval: watchCeremony ? 15_000 : false,
     queryFn: async () => {
       if (!userId) return [];
       const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -126,7 +128,7 @@ export const useAwards = (userId?: string, bandId?: string) => {
       const accountId = authData.user?.id;
       if (!accountId) return [];
 
-      const filters = [`user_id.eq.${accountId}`];
+      const filters = [`profile_id.eq.${userId}`, `and(profile_id.is.null,user_id.eq.${accountId})`];
       if (bandId) filters.push(`band_id.eq.${bandId}`);
       const { data, error } = await (supabase as any)
         .from("award_wins")

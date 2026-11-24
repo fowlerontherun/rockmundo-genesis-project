@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { SocialInviteKind, SocialInviteRow, SocialInviteStatus } from "@/hooks/useSocialInvites";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_INVITE_MESSAGE_LENGTH = 280;
 
 export interface SendSocialInviteInput {

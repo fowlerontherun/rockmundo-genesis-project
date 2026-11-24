@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useSocialUpdates } from "@/features/social-hub/useSocialUpdates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -80,24 +80,7 @@ export function useOutgoingInvites(profileId?: string | null) {
 }
 
 export function useInviteRealtime(profileId?: string | null) {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    if (!profileId) return;
-    const channel = supabase
-      .channel(`invites-${profileId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "social_invites" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["social-invites-in", profileId] });
-          queryClient.invalidateQueries({ queryKey: ["social-invites-out", profileId] });
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profileId, queryClient]);
+  useSocialUpdates(profileId, "social_invites");
 }
 
 export interface CreateInviteInput {

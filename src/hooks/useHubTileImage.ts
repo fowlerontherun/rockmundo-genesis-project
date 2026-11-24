@@ -13,7 +13,7 @@ export function useHubTileImage(tileKey: string, _prompt: string) {
       // Verify the image exists
       try {
         const res = await fetch(path, { method: "HEAD" });
-        if (res.ok) return path;
+        if (res.ok && res.headers.get('content-type')?.startsWith('image/')) return path;
       } catch {
         // fall through
       }

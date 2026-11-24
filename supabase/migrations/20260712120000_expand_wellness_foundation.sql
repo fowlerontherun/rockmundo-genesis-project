@@ -1,6 +1,12 @@
 -- Expanded wellness foundation: safe additive schema and balance seeds.
 
+-- Earlier schema snapshots can lack these two legacy wellness scalars,
+-- although the bootstrap UPDATE and later July wellness RPCs read them.
+-- Recreate missing columns with the live defaults; never overwrite existing
+-- player mood/stress values or drop existing constraints.
 alter table public.profiles
+  add column if not exists mood integer not null default 70,
+  add column if not exists stress integer not null default 30,
   add column if not exists physical_health integer not null default 80 check (physical_health between 0 and 100),
   add column if not exists happiness integer not null default 72 check (happiness between 0 and 100),
   add column if not exists fatigue integer not null default 35 check (fatigue between 0 and 100),
@@ -29,6 +35,108 @@ create table if not exists public.wellness_history (
   created_at timestamptz not null default now(),
   unique(profile_id, processed_on, source)
 );
+
+-- Some existing databases received the wellness foundation tables outside
+-- migration history. Rebuild their verified baseline for clean restores.
+-- CREATE IF NOT EXISTS intentionally leaves populated live tables untouched.
+CREATE TABLE IF NOT EXISTS public.wellness_activity_catalog (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text NOT NULL UNIQUE,
+  name text NOT NULL,
+  category text NOT NULL CHECK (category IN ('recovery', 'fitness', 'medical', 'indulgence')),
+  description text,
+  duration_minutes integer NOT NULL DEFAULT 30,
+  cooldown_hours integer NOT NULL DEFAULT 12,
+  stamina_cost integer NOT NULL DEFAULT 10,
+  cost_cents integer NOT NULL DEFAULT 0,
+  stat_effects jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ailment_risk jsonb NOT NULL DEFAULT '{}'::jsonb,
+  treats_ailment_slug text,
+  unlock_min_fame integer NOT NULL DEFAULT 0,
+  blocks_activity_types text[] NOT NULL DEFAULT ARRAY[]::text[],
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.player_ailments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  slug text NOT NULL,
+  name text NOT NULL,
+  severity smallint NOT NULL DEFAULT 1 CHECK (severity BETWEEN 1 AND 3),
+  contracted_at timestamptz NOT NULL DEFAULT now(),
+  resolved_at timestamptz,
+  treatment_required_slug text,
+  blocks_activity_types text[] NOT NULL DEFAULT ARRAY[]::text[],
+  stat_penalty jsonb NOT NULL DEFAULT '{}'::jsonb,
+  description text,
+  source text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- The activity log is also a baseline table missing from older replay
+-- sources, but used by the next July lifestyle migration.
+CREATE TABLE IF NOT EXISTS public.wellness_activity_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  catalog_id uuid NOT NULL REFERENCES public.wellness_activity_catalog(id) ON DELETE CASCADE,
+  catalog_slug text NOT NULL,
+  category text NOT NULL,
+  performed_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  cooldown_until timestamptz NOT NULL,
+  stat_delta jsonb NOT NULL DEFAULT '{}'::jsonb,
+  cost_cents integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS wellness_activity_log_profile_idx
+  ON public.wellness_activity_log(profile_id, catalog_slug, performed_at DESC);
+CREATE INDEX IF NOT EXISTS wellness_activity_log_cooldown_idx
+  ON public.wellness_activity_log(profile_id, cooldown_until DESC);
+
+CREATE INDEX IF NOT EXISTS player_ailments_active_idx
+  ON public.player_ailments(profile_id) WHERE resolved_at IS NULL;
+
+-- The catalog is public reference data; ailment rows are account-private.
+ALTER TABLE public.wellness_activity_catalog ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.player_ailments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wellness_activity_log ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.wellness_activity_catalog TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.player_ailments TO authenticated;
+GRANT SELECT, INSERT ON public.wellness_activity_log TO authenticated;
+
+DO $wellness_restore_policies$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public'
+      AND tablename='wellness_activity_catalog' AND policyname='wellness_catalog readable'
+  ) THEN
+    EXECUTE 'CREATE POLICY "wellness_catalog readable" ON public.wellness_activity_catalog FOR SELECT USING (true)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public'
+      AND tablename='player_ailments' AND policyname='ailments own all'
+  ) THEN
+    EXECUTE 'CREATE POLICY "ailments own all" ON public.player_ailments FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public'
+      AND tablename='wellness_activity_log' AND policyname='wellness_log own select'
+  ) THEN
+    EXECUTE 'CREATE POLICY "wellness_log own select" ON public.wellness_activity_log FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public'
+      AND tablename='wellness_activity_log' AND policyname='wellness_log own insert'
+  ) THEN
+    EXECUTE 'CREATE POLICY "wellness_log own insert" ON public.wellness_activity_log FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id)';
+  END IF;
+END;
+$wellness_restore_policies$;
 
 alter table public.wellness_activity_catalog
   add column if not exists unlock_tier text not null default 'new_artist',

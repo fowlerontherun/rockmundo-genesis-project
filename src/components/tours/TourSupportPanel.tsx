@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+import { createTourProposal } from '@/features/support-bands/completionApi';
+import { TourProposalsPanel } from '@/features/support-bands/TourProposalsPanel';
+import { PlayTogetherPicker } from '@/features/support-bands/PlayTogetherPicker';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Loader2, MapPin, Route, Send, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   cancelGigSupportOffer,
-  createGigSupportOffer,
   findTourSupportCandidates,
   findTourSupportShowCandidates,
 } from '@/features/support-bands/api';
@@ -21,6 +22,7 @@ interface TourSupportPanelProps {
   tourId: string;
   headlinerBandId: string;
   tourStatus: string;
+  initialSupportBandId?: string;
 }
 
 const statusVariant = (status: string | null) => {
@@ -29,24 +31,27 @@ const statusVariant = (status: string | null) => {
   return 'outline' as const;
 };
 
-export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSupportPanelProps) {
+export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialSupportBandId }: TourSupportPanelProps) {
   const queryClient = useQueryClient();
-  const [selectedBandId, setSelectedBandId] = useState<string>('');
+  const [selectedBandId, setSelectedBandId] = useState<string>(initialSupportBandId ?? '');
+  const [excludedDates, setExcludedDates] = useState<string[]>([]);
+  const [proposalNote, setProposalNote] = useState('');
+  const request = useRef<{ key: string; id: string } | null>(null);
   const editable = tourStatus === 'scheduled' || tourStatus === 'active';
 
-  const { data: assignments = [], isLoading: loadingAssignments } = useQuery({
+  const { data: assignments = [], isLoading: loadingAssignments, isError: assignmentsError } = useQuery({
     queryKey: ['tour-support-assignments', tourId, headlinerBandId],
     queryFn: () => getTourSupportAssignments({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId,
   });
 
-  const { data: candidates = [], isLoading: loadingCandidates } = useQuery({
+  const { data: candidates = [], isLoading: loadingCandidates, isError: candidatesError } = useQuery({
     queryKey: ['tour-support-candidates', tourId, headlinerBandId],
     queryFn: () => findTourSupportCandidates({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId && editable,
   });
 
-  const { data: showCandidates = [], isLoading: loadingShows } = useQuery({
+  const { data: showCandidates = [], isLoading: loadingShows, isError: showsError } = useQuery({
     queryKey: ['tour-support-show-candidates', tourId, headlinerBandId],
     queryFn: () => findTourSupportShowCandidates({ tourId, headlinerBandId }),
     enabled: !!tourId && !!headlinerBandId && editable,
@@ -59,35 +64,48 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
 
   const selectedCoverage = useMemo(() => {
     if (!selectedBandId) return [];
-    return showCandidates.filter((row) => row.support_band_id === selectedBandId && !blockedGigIds.has(row.gig_id));
+    return showCandidates.filter((row) => row.support_band_id === selectedBandId && !blockedGigIds.has(row.gig_id) && row.travel_feasible && new Date(row.scheduled_date).getTime() > Date.now());
   }, [selectedBandId, showCandidates, blockedGigIds]);
 
-  const selectedCandidate = candidates.find((row) => row.support_band_id === selectedBandId) ?? null;
+  const offeredCoverage = selectedCoverage.filter(show => !excludedDates.includes(show.gig_id));
+
+  const remainingCandidates = candidates.map(candidate => ({
+    ...candidate,
+    eligible_shows: showCandidates.filter(show => show.support_band_id === candidate.support_band_id && show.travel_feasible && !blockedGigIds.has(show.gig_id) && new Date(show.scheduled_date).getTime() > Date.now()).length,
+  })).filter(candidate => candidate.eligible_shows > 0);
+
+  const selectedCandidate = remainingCandidates.find((row) => row.support_band_id === selectedBandId) ?? null;
 
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['tour-support-assignments', tourId] }),
       queryClient.invalidateQueries({ queryKey: ['tour-support-candidates', tourId] }),
       queryClient.invalidateQueries({ queryKey: ['tour-support-show-candidates', tourId] }),
+      queryClient.invalidateQueries({ queryKey: ['support-tour-proposals'] }),
     ]);
   };
 
   const sendOffers = useMutation({
     mutationFn: async () => {
-      if (!selectedBandId || selectedCoverage.length === 0) return 0;
-      let sent = 0;
-      for (const show of selectedCoverage) {
-        await createGigSupportOffer({ gigId: show.gig_id, supportBandId: selectedBandId });
-        sent += 1;
-      }
-      return sent;
+      if (!selectedBandId || offeredCoverage.length === 0) return 0;
+      const gigIds = offeredCoverage.map(show => show.gig_id).sort();
+      const key = JSON.stringify([headlinerBandId, tourId, selectedBandId, gigIds]);
+      if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() };
+      await createTourProposal(headlinerBandId, tourId, selectedBandId, gigIds, request.current.id, proposalNote);
+      return gigIds.length;
     },
     onSuccess: async (count) => {
-      toast.success(`Support offer sent for ${count} tour show${count === 1 ? '' : 's'}`);
+      toast.success(`Tour proposal sent for ${count} tour show${count === 1 ? '' : 's'}`);
       setSelectedBandId('');
+      setExcludedDates([]);
+      setProposalNote('');
+      request.current = null;
       await refresh();
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not send the tour support offer'),
+    onError: async () => {
+      toast.error('Could not confirm that the tour offers were sent. Refresh coverage before retrying.');
+      await refresh();
+    },
   });
 
   const cancelAssignment = useMutation({
@@ -102,6 +120,9 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not cancel support slot'),
   });
 
+  if (assignmentsError || (editable && (candidatesError || showsError))) return <Card><CardContent className="p-4" role="alert">
+    Support availability could not be verified. <Button variant="outline" onClick={() => void refresh()}>Retry</Button>
+  </CardContent></Card>;
   if (!editable && assignments.length === 0) return null;
 
   return (
@@ -110,12 +131,70 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" />Tour Support Acts</CardTitle>
-            <CardDescription>Manage support coverage show-by-show. Confirmed support acts receive 20% of artist ticket revenue.</CardDescription>
+            <CardDescription>Invite bands after booking, including while your tour is underway. Choose remaining open dates. Confirmed support acts receive 20% of artist ticket revenue.</CardDescription>
           </div>
           <Badge variant="outline">1 support act per show</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
+        {editable && (
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold">Fill open dates</h4>
+            {loadingAssignments || loadingCandidates || loadingShows ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
+            ) : remainingCandidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
+            ) : (
+              <>
+                {initialSupportBandId && selectedBandId === initialSupportBandId && !selectedCandidate && (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    The band from your link is unavailable for the open dates on this tour. You can choose another band below.
+                  </p>
+                )}
+                {selectedCandidate && (
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{selectedCandidate.support_band_name}</span>
+                      <Badge variant="secondary">Fame {selectedCandidate.fame.toLocaleString()}</Badge>
+                      <Badge variant="secondary">Popularity {selectedCandidate.popularity.toLocaleString()}</Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium" aria-live="polite">{offeredCoverage.length} of {selectedCoverage.length} open dates selected</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={sendOffers.isPending || offeredCoverage.length === selectedCoverage.length} onClick={() => setExcludedDates([])}>Select all dates</Button><Button size="sm" variant="outline" disabled={sendOffers.isPending || !offeredCoverage.length} onClick={() => setExcludedDates(selectedCoverage.map(show => show.gig_id))}>Clear date selection</Button></div></div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {selectedCoverage.map((show) => (
+                        <div key={show.gig_id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                          <label className="flex min-w-0 flex-1 items-start gap-2"><input type="checkbox" checked={!excludedDates.includes(show.gig_id)} disabled={sendOffers.isPending}
+                            onChange={event => setExcludedDates(current => event.target.checked ? current.filter(id => id !== show.gig_id) : [...current, show.gig_id])} />
+                            <span className="min-w-0 break-words"><span className="block">{new Date(show.scheduled_date).toLocaleString()}</span><span className="block text-xs text-muted-foreground">{assignments.find(row => row.gig_id === show.gig_id)?.city_name ?? 'City'} · {assignments.find(row => row.gig_id === show.gig_id)?.venue_name ?? 'Venue'}</span></span></label>
+                          <Badge variant="outline" className="hidden shrink-0 gap-1 sm:inline-flex"><Route className="h-3 w-3" />Date available</Badge>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="block text-sm">Message to the band (optional)<textarea aria-label="Tour proposal message" maxLength={500} disabled={sendOffers.isPending} className="mt-1 w-full rounded border bg-background p-2" value={proposalNote} onChange={e => setProposalNote(e.target.value)} /></label>
+                    <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-muted-foreground">Support receives 20% of artist ticket revenue per confirmed date. The invited band reviews and accepts the itinerary.</p>
+                      <Button size="sm" disabled={offeredCoverage.length === 0 || sendOffers.isPending} onClick={() => sendOffers.mutate()}>
+                        {sendOffers.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Invite to {offeredCoverage.length} {offeredCoverage.length === 1 ? 'date' : 'dates'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <details open={!selectedCandidate}>
+                  <summary className="cursor-pointer py-2 text-sm font-medium">{selectedCandidate ? 'Choose a different band' : 'Browse available bands'}</summary>
+                  <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} preferredId={initialSupportBandId} onSelect={id => {
+                  if (id === selectedBandId) return;
+                  setSelectedBandId(id);
+                  setExcludedDates([]);
+                }}
+                  disabled={sendOffers.isPending}
+                  candidates={remainingCandidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
+                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates` }))} />
+                </details>
+              </>
+            )}
+          </section>
+        )}
+        <TourProposalsPanel bandId={headlinerBandId} tourId={tourId} />
         <section className="space-y-2">
           <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Tour coverage</h4><span className="text-xs text-muted-foreground">{assignments.filter((a) => a.support_status === 'accepted' || a.support_status === 'completed').length}/{assignments.length} confirmed</span></div>
           {loadingAssignments ? (
@@ -147,55 +226,6 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus }: TourSu
           )}
         </section>
 
-        {editable && (
-          <section className="space-y-3 border-t pt-4">
-            <h4 className="text-sm font-semibold">Fill open dates</h4>
-            {loadingCandidates || loadingShows ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
-            ) : candidates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
-            ) : (
-              <>
-                <Select value={selectedBandId} onValueChange={setSelectedBandId}>
-                  <SelectTrigger><SelectValue placeholder="Choose a support band" /></SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((candidate) => (
-                      <SelectItem key={candidate.support_band_id} value={candidate.support_band_id}>
-                        {candidate.support_band_name} · {candidate.eligible_shows}/{candidate.total_shows} eligible{candidate.full_tour_match ? ' · Full tour match' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {selectedCandidate && (
-                  <div className="rounded-lg border p-3 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{selectedCandidate.support_band_name}</span>
-                      {selectedCandidate.full_tour_match && <Badge>Full-tour match</Badge>}
-                      <Badge variant="secondary">Fame {selectedCandidate.fame.toLocaleString()}</Badge>
-                      <Badge variant="secondary">Popularity {selectedCandidate.popularity.toLocaleString()}</Badge>
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {selectedCoverage.map((show) => (
-                        <div key={show.gig_id} className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
-                          <span>{new Date(show.scheduled_date).toLocaleDateString()}</span>
-                          <Badge variant="outline" className="gap-1"><Route className="h-3 w-3" />Travel OK</Badge>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between gap-3 border-t pt-3">
-                      <p className="text-xs text-muted-foreground">Only currently open, eligible dates are included. Confirmed dates are never overwritten.</p>
-                      <Button size="sm" disabled={selectedCoverage.length === 0 || sendOffers.isPending} onClick={() => sendOffers.mutate()}>
-                        {sendOffers.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Send {selectedCoverage.length} offer{selectedCoverage.length === 1 ? '' : 's'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-        )}
       </CardContent>
     </Card>
   );

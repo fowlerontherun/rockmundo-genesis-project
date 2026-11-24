@@ -15,10 +15,11 @@ const sql = readFileSync(
 describe("canonical festival stage evidence", () => {
   it("only recognises explicitly sourced runtime stage statuses", () => {
     expect(canonicalStageStates).toEqual([
-      "ready", "starting", "live", "delayed", "completed", "cancelled",
+      "ready", "changeover", "soundcheck", "starting", "live", "delayed", "completed", "cancelled",
     ]);
+    const preparationSql = readFileSync(resolve(process.cwd(), "supabase/migrations/20261115210144_canonical_festival_stage_preparation.sql"), "utf8");
     for (const state of canonicalStageStates) {
-      expect(sql).toContain("'stage_" + state + "'");
+      expect(sql + preparationSql).toContain("'stage_" + state + "'");
     }
   });
 
@@ -31,6 +32,9 @@ describe("canonical festival stage evidence", () => {
 
   it("supports official delayed recovery and cancellation while rejecting terminal reactivation", () => {
     expect(canAdvanceCanonicalStageState("ready", "starting")).toBe(true);
+    expect(canAdvanceCanonicalStageState("changeover", "soundcheck")).toBe(true);
+    expect(canAdvanceCanonicalStageState("soundcheck", "starting")).toBe(true);
+    expect(canAdvanceCanonicalStageState("soundcheck", "completed")).toBe(false);
     expect(canAdvanceCanonicalStageState("starting", "live")).toBe(true);
     expect(canAdvanceCanonicalStageState("live", "completed")).toBe(true);
     expect(canAdvanceCanonicalStageState("live", "delayed")).toBe(true);

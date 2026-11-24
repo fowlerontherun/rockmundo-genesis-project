@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Share2 } from "lucide-react";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,11 @@ import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { FestivalGrounds } from "./FestivalGrounds";
 import { FestivalPublishedTimetable } from "./FestivalPublishedTimetable";
 import { FestivalVisitorGuide } from "./FestivalVisitorGuide";
+import { FestivalLineupPoster } from "./poster/FestivalLineupPoster";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
+import { FestivalBrandArtwork, FestivalLineupRibbon } from "./FestivalBrandArtwork";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
 import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
 
@@ -92,6 +94,11 @@ const attendanceLabel = (status: string) => {
   }
 };
 
+const festivalTabs = ["overview", "grounds", "lineup", "timetable", "tickets", "information"] as const;
+type FestivalTab = (typeof festivalTabs)[number];
+const isFestivalTab = (value: string | null): value is FestivalTab =>
+  festivalTabs.some((tab) => tab === value);
+
 export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string } = {}) {
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
@@ -105,14 +112,24 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
   const [now, setNow] = useState(() => Date.now());
-  const [activeFestivalTab, setActiveFestivalTab] = useState("overview");
-  useEffect(() => { setActiveFestivalTab("overview"); }, [festivalCompanyIdentifier, publicSlug]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeFestivalTab = isFestivalTab(searchParams.get("tab")) ? searchParams.get("tab")! : "overview";
+  const setActiveFestivalTab = (tab: string, focusTab = false) => {
+    if (!isFestivalTab(tab)) return;
+    const next = new URLSearchParams(searchParams);
+    if (tab === "overview") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+    // Shortcuts can be activated far above the tab list. Move keyboard focus
+    // to the selected tab so screen-reader and keyboard users stay oriented.
+    if (focusTab) document.querySelector<HTMLElement>(`[data-festival-tab="${tab}"]`)?.focus();
+  };
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10_000); return () => window.clearInterval(timer); }, []);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [failedFestivalLogo, setFailedFestivalLogo] = useState<string | null>(null);
-  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
+  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id, profileId]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError) return <main className="space-y-3 p-8" role="alert"><p>Festival details could not be loaded.</p><Button type="button" variant="outline" onClick={() => void retryPublicFestival()}>Retry festival details</Button></main>;
@@ -121,6 +138,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt, now);
   const cancelled = f.launchStatus === "cancelled_before_event";
   const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
+  const salesStatus = f.soldOut && f.launchStatus === "tickets_on_sale" && eventPhase !== "dates_ended"
+    ? "Sold out" : festivalVisitorSalesLabel(eventPhase, f.launchStatus);
   const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
   // Audit the raw immutable projection before display-only deduplication.
   // Historical public projections can predate editor-side URL validation.
@@ -143,6 +162,13 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = memorabiliaError ? undefined : festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = !walletError && !walletWaiting && hasIssuedFestivalAdmission(myFestivalTickets);
+  const admissionOnSale = !cancelled && eventPhase !== "dates_ended" &&
+    f.launchStatus === "tickets_on_sale" && !f.soldOut &&
+    f.ticketProducts.some((product) => product.productClass === "admission" &&
+      product.saleStatus === "tickets_on_sale" && product.availableQuantity > 0);
+  const featuredTab: FestivalTab = hasAdmissionTicket || admissionOnSale ? "tickets" : "lineup";
+  const featuredAction = hasAdmissionTicket ? "View my festival tickets"
+    : admissionOnSale ? "See tickets and prices" : "Explore the line-up";
 
   // The simplified timetable contains automatically generated provisional slots.
   // Only the authoritative confirmed lineup may be advertised publicly.
@@ -169,8 +195,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   return (
     <main>
       {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival wallet, attendance, keepsakes or check-in status could not be verified. Unverified information is hidden. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); if (attendanceError) void retryAttendance(); if (memorabiliaError) void retryMemorabilia(); }}>Retry verification</button></div>}
-      <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
+      <header className="relative isolate overflow-hidden bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
+        <FestivalBrandArtwork festival={f} variant="backdrop" />
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
             {verifiedFestivalLogo && failedFestivalLogo !== verifiedFestivalLogo ? (
               <img src={verifiedFestivalLogo} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" onError={() => setFailedFestivalLogo(verifiedFestivalLogo)} />
@@ -180,7 +207,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
               <Badge variant="outline" className="border-white/50 text-white">
-                Ticket sales: {festivalVisitorSalesLabel(eventPhase, f.launchStatus)}
+                Ticket sales: {salesStatus}
               </Badge>
             </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
@@ -190,6 +217,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               {formatFestivalEditionDate(f.endsAt, f.timezone)}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setActiveFestivalTab(featuredTab, true)}>
+                {featuredAction}
+              </Button>
               <Button variant="secondary" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "festival_share"); setShareMoment({
                 version: 1,
                 type: "festival",
@@ -319,20 +349,20 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <Badge variant="secondary">{eventPhaseLabel}</Badge>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <button type="button" onClick={() => setActiveFestivalTab("lineup")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <button type="button" onClick={() => setActiveFestivalTab("lineup", true)} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               <span className="block text-2xl font-bold">{confirmedLineup.length}</span>
               <span className="font-semibold">Confirmed artists</span>
               <span className="block text-xs text-muted-foreground">Explore the line-up</span>
             </button>
-            <button type="button" onClick={() => setActiveFestivalTab("grounds")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <button type="button" onClick={() => setActiveFestivalTab("grounds", true)} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               <span className="block text-2xl font-bold">{f.stages.length}</span>
               <span className="font-semibold">Festival stages</span>
               <span className="block text-xs text-muted-foreground">See published set times</span>
             </button>
-            <button type="button" onClick={() => setActiveFestivalTab("tickets")} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-              <span className="block text-2xl font-bold">{walletError || walletWaiting ? "—" : myFestivalTickets.length}</span>
+            <button type="button" onClick={() => setActiveFestivalTab("tickets", true)} className="rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <span className="block text-2xl font-bold">{!profileId || walletError || walletWaiting ? "—" : myFestivalTickets.length}</span>
               <span className="font-semibold">My tickets</span>
-              <span className="block text-xs text-muted-foreground">{walletError ? "Verification unavailable" : walletWaiting ? "Verifying tickets" : "Open festival wallet"}</span>
+              <span className="block text-xs text-muted-foreground">{!user ? "Sign in to view tickets" : !profileId ? "Select a character" : walletError ? "Verification unavailable" : walletWaiting ? "Verifying tickets" : "Open festival wallet"}</span>
             </button>
           </div>
           <div aria-label="Upcoming performances" className="space-y-2">
@@ -350,13 +380,13 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
         </section>
 
         <Tabs value={activeFestivalTab} onValueChange={setActiveFestivalTab}>
-          <TabsList className="h-auto flex-wrap">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="grounds">Stages & grounds</TabsTrigger>
-            <TabsTrigger value="lineup">Line-up</TabsTrigger>
-            <TabsTrigger value="timetable">Timetable</TabsTrigger>
-            <TabsTrigger value="tickets">Tickets</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
+          <TabsList aria-label="Festival sections" className="h-auto max-w-full flex-nowrap justify-start overflow-x-auto md:flex-wrap">
+            <TabsTrigger data-festival-tab="overview" value="overview">Overview</TabsTrigger>
+            <TabsTrigger data-festival-tab="grounds" value="grounds">Stages & grounds</TabsTrigger>
+            <TabsTrigger data-festival-tab="lineup" value="lineup">Line-up</TabsTrigger>
+            <TabsTrigger data-festival-tab="timetable" value="timetable">Timetable</TabsTrigger>
+            <TabsTrigger data-festival-tab="tickets" value="tickets">Tickets</TabsTrigger>
+            <TabsTrigger data-festival-tab="information" value="information">Information</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -386,11 +416,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="grounds">
-            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
+            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
           </TabsContent>
 
           <TabsContent value="lineup">
             <section aria-label="Confirmed festival line-up" className="space-y-4">
+              <FestivalLineupPoster editionId={f.editionId} name={f.name} place={[f.city, f.country].filter(Boolean).join(", ")} dates={formatFestivalEditionDate(f.startsAt, f.timezone)} artists={confirmedLineup.map((e) => e.artistName ?? "")} />
               <div>
                 <h2 className="text-xl font-bold">Confirmed line-up</h2>
                 <p className="text-sm text-muted-foreground">
@@ -410,7 +441,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <h3 className="font-semibold">{dayLabel(day || null)}</h3>
                       <div className="grid gap-3 sm:grid-cols-2">
                         {confirmedLineup.filter((entry) => (entry.festivalDate ?? "") === day).map((entry) => (
-                          <Card key={entry.id}>
+                          <Card key={entry.id} className="overflow-hidden">
+                            <FestivalLineupRibbon act={entry} />
                             <CardHeader>
                               <CardTitle className="flex flex-wrap items-center gap-2">
                                 {entry.artistName}

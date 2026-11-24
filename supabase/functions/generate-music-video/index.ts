@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Replicate from "https://esm.sh/replicate@0.25.2";
+import { buildMusicVideoPrompts } from "../_shared/musicVideoPrompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,13 +11,6 @@ const corsHeaders = {
 
 interface VideoGenerationRequest {
   videoId: string;
-  songTitle: string;
-  songGenre?: string;
-  visualTheme: string;
-  artStyle: string;
-  sceneDescriptions: string[];
-  mood?: string;
-  songAudioUrl?: string;
 }
 
 /** Generate a first-frame image using Lovable AI (Gemini image model) */
@@ -108,11 +102,10 @@ serve(async (req) => {
     }
 
     const body: VideoGenerationRequest = await req.json();
-    const { videoId, songTitle, songGenre, visualTheme, artStyle, sceneDescriptions, mood } = body;
-
-    if (!videoId || !songTitle || !visualTheme || !sceneDescriptions?.length) {
+    const { videoId } = body;
+    if (typeof videoId !== "string" || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(videoId)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: videoId, songTitle, visualTheme, sceneDescriptions" }),
+        JSON.stringify({ error: "Invalid video ID" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -120,7 +113,7 @@ serve(async (req) => {
     // Verify the video exists
     const { data: video, error: videoError } = await supabaseClient
       .from("music_videos")
-      .select("id, song_id, title, status")
+      .select("id, song_id, title, status, description")
       .eq("id", videoId)
       .single();
 
@@ -142,6 +135,28 @@ serve(async (req) => {
         status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Read the creative brief from the SAME reserved video that was charged.
+    // Request-body fields are not authoritative for a paid generation.
+    let savedBrief: Record<string, unknown>;
+    try {
+      savedBrief = JSON.parse(video.description || "{}") as Record<string, unknown>;
+      if (!savedBrief || typeof savedBrief !== "object" || savedBrief.ai_generated !== true) {
+        throw new Error("Not an AI video brief");
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid saved video brief" }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: song, error: songError } = await supabaseClient.from("songs")
+      .select("title, genre").eq("id", video.song_id).single();
+    if (songError || !song) throw new Error("Reserved song not found");
+    const { imagePrompt, videoPrompt, brief } = buildMusicVideoPrompts({
+      songTitle: song.title,
+      songGenre: typeof song.genre === "string" ? song.genre : null,
+      brief: savedBrief,
+    });
+
     // Atomic preflight claim precedes the first external provider request.
     // Two simultaneous invocations cannot both call the paid provider.
     const { error: claimError } = await supabaseClient.rpc("claim_music_video_generation", {
@@ -153,15 +168,6 @@ serve(async (req) => {
       });
     }
     claimedVideoId = videoId;
-
-    // Build prompts
-    const scenePrompt = sceneDescriptions.slice(0, 3).join(". ");
-    const videoPrompt = `Cinematic music video scene for "${songTitle}"${songGenre ? ` (${songGenre} style)` : ""}. 
-${visualTheme.replace(/_/g, " ")} visual aesthetic, ${artStyle} style${mood ? `, ${mood} atmosphere` : ""}.
-${scenePrompt}
-Smooth camera movement, professional lighting, high production value. Single continuous shot with dynamic motion.`;
-
-    const imagePrompt = `${visualTheme.replace(/_/g, " ")} scene for a ${songGenre || "music"} video called "${songTitle}". ${artStyle} style${mood ? `, ${mood} mood` : ""}. ${sceneDescriptions[0] || ""}`;
 
     console.log("[generate-music-video] Starting generation for video:", videoId);
 
@@ -206,9 +212,10 @@ Smooth camera movement, professional lighting, high production value. Single con
     const { error: metadataError } = await supabaseClient.from("music_videos")
       .update({
         description: JSON.stringify({
-          visual_theme: visualTheme, art_style: artStyle,
-          scene_descriptions: sceneDescriptions, mood,
+          ...savedBrief,
+          ...brief,
           generation_prompt: videoPrompt,
+          first_frame_prompt: imagePrompt,
           replicate_prediction_id: prediction.id,
           first_frame_generated: true,
         }),
@@ -222,7 +229,7 @@ Smooth camera movement, professional lighting, high production value. Single con
       message: `AI video generation started for "${video.title}"`,
       metadata: {
         video_id: videoId,
-        visual_theme: visualTheme,
+        visual_theme: brief.visual_theme,
         prediction_id: prediction.id,
         estimated_time: "2-5 minutes",
       },

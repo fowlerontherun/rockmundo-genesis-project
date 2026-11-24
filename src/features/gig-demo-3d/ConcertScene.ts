@@ -25,6 +25,7 @@ import { sectionLight } from './showMotion';
 import { directGigCamera } from './gigCameraSequence';
 import { frameVenueBand, frameVenuePerformer } from './venueCameraAngles';
 import { frameTvPerformance, studioPerformerMotion, TV_PERFORMANCE_SHOTS } from './tvPerformanceDirection';
+import { buildFestivalOutdoorAtmosphere } from './festivalOutdoorAtmosphere';
 
 const CAMERAS = {
   front: { position: [0.4, 2.8, 6.7], target: [0, 2.4, -1.9], fov: 42 },
@@ -111,6 +112,7 @@ export class ConcertScene {
   private distantAudience: T.Group | null = null;
   private cameraCollision: CameraCollisionWorld | null = null;
   private sceneKey: CameraShot = 'front';
+  private outdoorAtmosphere: ReturnType<typeof buildFestivalOutdoorAtmosphere> | null = null;
   private onStats: (stats: DemoStats) => void;
   constructor(private canvas: HTMLCanvasElement, initial: DemoSettings, onStats: (stats: DemoStats) => void, private onState: (state: 'loading' | 'ready' | 'error', message?: string) => void, private options?: ConcertOptions) {
     this.settings = { ...initial }; this.onStats = onStats;
@@ -125,9 +127,10 @@ export class ConcertScene {
     this.assetManager.onError = () => { this.assetsFailed = true; };
     const pmrem = new T.PMREMGenerator(this.renderer), room = new RoomEnvironment();
     this.environment = pmrem.fromScene(room, 0.04); this.scene.environment = this.environment.texture; room.dispose(); pmrem.dispose();
-    this.scene.background = new T.Color('#010205'); this.scene.fog = this.fog;
-    this.scene.add(new T.HemisphereLight('#526070', '#050406', 0.18));
-    const key = new T.DirectionalLight('#f4d5b3', 0.22); key.position.set(0, 5, 6); this.scene.add(key);
+    const daylight = options?.outdoorDaylight && this.venueProfile?.outdoor;
+    this.scene.background = new T.Color(daylight ? '#8db9d2' : '#010205'); this.scene.fog = this.fog;
+    this.scene.add(new T.HemisphereLight(daylight ? '#c3e6ff' : '#526070', daylight ? '#626b49' : '#050406', daylight ? .85 : .18));
+    const key = new T.DirectionalLight('#f4d5b3', daylight ? 1.5 : .22); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#5f7390', 0.08); backFill.position.set(0, 5, -7); this.scene.add(backFill);
     const crowdSignal = options?.merchCrowdSignal ?? null;
     const distantMerch = crowdSignal
@@ -139,6 +142,11 @@ export class ConcertScene {
       onSale: crowdSignal.onSale,
     }) : 0;
     buildVenue(this.scene, this.assetManager, options?.venue, distantMerch ? { color: distantMerch.garment_color, chance: distantChance } : null);
+    if (options?.outdoorAtmosphere && this.venueProfile?.outdoor) {
+      const styles = getComputedStyle(canvas);
+      this.outdoorAtmosphere = buildFestivalOutdoorAtmosphere(this.scene, this.venueProfile, options.outdoorAtmosphere,
+        Boolean(daylight), options.venue.seed, name => styles.getPropertyValue(`--festival-outdoor-${name}`).trim());
+    }
     this.distantAudience = this.scene.getObjectByName('venue-distant-audience') as T.Group ?? null;
     this.cameraCollision = options?.television ? null : new CameraCollisionWorld(this.scene);
     this.buildLighting(); this.particles = this.buildParticles();
@@ -247,7 +255,8 @@ export class ConcertScene {
     const qualityChanged = this.settings.quality !== next.quality;
     this.settings = { ...next };
     const look = LOOKS[next.look];
-    this.fog.color.set(new T.Color(look.ambient).multiplyScalar(0.18)); this.scene.fog = next.haze ? this.fog : null;
+    this.fog.color.copy(this.outdoorAtmosphere?.sky ?? new T.Color(look.ambient).multiplyScalar(0.18));
+    this.scene.fog = next.haze || this.outdoorAtmosphere ? this.fog : null;
     this.lights.forEach((light, i) => { const color = i >= 4 ? look.key : i % 2 === 0 ? look.left : look.right; light.color.set(color); this.lenses[i].emissive.set(color); });
     const positions = this.venueProfile ? stageLightPositions(this.venueProfile) : [];
     const plan = planVenueLighting(
@@ -579,6 +588,7 @@ export class ConcertScene {
     const dt = this.last ? Math.min((now - this.last) / 1000, 0.05) : 0; this.last = now;
     if (!this.options?.externalClock && this.settings.playing && this.loaded) this.seconds += dt;
     const t = this.settings.reducedMotion ? 0 : this.seconds;
+    this.outdoorAtmosphere?.update(t, this.settings.reducedMotion);
     const rhythm = this.settings.reducedMotion ? 0 : (this.options?.television ? t : this.playback?.rhythmSeconds ?? t);
     const energy = this.playback?.energy ?? this.settings.energy;
     const section = this.playback?.section ?? 'idle';

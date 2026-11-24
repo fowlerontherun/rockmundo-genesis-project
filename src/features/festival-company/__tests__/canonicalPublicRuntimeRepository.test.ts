@@ -27,11 +27,25 @@ const result = {
 describe("canonical public edition runtime", () => {
   beforeEach(() => { rpc.mockReset(); });
 
-  it("fetches only the canonical public RPC using the published slug", async () => {
+  it("fetches only the canonical public feed projection using the published slug", async () => {
     rpc.mockResolvedValue({ data: result, error: null });
     const response = await festivalRuntimeRepository.publicExperience("sample-festival");
-    expect(rpc).toHaveBeenCalledWith("get_public_festival_edition_live_status", { p_slug: "sample-festival" });
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith("get_public_festival_edition_live_experience", { p_slug: "sample-festival" });
     expect(response).toEqual(result);
+  });
+
+  it("falls back to the canonical status when the additive feed RPC is not deployed", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "Could not find the function public.get_public_festival_edition_live_experience(p_slug)" } })
+      .mockResolvedValueOnce({ data: result, error: null });
+    expect(await festivalRuntimeRepository.publicExperience("sample-festival")).toEqual({ ...result, feedAvailable: false });
+    expect(rpc).toHaveBeenNthCalledWith(2, "get_public_festival_edition_live_status", { p_slug: "sample-festival" });
+  });
+
+  it("never falls back on real projection failures or permission denials", async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "permission denied" } });
+    await expect(festivalRuntimeRepository.publicExperience("sample-festival")).rejects.toThrow("permission denied");
+    expect(rpc).toHaveBeenCalledOnce();
   });
 
   it("supports the existing read-only live status parser without inventing performances or crowd sizes", () => {

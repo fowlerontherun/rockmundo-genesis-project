@@ -1,3 +1,4 @@
+import { RoomChat } from "@/features/roleplay/RoomChat";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Disc3, Mic2, Users, Sparkles, Loader2, Trophy, MessageCircle, Crown, History, UserPlus, Building2 } from "lucide-react";
@@ -574,22 +575,9 @@ const NightClubDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Club Chat */}
-      {clubChatChannel && profileUserId && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MessageCircle className="h-5 w-5 text-primary" /> Club Chat
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DirectMessagePanel
-              channel={clubChatChannel}
-              currentUserId={profileUserId}
-              otherDisplayName="Club Chat"
-            />
-          </CardContent>
-        </Card>
+      {/* Club Chat — in-character room for everyone currently inside */}
+      {clubChatChannel && (
+        <RoomChat roomKey={clubChatChannel} title="Club Chat" subtitle="Enter the club to talk. Use /me for actions and (( )) for out-of-character." />
       )}
 
       {/* Quests */}

@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -23,9 +25,12 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { FestivalRuntimeProjection } from "./model";
+import { CanonicalLiveDayOperations } from "./CanonicalLiveDayOperations";
 import { CanonicalStageControl } from "./CanonicalStageControl";
 import {
   getEditionRuntime,
+  getCanonicalLiveDayAvailability,
+  startCanonicalFestivalLiveDay,
   getFestivalRunReadiness,
   runSimplifiedFestival,
 } from "./service";
@@ -61,6 +66,32 @@ export function FestivalLiveControlRoom({
     queryKey: ["festival-run-readiness", companyId, editionId],
     queryFn: () => getFestivalRunReadiness(companyId, editionId),
     enabled: query.isSuccess && query.data === null,
+    refetchInterval: 10_000,
+  });
+  const openRequest = useRef<{ editionId: string; key: string } | null>(null);
+  const availability = useQuery({
+    queryKey: ["festival-live-day-availability", companyId, editionId],
+    queryFn: () => getCanonicalLiveDayAvailability(companyId, editionId),
+    enabled: query.isSuccess,
+    refetchInterval: 15_000,
+    retry: false,
+  });
+  const updateRuntime = (updated: FestivalRuntimeProjection) => {
+    queryClient.setQueryData(runtimeQueryKey(companyId, editionId), updated);
+    void queryClient.invalidateQueries({ queryKey: ["festival-live-day-availability", companyId, editionId] });
+    void queryClient.invalidateQueries({ queryKey: ["festival-edition-history", editionId] });
+  };
+  const openMutation = useMutation({
+    mutationFn: (editionVersion: number) => {
+      if (openRequest.current?.editionId !== editionId) {
+        openRequest.current = { editionId, key: crypto.randomUUID() };
+      }
+      return startCanonicalFestivalLiveDay({
+        companyId, editionId, editionVersion, requestId: openRequest.current.key,
+      });
+    },
+    onSuccess: updateRuntime,
+    onError: () => { void readinessQuery.refetch(); void availability.refetch(); },
   });
   const runMutation = useMutation({
     mutationFn: (expectedEditionVersion: number) =>
@@ -74,6 +105,7 @@ export function FestivalLiveControlRoom({
         queryKey: ["festival-edition-history", editionId],
       });
     },
+    onError: () => { void readinessQuery.refetch(); void availability.refetch(); },
   });
 
   if (query.isLoading) return <section role="status">Loading Festival Day…</section>;
@@ -81,7 +113,10 @@ export function FestivalLiveControlRoom({
     return (
       <Card role="alert">
         <CardHeader><CardTitle>Festival Day unavailable</CardTitle></CardHeader>
-        <CardContent>The live Festival state could not be loaded.</CardContent>
+        <CardContent className="space-y-3">
+          <p>The live Festival state could not be loaded. No operating actions are available until it can be verified.</p>
+          <Button variant="outline" onClick={() => void query.refetch()}>Retry Festival Day</Button>
+        </CardContent>
       </Card>
     );
   }
@@ -93,7 +128,7 @@ export function FestivalLiveControlRoom({
       <section className="space-y-4" aria-label="Run Festival">
         <Card className="overflow-hidden border-primary/30">
           <div className="bg-gradient-to-r from-violet-950 via-slate-950 to-fuchsia-950 p-6 text-white">
-            <Badge className="mb-3">Festival launch</Badge>
+            <Badge className="mb-3">Festival simulation</Badge>
             <h2 className="text-3xl font-black">The festival simulation is almost ready</h2>
             <p className="mt-2 max-w-2xl text-sm text-violet-100">
               Finish the three big decisions, then run and complete the simulated event. Staffing, suppliers,
@@ -103,11 +138,22 @@ export function FestivalLiveControlRoom({
           <CardContent className="space-y-5 pt-6">
             {readinessQuery.isLoading ? <p role="status">Checking Festival readiness…</p> : null}
             {readinessQuery.isError ? <p role="alert" className="text-destructive">Festival readiness could not be loaded.</p> : null}
+            {availability.isError ? (
+              <div role="alert" className="space-y-2 rounded-lg border border-destructive/40 p-3 text-sm">
+                <p>Live-day permission and availability checks failed. Starting or simulating the edition is temporarily disabled.</p>
+                <Button size="sm" variant="outline" onClick={() => void availability.refetch()}>Retry live-day checks</Button>
+              </div>
+            ) : availability.isPending ? <p role="status">Verifying live-day availability…</p> : null}
+            {availability.data?.liveDaySupported === false ? <p role="status" className="text-sm text-muted-foreground">Live gate controls are unavailable for this edition. Final simulation is available after the festival ends and all planning checks pass.</p> : null}
             {readiness ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <LaunchStep label="Annual plan" ready={readiness.readinessScore === 100} value={`${readiness.readinessScore}%`} />
-                  <LaunchStep label="Line-up" ready={readiness.confirmedActs > 0} value={`${readiness.confirmedActs} confirmed`} />
+                  {readiness.confirmedPlayerActs === undefined ? (
+                    <LaunchStep label="Confirmed acts" ready={readiness.confirmedActs > 0} value={String(readiness.confirmedActs)} />
+                  ) : (
+                    <LaunchStep label="Confirmed player acts" ready={readiness.confirmedPlayerActs > 0} value={String(readiness.confirmedPlayerActs)} />
+                  )}
                   <LaunchStep label="Stages" ready={readiness.stageCount > 0} value={readiness.licensedStageLimit ? `${readiness.stageCount}/${readiness.licensedStageLimit}` : `${readiness.stageCount}`} />
                 </div>
 
@@ -122,6 +168,10 @@ export function FestivalLiveControlRoom({
                   <div key={blocker.code} role="alert" className="flex gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
                     <AlertTriangle className="h-5 w-5 shrink-0" />
                     <span>{blocker.message}</span>
+                    {(() => {
+                      const section = /ticket|budget/.test(blocker.code) ? "finance" : /act|artist|lineup/.test(blocker.code) ? "applications" : /plan|stage|licence/.test(blocker.code) ? "overview" : null;
+                      return section ? <Button size="sm" variant="outline" asChild><Link to={`/festival-company/${companyId}/editions/${editionId}${section === "overview" ? "" : `/${section}`}`}>Review {section === "applications" ? "line-up" : section === "finance" ? "tickets" : "plan"}</Link></Button> : null;
+                    })()}
                   </div>
                 ))}
 
@@ -130,18 +180,28 @@ export function FestivalLiveControlRoom({
                     <div className="flex gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       <div>
-                        <p className="font-semibold">Ready for Festival Day</p>
-                        <p className="text-sm text-muted-foreground">One simulation action completes the festival and records results. This is not a real-time live show.</p>
+                        <p className="font-semibold">Ready to simulate</p>
+                        <p className="text-sm text-muted-foreground">Simulation completes the edition in one step and records the results.</p>
                       </div>
                     </div>
                   </div>
                 ) : null}
 
-                {runMutation.isError ? <p role="alert" className="text-destructive">The Festival could not be launched. Review the blockers and try again.</p> : null}
+                {runMutation.isError ? <p role="alert" className="text-destructive">The simulation could not complete. Review the blockers and try again.</p> : null}
 
-                <Button size="lg" disabled={!readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
+                {availability.data?.canOpen && (
+                  <Button
+                    size="lg"
+                    disabled={availability.isPending || readinessQuery.isError || readiness.blockers.some((blocker) => !["festival_not_due", "festival_final_results_not_due"].includes(blocker.code)) || openMutation.isPending || runMutation.isPending}
+                    onClick={() => openMutation.mutate(readiness.editionVersion)}
+                  >Open festival gates</Button>
+                )}
+                {openMutation.isError && <p role="alert" className="text-sm text-destructive">
+                  {(openMutation.error as { message?: string }).message ?? "Festival gates could not be opened."}
+                </p>}
+                <Button size="lg" disabled={availability.isPending || availability.isError || !readiness.canRun || readiness.blockers.length > 0 || runMutation.isPending || openMutation.isPending} onClick={() => runMutation.mutate(readiness.editionVersion)}>
                   <Play className="mr-2 h-4 w-4" />
-                  {runMutation.isPending ? "Simulating Festival…" : "Simulate Festival & results"}
+                  {runMutation.isPending ? "Simulating Festival…" : "Simulate and complete edition"}
                 </Button>
               </>
             ) : null}
@@ -163,10 +223,19 @@ export function FestivalLiveControlRoom({
     );
   }
 
-  return <FestivalDay runtime={runtime} />;
+  return <FestivalDay runtime={runtime} availability={availability} onUpdate={updateRuntime} />;
 }
 
-function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
+function FestivalDay({ runtime, availability, onUpdate }: {
+  runtime: FestivalRuntimeProjection;
+  availability: {
+    data?: { managed?: boolean; canAllocate?: boolean };
+    isPending: boolean;
+    isError: boolean;
+    refetch: () => unknown;
+  };
+  onUpdate: (runtime: FestivalRuntimeProjection) => void;
+}) {
   const occupancy = runtime.attendance.capacity
     ? Math.round((runtime.attendance.onsite / runtime.attendance.capacity) * 100)
     : 0;
@@ -221,7 +290,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5" /> Stage programme · unverified</CardTitle>
-            <CardDescription>Published running order and provisional stage information. Only the official confirmations below establish live activity.</CardDescription>
+            <CardDescription>Published running order and provisional stage information. Live activity requires an operator confirmation.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {runtime.stages.map((stage) => (
@@ -266,6 +335,20 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
           </CardContent>
         </Card>
       </div>
+
+      {availability.isPending ? <p role="status">Verifying live operating permissions…</p> : null}
+      {availability.isError ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 p-3 text-sm">
+          <p>Live operating permissions could not be verified. Controls are unavailable, but the last confirmed Festival report remains readable.</p>
+          <Button size="sm" variant="outline" onClick={() => void availability.refetch()}>Retry operating permissions</Button>
+        </div>
+      ) : null}
+      {!availability.isPending && !availability.isError && availability.data?.managed ? (
+        <CanonicalLiveDayOperations runtime={runtime} canAllocate={availability.data.canAllocate === true} onUpdate={onUpdate} />
+      ) : null}
+      {!availability.isPending && !availability.isError && availability.data && !availability.data.managed ? (
+        <p role="status" className="rounded-lg border p-3 text-sm">This edition has no canonical live-day operating session. Its existing Festival report is viewable, but the live-day controls are not available.</p>
+      ) : null}
 
       {["live", "gates_open", "paused"].includes(runtime.state) && (
         <CanonicalStageControl runtimeId={runtime.runtimeId} />
@@ -321,7 +404,7 @@ function FestivalDay({ runtime }: { runtime: FestivalRuntimeProjection }) {
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader><CardTitle>Festival complete</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
-            <Metric icon={Users} label="Final attendance" value={runtime.attendance.admitted.toLocaleString("en-GB")} detail={`${occupancy}% peak site occupancy`} />
+            <Metric icon={Users} label="Final attendance" value={runtime.attendance.admitted.toLocaleString("en-GB")} detail="Total admissions" />
             <Metric icon={Sparkles} label="Audience rating" value={`${Math.round(runtime.satisfaction.audience)}/100`} detail="Final satisfaction" />
             <Metric icon={WalletCards} label="On-site sales" value={money(runtime.sales.foodAndDrinkMinor + runtime.sales.merchandiseMinor, runtime.currencyCode)} detail="Before full Results settlement" />
           </CardContent>

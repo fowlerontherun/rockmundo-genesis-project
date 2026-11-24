@@ -13,7 +13,7 @@ BEGIN
  IF actor IS NULL THEN RAISE EXCEPTION 'no_band_leader_fixture'; END IF;
  SELECT id INTO foreign_chr FROM public.profiles WHERE user_id<>actor LIMIT 1;
  INSERT INTO public.award_shows(show_name,year,status,ceremony_date)
- VALUES('Rollback-only ballot security check',2026,'voting_open',now()+interval '1 day')
+ VALUES('Rollback-only ballot security check',2026,'nominations_open',now()+interval '1 day')
  RETURNING id INTO show_id;
  FOR n IN 1..5 LOOP
   INSERT INTO public.award_nominations
@@ -22,6 +22,7 @@ BEGIN
   RETURNING id INTO nominee_id;
   ids:=array_append(ids,nominee_id);
  END LOOP;
+ UPDATE public.award_shows SET status='voting_open' WHERE id=show_id;
 
  IF has_table_privilege('authenticated','public.award_votes','insert')
    OR has_table_privilege('anon','public.award_votes','insert')

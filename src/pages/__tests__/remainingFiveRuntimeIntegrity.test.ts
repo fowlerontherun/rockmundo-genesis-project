@@ -18,15 +18,15 @@ describe("next five open issue fixes", () => {
     expect(source).toContain("setLibrary(sounds)");
   });
 
-  it("#4064 aborts page-switched audio metadata probes rather than exporting stale results", () => {
+  it("#4064 aborts page-switched MP3 downloads rather than exporting stale results", () => {
     const admin = read("src/pages/admin/AISongGeneration.tsx");
     const reader = read("src/lib/audioDurationAudit.ts");
     expect(admin).toContain("auditAbortRef.current?.abort()");
     expect(admin).toContain("new AbortController()");
     expect(admin).toContain("readAudioDuration(song.audio_url, 12000, controller.signal)");
-    expect(reader).toContain('audio.addEventListener("durationchange", loaded)');
-    expect(reader).toContain('signal?.addEventListener("abort", failed');
-    expect(reader).toContain("Number.isFinite(audio.duration)");
+    expect(reader).toContain('signal?.addEventListener("abort", abort');
+    expect(reader).toContain("getMp3DurationSeconds(bytes)");
+    expect(admin).toContain("result.url === song.audio_url");
   });
 
   it("#2182 restricts active new sponsor branding and protects admin/public image previews", () => {

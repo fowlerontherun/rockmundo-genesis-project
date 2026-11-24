@@ -3,6 +3,13 @@ import { parseFestivalPerformanceSimulationJob,parseFestivalPublicLiveStatus,par
 type RpcArgs=Record<string,unknown>; type RpcResult={data:unknown;error:{message?:string;code?:string}|null};
 const rpc=async(name:string,args:RpcArgs={}):Promise<unknown>=>{const {data,error}=await (supabase.rpc as unknown as (n:string,a?:RpcArgs)=>Promise<RpcResult>)(name,args);if(error)throw mapFestivalRuntimeError(error.message,error.code);return data};
 export const mapFestivalRuntimeError = (message = "festival_runtime_failed", code?: string) => {
+  // An additive public-feed RPC may lag the deployed canonical status RPC.
+  // Fall back only for this specific missing function, never for auth, network
+  // or runtime failures that would make historical data look current.
+  if ((code === "PGRST202" || message.includes("Could not find the function")) &&
+      message.includes("get_public_festival_edition_live_experience")) {
+    return new Error("festival_public_feed_not_deployed");
+  }
   // The launch-scoped public runtime is absent from some environments where
   // the canonical annual-edition runtime is already live. Do not spam missing
   // RPC calls every 15 seconds or disguise this as an empty crowd.
@@ -24,7 +31,16 @@ export const festivalRuntimeRepository={
  sponsorActivations:async(id:string)=>rpc("get_festival_sponsor_activation_runtime",{p_runtime_session_id:id}),
  operationalOutcomes:async(id:string)=>rpc("get_festival_operational_outcomes",{p_runtime_session_id:id}),
  simulationJobs:async(id:string):Promise<FestivalPerformanceSimulationJob[]>=>parseFestivalRuntimeList(await rpc("get_festival_performance_simulation_jobs",{p_runtime_session_id:id}),parseFestivalPerformanceSimulationJob),
- publicExperience:async(slug:string)=>rpc("get_public_festival_edition_live_status",{p_slug:slug}),
+ publicExperience:async(slug:string)=>{
+   try {
+     return await rpc("get_public_festival_edition_live_experience",{p_slug:slug});
+   } catch (error) {
+     if (!(error instanceof Error) || error.message !== "festival_public_feed_not_deployed") throw error;
+     const status = await rpc("get_public_festival_edition_live_status",{p_slug:slug});
+     return status && typeof status === "object" && !Array.isArray(status)
+       ? { ...status, feedAvailable: false } : status;
+   }
+ },
  prepare:async(launchId:string,version:number,key:string):Promise<FestivalRuntimeSession>=>parseFestivalRuntimeSession(await rpc("prepare_festival_runtime",{p_festival_launch_id:launchId,p_expected_launch_version:version,p_idempotency_key:key})),
  action:async(name:FestivalRuntimeAction,args:RpcArgs)=>rpc(name,args),
 };

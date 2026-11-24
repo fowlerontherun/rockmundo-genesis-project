@@ -291,7 +291,8 @@ const Dashboard = () => {
   } = useAuth();
   const {
     profile,
-    currentCity
+    currentCity,
+    refetch
   } = useGameData();
   const { t } = useTranslation();
   
@@ -300,7 +301,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [surveyDismissed, setSurveyDismissed] = useState(false);
   const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
-  const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
+  const { shouldShowSurvey, questions: surveyQuestions, surveyConfig, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   const weekStart = useMemo(() => startOfWeek(currentDate, {
     weekStartsOn: 1
@@ -347,10 +348,14 @@ const Dashboard = () => {
       }
     >
       <PlayerSurveyModal
+        key={`${user?.id}:${surveyConfig?.round}:${surveyConfig?.questions_per_session}`}
         open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
         onClose={() => setSurveyDismissed(true)}
         questions={surveyQuestions}
-        onSubmit={submitSurvey}
+        onSubmit={async (answers) => {
+          await submitSurvey(answers);
+          void refetch();
+        }}
         isSubmitting={isSurveySubmitting}
       />
 

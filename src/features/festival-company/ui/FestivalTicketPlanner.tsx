@@ -21,12 +21,12 @@ import {
   useSaveFestivalTicketPlan,
 } from "../application/useFestivalTicketPlan";
 import {
-  parseMoneyToMinor,
   ticketPlanToDraft,
   type FestivalTicketPlanDraft,
   type FestivalTicketPlanResult,
   type FestivalTicketProduct,
 } from "../domain/festivalTicketPlan";
+import { parseFestivalCapacity, parseFestivalFee } from "../domain/festivalOwnerInputs";
 import { validateFestivalTicketDraft } from "../domain/festivalTicketValidation";
 
 const SIMPLE_TICKET_SLUG = "standard-festival-ticket";
@@ -43,7 +43,7 @@ function standardTicket(
     productClass: "admission",
     accessScope: "full_festival",
     validFromDate: dates[0],
-    validToDate: dates.at(-1)!,
+    validToDate: dates.at(-1) ?? dates[0],
     priceMinor: 0,
     faceValueMinor: 0,
     capacityLimit: capacity,
@@ -146,18 +146,30 @@ export function FestivalTicketPlanner({
   const [capacityInput, setCapacityInput] = useState<string | null>(null);
   const retry = useRef<{ hash: string; key: string } | null>(null);
 
+  const editionKey = `${festivalCompanyId}:${festivalEditionId ?? ""}`;
+  // A pending save from a different edition must not overwrite this draft.
+  const activeEditionKey = useRef(editionKey);
+  activeEditionKey.current = editionKey;
   const loadedKey = useRef<string | null>(null);
   useEffect(() => {
-    const key = `${festivalCompanyId}:${festivalEditionId ?? ""}`;
-    if (loadedKey.current !== key) { loadedKey.current = key; setDraft(null); }
-    if (query.data && loadedKey.current === key) setDraft(current => current ?? simpleDraftFromResult(query.data!));
-  }, [query.data, festivalCompanyId, festivalEditionId]);
+    if (loadedKey.current !== editionKey) {
+      loadedKey.current = editionKey;
+      setDraft(null);
+      setPriceInput(null);
+      setCapacityInput(null);
+      retry.current = null;
+    }
+    if (query.data && loadedKey.current === editionKey) {
+      const result = query.data;
+      setDraft(current => current ?? simpleDraftFromResult(result));
+    }
+  }, [query.data, editionKey]);
 
   if (site.isLoading) {
     return <p role="status">Checking Festival readiness…</p>;
   }
 
-  if (site.isError) return <Alert variant="destructive"><AlertDescription>Festival site readiness could not be checked. <button className="underline" onClick={() => void site.refetch()}>Retry</button></AlertDescription></Alert>;
+  if (site.isError) return <Alert variant="destructive"><AlertDescription>Festival site readiness could not be checked. <Button variant="outline" size="sm" onClick={() => void site.refetch()}>Retry</Button></AlertDescription></Alert>;
 
   if (!site.data?.ready) {
     return (
@@ -175,15 +187,27 @@ export function FestivalTicketPlanner({
     return <p role="status">Loading ticket choices…</p>;
   }
 
-  if (query.isError || !query.data || !draft) {
+  if (query.isError || !query.data) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" role="alert">
         <AlertDescription>
           Ticket choices could not be loaded. Check your company access and try
-          again.
+          again.{" "}
+          <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+            Retry ticket choices
+          </Button>
         </AlertDescription>
       </Alert>
     );
+  }
+
+  // Block stale prices and save controls synchronously during an edition switch.
+  if (loadedKey.current !== editionKey) {
+    return <p role="status">Preparing ticket choices for this Festival…</p>;
+  }
+
+  if (!draft) {
+    return <p role="status">Preparing ticket choices for this Festival…</p>;
   }
 
   const data = query.data;
@@ -199,6 +223,8 @@ export function FestivalTicketPlanner({
   );
   const savedDraft = simpleDraftFromResult(data);
   const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft);
+  const invalidInputs = (priceInput !== null && parseFestivalFee(priceInput) === null)
+    || (capacityInput !== null && parseFestivalCapacity(capacityInput, data.usableSiteCapacity) === null);
 
   const updateAdmission = (patch: Partial<FestivalTicketProduct>) => {
     setDraft((current) => {
@@ -237,7 +263,7 @@ export function FestivalTicketPlanner({
   };
 
   const persist = (complete = false) => {
-    if (save.isPending || !data.canWrite) return;
+    if (save.isPending || !data.canWrite || invalidInputs) return;
     const hash = JSON.stringify({ draft, complete });
     if (retry.current?.hash !== hash) {
       retry.current = { hash, key: crypto.randomUUID() };
@@ -253,6 +279,7 @@ export function FestivalTicketPlanner({
       },
       {
         onSuccess: (result) => {
+          if (activeEditionKey.current !== editionKey) return;
           setDraft(simpleDraftFromResult(result));
           setPriceInput(null);
           setCapacityInput(null);
@@ -293,7 +320,7 @@ export function FestivalTicketPlanner({
               value={priceInput ?? (admission.priceMinor / 100).toFixed(2)}
               onChange={(event) => {
                 setPriceInput(event.target.value);
-                const amount = parseMoneyToMinor(event.target.value);
+                const amount = parseFestivalFee(event.target.value);
                 if (amount === null) return;
                 updateAdmission({ priceMinor: amount, faceValueMinor: amount });
               }}
@@ -308,7 +335,7 @@ export function FestivalTicketPlanner({
               min={0}
               max={data.usableSiteCapacity}
               value={capacityInput ?? admission.capacityLimit}
-              onChange={(event) => { setCapacityInput(event.target.value); if (event.target.value.trim() !== "") updateCapacity(Number(event.target.value)); }}
+              onChange={(event) => { setCapacityInput(event.target.value); const capacity = parseFestivalCapacity(event.target.value, data.usableSiteCapacity); if (capacity !== null) updateCapacity(capacity); }}
             />
             <p className="text-xs text-muted-foreground">
               You can sell fewer tickets than capacity. Demand is recalculated
@@ -350,6 +377,7 @@ export function FestivalTicketPlanner({
         </CardContent>
       </Card>
 
+      {invalidInputs ? <Alert variant="destructive"><AlertDescription>Enter a price with at most two decimal places and a whole ticket quantity within site capacity before saving.</AlertDescription></Alert> : null}
       {issues.length ? (
         <Alert variant="destructive">
           <AlertDescription>
@@ -380,13 +408,13 @@ export function FestivalTicketPlanner({
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            disabled={!dirty || save.isPending || !data.canWrite}
+            disabled={!dirty || invalidInputs || save.isPending || !data.canWrite}
             onClick={() => persist(false)}
           >
             Save choices
           </Button>
           <Button
-            disabled={dirty || issues.length > 0 || save.isPending || !data.canWrite}
+            disabled={dirty || invalidInputs || issues.length > 0 || save.isPending || !data.canWrite}
             onClick={() => persist(true)}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm tickets & budget

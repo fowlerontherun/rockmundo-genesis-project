@@ -267,7 +267,7 @@ export default function UniversityDetail() {
       const { data, error } = await supabase
         .from("player_university_enrollments")
         .select(`
-          id, status, course_id, university_id, days_attended,
+          id, status, course_id, university_id, days_attended, enrolled_at,
           total_xp_earned, scheduled_end_date, payment_amount, auto_attend,
           university_courses(name,base_duration_days),
           universities(name),
@@ -280,10 +280,29 @@ export default function UniversityDetail() {
       return data ?? [];
     },
     enabled: !!profile?.id,
+    refetchInterval: 60_000,
   });
   const currentEnrollment = currentEnrollments.find(enrollment => enrollment.id === selectedEnrollmentId)
     ?? currentEnrollments.find(enrollment => enrollment.university_id === id)
     ?? currentEnrollments[0] ?? null;
+
+  const { data: completionReceipts = [] } = useQuery({
+    queryKey: ["university_completion_receipts", profileId, id],
+    enabled: !!profileId && !!id,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      if (!profileId || !id) return [];
+      const { data, error } = await supabase
+        .from("university_course_completions")
+        .select("enrollment_id, bonus_xp, completed_at, player_university_enrollments!inner(university_id, university_courses(name))")
+        .eq("profile_id", profileId)
+        .eq("player_university_enrollments.university_id", id)
+        .order("completed_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const enrollMutation = useMutation({
     mutationFn: async (courseId: string) => {
@@ -778,6 +797,21 @@ export default function UniversityDetail() {
     >
       <div className="space-y-6">
         <VisitingProfessors universityId={university.id} />
+
+        {completionReceipts.length > 0 && (
+          <section aria-label="Completed courses" className="space-y-2">
+            <h2 className="text-sm font-semibold">Completed courses</h2>
+            {completionReceipts.map(receipt => (
+              <div key={receipt.enrollment_id} className="flex items-center justify-between gap-3 border-b py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium break-words">{receipt.player_university_enrollments.university_courses.name}</p>
+                  <p className="text-xs text-muted-foreground">Completed {format(new Date(receipt.completed_at), "MMM d, yyyy")}</p>
+                </div>
+                <span className="shrink-0 text-primary">+{receipt.bonus_xp} XP bonus</span>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* Every active enrollment remains accessible, including migrated legacy duplicates. */}
         {currentEnrollments.length > 1 && (

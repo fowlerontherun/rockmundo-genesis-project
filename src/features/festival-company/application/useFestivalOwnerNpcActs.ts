@@ -1,3 +1,4 @@
+import { festivalReadRefresh } from "./festivalReadRefresh";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRef } from "react";
@@ -34,6 +35,7 @@ const key = (festivalCompanyId: string, festivalEditionId: string) => [
 
 export const useFestivalOwnerNpcActs = (festivalCompanyId: string, festivalEditionId: string) =>
   useQuery({
+    ...festivalReadRefresh,
     queryKey: key(festivalCompanyId, festivalEditionId),
     enabled: Boolean(festivalCompanyId && festivalEditionId),
     queryFn: async () => {

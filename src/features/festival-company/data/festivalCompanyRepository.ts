@@ -11,7 +11,7 @@ import { parseFestivalTicketPlanResult, type FestivalTicketPlanDraft, type Festi
 import { parseFestivalArtistProgrammeResult, type FestivalApplicationWindow, type FestivalArtistProgramme, type FestivalArtistProgrammeResult } from "../domain/festivalArtistProgramme";
 import {parseFestivalArtistActionResult,parseFestivalArtistCandidates,parseFestivalArtistOpportunities,type FestivalArtistActionResult} from "../domain/festivalArtistWorkflows";
 import {isFestivalUuid,parseFestivalLaunch,parseFestivalTicketProduct,parseFestivalTicketPurchase,parseFestivalTicketWallet,parsePublicFestival,type FestivalPublicProfile,type FestivalPublicTimetableEntry} from "../domain/festivalLaunch";
-type UntypedRpc=(name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:{message?:string}|null}>;
+type UntypedRpc=(name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:{message?:string;code?:string}|null}>;
 const toJson = (value: unknown): Json => {
   if (value === null) return null;
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
@@ -153,7 +153,8 @@ export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFes
     && typeof candidate.configurationComplete === "boolean"
     && typeof candidate.firstEditionExists === "boolean"
     && isFiniteNonNegative(candidate.companyBalance)
-    && typeof candidate.managementEnabled === "boolean";
+    && typeof candidate.managementEnabled === "boolean"
+    && typeof candidate.currencyCode === "string" && /^[A-Z]{3}$/.test(candidate.currencyCode);
 };
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {

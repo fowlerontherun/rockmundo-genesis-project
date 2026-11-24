@@ -1,3 +1,4 @@
+import { LabelSuggestionsPanel } from '@/features/support-bands/LabelSuggestionsPanel';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -316,7 +317,8 @@ export default function LabelManagement() {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
           
-          <TabsContent value="roster">
+          <TabsContent value="roster" className="space-y-4">
+            {isPlayerOwned && <LabelSuggestionsPanel key={label.id} labelId={label.id} />}
             <LabelRosterTab labelId={label.id} rosterCapacity={label.roster_slot_capacity || 5} labelReputation={label.reputation_score || 0} />
           </TabsContent>
           

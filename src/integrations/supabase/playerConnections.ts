@@ -61,7 +61,7 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
   if (ids.length) {
     for (let offset = 0; offset < ids.length; offset += 100) {
       const { data: memberships, error } = await (supabase as any).from("band_members")
-        .select("profile_id, instrument_role, role, bands(name)")
+        .select("profile_id, instrument_role, role, bands!band_members_band_id_fkey(name)")
         .in("profile_id", ids.slice(offset, offset + 100))
         .eq("member_status", "active");
       if (error) throw error;

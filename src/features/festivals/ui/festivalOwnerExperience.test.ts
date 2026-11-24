@@ -46,9 +46,10 @@ describe("Festival owner experience", () => {
     expect(upgrades).toContain("idempotencyKey: crypto.randomUUID()");
   });
 
-  it("presents runtime data as Festival Day instead of a simulation report", () => {
+  it("distinguishes the timetable from confirmed live stage activity", () => {
     expect(live).toContain("FESTIVAL DAY");
-    expect(live).toContain("Stages now");
+    expect(live).toContain("Stage programme · unverified");
+    expect(live).toContain("CanonicalStageControl");
     expect(live).toContain("Festival timeline");
     expect(live).toContain("Incidents & pressure points");
     expect(live).toContain("runtime.recentEvents");
@@ -61,7 +62,9 @@ describe("Festival owner experience", () => {
   it("retains the simplified one-action Festival launch boundary", () => {
     expect(live).toContain("getFestivalRunReadiness");
     expect(live).toContain("runSimplifiedFestival");
-    expect(live).toContain("Open Festival gates");
+    expect(live).toContain("Simulate and complete edition");
+    expect(live).toContain("Simulation completes the edition in one step");
+    expect(live).not.toContain("Open Festival gates");
     expect(live).not.toContain("prepareEditionRuntime(");
     expect(live).not.toContain("transitionEditionRuntime(");
   });

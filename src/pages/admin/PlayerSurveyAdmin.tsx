@@ -17,17 +17,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { ClipboardList, BarChart3, Users, MessageSquare } from "lucide-react";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  gameplay: "Gameplay",
-  music: "Music & Production",
-  social: "Social & Community",
-  economy: "Economy & Balance",
-  ui: "UI & Experience",
-  content: "Content",
-  performance: "Performance",
-  progression: "Progression",
-};
+import { SURVEY_CATEGORY_LABELS } from "@/lib/playerSurvey";
 
 const PIE_COLORS = [
   "hsl(var(--primary))",
@@ -122,61 +112,58 @@ export default function PlayerSurveyAdmin() {
     },
   });
 
-  // Completions count
-  const { data: completions } = useQuery({
+  const { data: completionCount } = useQuery({
     queryKey: ["admin-survey-completions", config?.round],
     enabled: !!config?.round,
     queryFn: async () => {
-      const { data } = await supabase
+      const { count, error } = await supabase
         .from("player_survey_completions")
-        .select("id, user_id, completed_at")
+        .select("id", { count: "exact", head: true })
         .eq("survey_round", config!.round);
-      return data || [];
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
-  // All responses for current round
   const { data: responses } = useQuery({
     queryKey: ["admin-survey-responses", config?.round],
     enabled: !!config?.round,
     queryFn: async () => {
-      const { data } = await supabase
+      const fetchPage = (offset: number) => supabase
         .from("player_survey_responses")
         .select("*, player_survey_questions(question_text, question_type, category, options)")
-        .eq("survey_round", config!.round);
-      return data || [];
+        .eq("survey_round", config!.round)
+        .order("id")
+        .range(offset, offset + 499);
+
+      const first = await fetchPage(0);
+      if (first.error) throw first.error;
+      const rows = [...first.data];
+      for (let page = first.data; page.length === 500;) {
+        const next = await fetchPage(rows.length);
+        if (next.error) throw next.error;
+        page = next.data;
+        rows.push(...page);
+      }
+      return rows;
     },
   });
 
-  // Total unique respondents
-  const { data: totalRespondents } = useQuery({
-    queryKey: ["admin-survey-respondents", config?.round],
-    enabled: !!config?.round,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("player_survey_responses")
-        .select("user_id")
-        .eq("survey_round", config!.round);
-      const unique = new Set((data || []).map((r: any) => r.user_id));
-      return unique.size;
-    },
-  });
+  const totalRespondents = new Set(responses?.map((response) => response.user_id)).size;
 
   // Build rating chart data
   const ratingData = (() => {
     if (!responses || !questions) return [];
     const ratingQs = questions.filter((q: any) => q.question_type === "rating_1_5" && q.is_active);
-    return ratingQs.map((q: any) => {
+    return ratingQs.flatMap((q: any) => {
       const qResponses = responses.filter((r: any) => r.question_id === q.id && r.answer_numeric);
-      const avg = qResponses.length > 0
-        ? qResponses.reduce((sum: number, r: any) => sum + (r.answer_numeric || 0), 0) / qResponses.length
-        : 0;
-      return {
-        question: q.question_text.length > 40 ? q.question_text.slice(0, 37) + "..." : q.question_text,
+      if (qResponses.length === 0) return [];
+      const avg = qResponses.reduce((sum: number, r: any) => sum + (r.answer_numeric || 0), 0) / qResponses.length;
+      return [{
+        question: q.question_text,
         average: Math.round(avg * 100) / 100,
         responses: qResponses.length,
-        category: q.category,
-      };
+      }];
     });
   })();
 
@@ -253,13 +240,13 @@ export default function PlayerSurveyAdmin() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <Card>
                     <CardContent className="pt-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{completions?.length || 0}</p>
+                      <p className="text-2xl font-bold text-foreground">{completionCount ?? 0}</p>
                       <p className="text-xs text-muted-foreground">Completions</p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="pt-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{totalRespondents || 0}</p>
+                      <p className="text-2xl font-bold text-foreground">{totalRespondents}</p>
                       <p className="text-xs text-muted-foreground">Unique Respondents</p>
                     </CardContent>
                   </Card>
@@ -289,7 +276,7 @@ export default function PlayerSurveyAdmin() {
                           <TableCell className="text-xs">{q.display_order}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs">
-                              {CATEGORY_LABELS[q.category] || q.category}
+                              {SURVEY_CATEGORY_LABELS[q.category] || q.category}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs max-w-[200px] truncate">{q.question_text}</TableCell>
@@ -323,7 +310,7 @@ export default function PlayerSurveyAdmin() {
                       <YAxis dataKey="question" type="category" width={150} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
                       <Tooltip
                         contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                        formatter={(value: number, name: string) => [value.toFixed(2), "Avg Rating"]}
+                        formatter={(value: number, _name, item) => [value.toFixed(2), `Avg rating (${item.payload.responses} responses)`]}
                         labelFormatter={(label) => label}
                       />
                       <Bar dataKey="average" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />

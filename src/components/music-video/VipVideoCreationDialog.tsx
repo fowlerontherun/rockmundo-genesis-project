@@ -20,10 +20,20 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Plus, Trash2, Film, Palette, Camera, Wand2 } from "lucide-react";
+import { Sparkles, Film, Palette, Camera, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  normalizeMusicVideoBrief,
+  VIDEO_THEMES,
+  VIDEO_ART_STYLES,
+  VIDEO_MOODS,
+  VIDEO_CAMERA_MOVEMENTS,
+  VIDEO_LIGHTING,
+  VIDEO_PALETTES,
+  VIDEO_MOTION,
+} from "../../../supabase/functions/_shared/musicVideoPrompt";
 
 interface Song {
   id: string;
@@ -38,39 +48,6 @@ interface VipVideoCreationDialogProps {
   profileCash: number;
   onVideoCreated?: () => void;
 }
-
-const VISUAL_THEMES = [
-  { value: "cinematic", label: "Cinematic", description: "Film-like quality with dramatic lighting" },
-  { value: "neon_cyberpunk", label: "Neon Cyberpunk", description: "Futuristic neon-lit cityscapes" },
-  { value: "vintage_retro", label: "Vintage Retro", description: "70s/80s aesthetic with film grain" },
-  { value: "nature_ethereal", label: "Nature Ethereal", description: "Dreamy natural landscapes" },
-  { value: "urban_gritty", label: "Urban Gritty", description: "Raw street-level city vibes" },
-  { value: "abstract_artistic", label: "Abstract Artistic", description: "Surreal, artistic visuals" },
-  { value: "performance_stage", label: "Performance Stage", description: "Concert/stage focused" },
-  { value: "animated_stylized", label: "Animated Stylized", description: "Animated/cartoon aesthetic" },
-];
-
-const ART_STYLES = [
-  { value: "realistic", label: "Realistic" },
-  { value: "stylized", label: "Stylized" },
-  { value: "anime", label: "Anime" },
-  { value: "watercolor", label: "Watercolor" },
-  { value: "comic_book", label: "Comic Book" },
-  { value: "noir", label: "Film Noir" },
-  { value: "vaporwave", label: "Vaporwave" },
-  { value: "minimalist", label: "Minimalist" },
-];
-
-const MOODS = [
-  { value: "energetic", label: "Energetic" },
-  { value: "melancholic", label: "Melancholic" },
-  { value: "romantic", label: "Romantic" },
-  { value: "dark", label: "Dark & Moody" },
-  { value: "uplifting", label: "Uplifting" },
-  { value: "mysterious", label: "Mysterious" },
-  { value: "aggressive", label: "Aggressive" },
-  { value: "peaceful", label: "Peaceful" },
-];
 
 const VIP_VIDEO_COST = 75000; // $75,000 for AI-generated video
 
@@ -90,44 +67,28 @@ export function VipVideoCreationDialog({
   // Form state
   const [selectedSong, setSelectedSong] = useState("");
   const [videoTitle, setVideoTitle] = useState("");
+  const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const [visualTheme, setVisualTheme] = useState("cinematic");
   const [artStyle, setArtStyle] = useState("realistic");
-  const [mood, setMood] = useState("energetic");
-  const [sceneDescriptions, setSceneDescriptions] = useState<string[]>([
-    "Opening shot: Slow zoom into the scene, establishing the mood",
-    "Main verse: Dynamic camera movement following the performer",
-    "Chorus: Wide shots with dramatic lighting changes",
-  ]);
-
-  const addScene = () => {
-    if (sceneDescriptions.length < 8) {
-      setSceneDescriptions([...sceneDescriptions, ""]);
-    }
-  };
-
-  const updateScene = (index: number, value: string) => {
-    const updated = [...sceneDescriptions];
-    updated[index] = value;
-    setSceneDescriptions(updated);
-  };
-
-  const removeScene = (index: number) => {
-    if (sceneDescriptions.length > 1) {
-      setSceneDescriptions(sceneDescriptions.filter((_, i) => i !== index));
-    }
-  };
+  const [mood, setMood] = useState("auto");
+  const [shotConcept, setShotConcept] = useState("");
+  const [cameraMovement, setCameraMovement] = useState("auto");
+  const [lighting, setLighting] = useState("auto");
+  const [colourPalette, setColourPalette] = useState("auto");
+  const [subjectMotion, setSubjectMotion] = useState("auto");
 
   const resetForm = () => {
     setSelectedSong("");
     setVideoTitle("");
+    setMode("basic");
     setVisualTheme("cinematic");
     setArtStyle("realistic");
-    setMood("energetic");
-    setSceneDescriptions([
-      "Opening shot: Slow zoom into the scene, establishing the mood",
-      "Main verse: Dynamic camera movement following the performer",
-      "Chorus: Wide shots with dramatic lighting changes",
-    ]);
+    setMood("auto");
+    setShotConcept("");
+    setCameraMovement("auto");
+    setLighting("auto");
+    setColourPalette("auto");
+    setSubjectMotion("auto");
   };
 
   const handleCreate = async () => {
@@ -135,15 +96,6 @@ export function VipVideoCreationDialog({
       toast({
         title: "Missing Information",
         description: "Please select a song and enter a video title.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (sceneDescriptions.filter((s) => s.trim()).length < 2) {
-      toast({
-        title: "More Scenes Needed",
-        description: "Please add at least 2 scene descriptions for the AI to work with.",
         variant: "destructive",
       });
       return;
@@ -163,7 +115,18 @@ export function VipVideoCreationDialog({
     setIsCreating(true);
 
     try {
-      const song = songs.find((s) => s.id === selectedSong);
+      const creativeBrief = normalizeMusicVideoBrief({
+        visual_theme: visualTheme,
+        ...(mode === "advanced" ? {
+          art_style: artStyle,
+          mood,
+          shot_concept: shotConcept,
+          camera_movement: cameraMovement,
+          lighting,
+          colour_palette: colourPalette,
+          subject_motion: subjectMotion,
+        } : {}),
+      });
 
       // Charge, song ownership, VIP status, video creation and the unique
       // paid reservation are ONE atomic, character-scoped SQL transaction.
@@ -174,13 +137,7 @@ export function VipVideoCreationDialog({
         .rpc("reserve_music_video_generation", {
           p_song_id: selectedSong,
           p_title: videoTitle,
-          p_description: {
-            visual_theme: visualTheme,
-            art_style: artStyle,
-            mood,
-            scene_descriptions: sceneDescriptions.filter((scene) => scene.trim()),
-            ai_generated: true,
-          },
+          p_description: creativeBrief,
           p_request_id: requestId,
         });
       if (reserveError) throw reserveError;
@@ -192,15 +149,7 @@ export function VipVideoCreationDialog({
       requestIdRef.current = null;
       if (reservation.state === "reserved") {
         const { error: genError } = await supabase.functions.invoke("generate-music-video", {
-          body: {
-            videoId: reservation.video_id,
-            songTitle: song?.title || videoTitle,
-            songGenre: song?.genre,
-            visualTheme,
-            artStyle,
-            sceneDescriptions: sceneDescriptions.filter((scene) => scene.trim()),
-            mood,
-          },
+          body: { videoId: reservation.video_id },
         });
         if (genError) {
           toast({
@@ -252,7 +201,7 @@ export function VipVideoCreationDialog({
     }
   };
 
-  const selectedTheme = VISUAL_THEMES.find((t) => t.value === visualTheme);
+  const selectedTheme = VIDEO_THEMES.find((t) => t.value === visualTheme);
 
   if (!isVip) {
     return null;
@@ -277,7 +226,7 @@ export function VipVideoCreationDialog({
             <Badge>VIP Exclusive</Badge>
           </DialogTitle>
           <DialogDescription>
-            Create a custom AI-generated music video by describing your vision. Cost: ${VIP_VIDEO_COST.toLocaleString()}
+            Create a short AI-generated visual clip for your song. Cost: ${VIP_VIDEO_COST.toLocaleString()} in-game cash.
           </DialogDescription>
         </DialogHeader>
 
@@ -306,121 +255,92 @@ export function VipVideoCreationDialog({
               value={videoTitle}
               onChange={(e) => setVideoTitle(e.target.value)}
               placeholder="Enter a title for your music video..."
+              maxLength={160}
             />
           </div>
 
-          {/* Visual Settings */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <Film className="h-3 w-3" /> Visual Theme
-              </Label>
-              <Select value={visualTheme} onValueChange={setVisualTheme}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VISUAL_THEMES.map((theme) => (
-                    <SelectItem key={theme.value} value={theme.value}>
-                      {theme.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedTheme && (
-                <p className="text-xs text-muted-foreground">{selectedTheme.description}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <Palette className="h-3 w-3" /> Art Style
-              </Label>
-              <Select value={artStyle} onValueChange={setArtStyle}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ART_STYLES.map((style) => (
-                    <SelectItem key={style.value} value={style.value}>
-                      {style.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                <Camera className="h-3 w-3" /> Mood
-              </Label>
-              <Select value={mood} onValueChange={setMood}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MOODS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Scene Descriptions */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Scene Descriptions *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addScene}
-                disabled={sceneDescriptions.length >= 8}
-                className="gap-1"
-              >
-                <Plus className="h-3 w-3" />
-                Add Scene
-              </Button>
+            <Label>Creation Mode</Label>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="AI video creation mode">
+              <Button type="button" variant={mode === "basic" ? "default" : "outline"}
+                aria-pressed={mode === "basic"} onClick={() => setMode("basic")}>Basic Video</Button>
+              <Button type="button" variant={mode === "advanced" ? "default" : "outline"}
+                aria-pressed={mode === "advanced"} onClick={() => setMode("advanced")}>Advanced Video</Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Describe each scene or moment in your video. The AI will use these to create your video.
+            <p className="text-xs text-muted-foreground">
+              {mode === "basic" ? "Pick a look and we'll direct the shot for you." : "Describe one continuous shot and give the AI more visual direction. Results can vary."}
             </p>
-
-            <div className="space-y-3">
-              {sceneDescriptions.map((scene, index) => (
-                <Card key={index} className="bg-muted/50">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="mt-2 shrink-0">
-                        {index + 1}
-                      </Badge>
-                      <Textarea
-                        value={scene}
-                        onChange={(e) => updateScene(index, e.target.value)}
-                        placeholder={`Describe scene ${index + 1}... (e.g., "Close-up shot of the singer in a rain-soaked alley with neon reflections")`}
-                        rows={2}
-                        className="flex-1"
-                      />
-                      {sceneDescriptions.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeScene(index)}
-                          className="shrink-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1"><Film className="h-3 w-3" /> Visual Theme</Label>
+            <Select value={visualTheme} onValueChange={setVisualTheme}>
+              <SelectTrigger aria-label="Visual Theme"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VIDEO_THEMES.map((theme) => (
+                  <SelectItem key={theme.value} value={theme.value}>{theme.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedTheme && <p className="text-xs text-muted-foreground">{selectedTheme.description}</p>}
+          </div>
+
+          {mode === "advanced" && (
+            <div className="space-y-4 rounded-lg border bg-muted/20 p-4" aria-label="Advanced video direction">
+              <div className="space-y-2">
+                <Label htmlFor="video-shot-concept">Main Shot / Action (optional)</Label>
+                <Textarea id="video-shot-concept" value={shotConcept} onChange={(e) => setShotConcept(e.target.value)}
+                  maxLength={240} rows={3}
+                  placeholder={selectedTheme?.concept ?? "Describe the main subject and what happens in one shot"} />
+                <p className="text-xs text-muted-foreground">One shot only; leave blank for an automatic scene based on your theme.</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Palette className="h-3 w-3" /> Art Style</Label>
+                  <Select value={artStyle} onValueChange={setArtStyle}>
+                    <SelectTrigger aria-label="Art Style"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_ART_STYLES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Mood</Label>
+                  <Select value={mood} onValueChange={setMood}>
+                    <SelectTrigger aria-label="Mood"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_MOODS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Camera className="h-3 w-3" /> Camera Movement</Label>
+                  <Select value={cameraMovement} onValueChange={setCameraMovement}>
+                    <SelectTrigger aria-label="Camera Movement"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_CAMERA_MOVEMENTS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Lighting</Label>
+                  <Select value={lighting} onValueChange={setLighting}>
+                    <SelectTrigger aria-label="Lighting"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_LIGHTING.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Colour Palette</Label>
+                  <Select value={colourPalette} onValueChange={setColourPalette}>
+                    <SelectTrigger aria-label="Colour Palette"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_PALETTES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Subject Motion</Label>
+                  <Select value={subjectMotion} onValueChange={setSubjectMotion}>
+                    <SelectTrigger aria-label="Subject Motion"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VIDEO_MOTION.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Cost Summary */}
           <Card className="border-primary/30 bg-primary/5">
@@ -429,7 +349,7 @@ export function VipVideoCreationDialog({
                 <div>
                   <p className="font-semibold">AI Video Generation</p>
                   <p className="text-sm text-muted-foreground">
-                    High-quality AI-generated music video based on your vision
+                    One short visual clip. This does not create a full-song edit or sync the song audio.
                   </p>
                 </div>
                 <div className="text-right">
@@ -455,8 +375,7 @@ export function VipVideoCreationDialog({
                 isCreating ||
                 !selectedSong ||
                 !videoTitle ||
-                profileCash < VIP_VIDEO_COST ||
-                sceneDescriptions.filter((s) => s.trim()).length < 2
+                profileCash < VIP_VIDEO_COST
               }
               className="gap-2"
             >

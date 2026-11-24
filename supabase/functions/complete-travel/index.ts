@@ -213,6 +213,7 @@ serve(async (req) => {
       .from("player_travel_history")
       .select("id, user_id, profile_id, departure_time, arrival_time, scheduled_departure_time")
       .eq("status", "scheduled")
+      .is("tour_leg_id", null)
       .lte("scheduled_departure_time", new Date().toISOString());
 
     if (!scheduledError && scheduledTravels) {

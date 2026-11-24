@@ -109,7 +109,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       void queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
     };
     const channels = targets.map((target) => supabase
-      .channel(`dm-${channelId}-${target.name}`)
+      .channel(`dm-${channelId}-${target.name}-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {
@@ -266,7 +266,7 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
   useEffect(() => {
     if (!myProfileId) return;
     const channel = supabase
-      .channel(`dm-unread-${myProfileId}`)
+      .channel(`dm-unread-${myProfileId}-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, (payload) => {
         const row = (payload.new ?? payload.old) as Partial<DirectMessageRow>;
         if (row.sender_profile_id === myProfileId || row.recipient_profile_id === myProfileId) {

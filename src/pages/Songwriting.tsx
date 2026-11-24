@@ -57,6 +57,8 @@ import {
 import { SongCompletionDialog } from "@/components/songwriting/SongCompletionDialog";
 import { AddToRepertoireDialog } from "@/components/band/AddToRepertoireDialog";
 import { SongwritingInstrumentSelector } from "@/components/songwriting/SongwritingInstrumentSelector";
+import { SongSoundDesignFields } from "@/components/songwriting/SongSoundDesignFields";
+import type { SongSoundProfile } from "../../supabase/functions/_shared/songSoundPrompt";
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
 import { CollaboratorInviteDialog } from "@/components/songwriting/CollaboratorInviteDialog";
@@ -149,6 +151,7 @@ interface ProjectFormState {
   inspirationModifiers: string[];
   moodModifiers: string[];
   instruments: string[];
+  soundProfile: SongSoundProfile;
 }
 
 type SessionEffortOption = {
@@ -197,6 +200,7 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   inspirationModifiers: [],
   moodModifiers: [],
   instruments: [],
+  soundProfile: {},
 };
 
 type LyricsSaveStatus =
@@ -695,6 +699,7 @@ const Songwriting = () => {
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [quickCreateTitle, setQuickCreateTitle] = useState("");
   const [quickCreateGenre, setQuickCreateGenre] = useState("");
+  const [quickCreateMood, setQuickCreateMood] = useState("auto");
   const [quickCreateError, setQuickCreateError] = useState<string | null>(null);
 
   // Song completion dialog state
@@ -1453,6 +1458,7 @@ const Songwriting = () => {
   const handleOpenQuickCreate = () => {
     setQuickCreateTitle("");
     setQuickCreateGenre("");
+    setQuickCreateMood("auto");
     setQuickCreateError(null);
     setIsQuickCreateOpen(true);
   };
@@ -1470,17 +1476,22 @@ const Songwriting = () => {
       setQuickCreateError("Select a genre to continue.");
       return;
     }
+    if (!canWriteGenre(quickCreateGenre, skills || {})) {
+      setQuickCreateError("Learn the required genre skill before writing this song.");
+      return;
+    }
     setQuickCreateError(null);
 
     const creativeBrief = {
       genre: quickCreateGenre,
+      creation_mode: "basic",
       writing_mode: "solo",
       familiarity_tags: [quickCreateGenre],
       co_writers: [],
       producers: [],
       session_musicians: [],
       inspiration_modifiers: [],
-      mood_modifiers: [],
+      mood_modifiers: quickCreateMood === "auto" ? [] : [quickCreateMood],
       rating_revealed_at: null,
       core_attributes: null,
     } as const;
@@ -1549,6 +1560,7 @@ const Songwriting = () => {
       inspirationModifiers: creativeBrief?.inspiration_modifiers ?? [],
       moodModifiers: creativeBrief?.mood_modifiers ?? [],
       instruments: (project as any).instruments ?? [],
+      soundProfile: creativeBrief?.sound_profile ?? {},
     });
     setFormErrors({});
     setIsDialogOpen(true);
@@ -1615,7 +1627,9 @@ const Songwriting = () => {
 
     const creativeBrief = {
       genre: formState.genre,
+      creation_mode: "advanced",
       writing_mode: formState.writingMode,
+      sound_profile: formState.soundProfile,
       additional_notes: formState.additionalNotes,
       familiarity_tags: formState.genre ? [formState.genre] : [],
       co_writers: coWriterEntries,
@@ -1658,6 +1672,7 @@ const Songwriting = () => {
           initial_lyrics: payload.initial_lyrics ?? null,
           lyrics: payload.initial_lyrics ?? null,
           creative_brief: payload.creative_brief,
+          genres: [formState.genre],
           instruments: formState.instruments,
         });
         setIsDialogOpen(false);
@@ -1669,6 +1684,7 @@ const Songwriting = () => {
           chord_progression_id: payload.chord_progression_id || null,
           initial_lyrics: payload.initial_lyrics ?? undefined,
           creative_brief: payload.creative_brief,
+          genres: [formState.genre],
           instruments: formState.instruments,
         });
         setIsDialogOpen(false);
@@ -1973,13 +1989,13 @@ const Songwriting = () => {
         <div className="flex items-center gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             size="sm"
             className="md:size-default"
             onClick={handleOpenQuickCreate}
           >
             <Zap className="mr-2 h-4 w-4" />
-            Quick Create
+            Basic Song
           </Button>
           <DialogTrigger asChild>
             <Button
@@ -1988,7 +2004,7 @@ const Songwriting = () => {
               className="md:size-default"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t("songwriting.newProject")}
+              Advanced Song
             </Button>
           </DialogTrigger>
         </div>
@@ -1997,7 +2013,7 @@ const Songwriting = () => {
             <DialogTitle>
               {selectedProject
                 ? "Edit Songwriting Project"
-                : "Create Songwriting Project"}
+                : "Advanced Songwriting"}
             </DialogTitle>
             <DialogDescription>
               {selectedProject
@@ -2263,6 +2279,10 @@ const Songwriting = () => {
                             instruments,
                           }))
                         }
+                      />
+                      <SongSoundDesignFields
+                        value={formState.soundProfile}
+                        onChange={(soundProfile) => setFormState((previous) => ({ ...previous, soundProfile }))}
                       />
                     </section>
 
@@ -2970,11 +2990,11 @@ const Songwriting = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
-              Quick Create
+              Basic Songwriting
             </DialogTitle>
             <DialogDescription>
-              Skip the creative brief — just title + genre. Defaults to Solo
-              writing mode. You can edit details later.
+              Start with a title and genre. RockMundo handles the sound and arrangement automatically.
+              You can open the Advanced editor later if you want more creative control.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleQuickCreateSubmit} className="space-y-4">
@@ -3002,10 +3022,22 @@ const Songwriting = () => {
                 <SelectContent>
                   <SelectItem value="none">Select a genre</SelectItem>
                   {MUSIC_GENRES.map((genre) => (
-                    <SelectItem key={genre} value={genre}>
+                    <SelectItem key={genre} value={genre} disabled={!canWriteGenre(genre, skills || {})}>
                       {genre}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quick-mood">Mood (optional)</Label>
+              <Select value={quickCreateMood} onValueChange={setQuickCreateMood}>
+                <SelectTrigger id="quick-mood"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Let the AI choose</SelectItem>
+                  <SelectItem value="uplifting">Happy / uplifting</SelectItem>
+                  <SelectItem value="moody">Sad / emotional</SelectItem>
+                  <SelectItem value="urgent">Energetic / urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3014,9 +3046,8 @@ const Songwriting = () => {
             )}
             <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
               <strong className="text-foreground">Defaults applied:</strong>{" "}
-              Solo writing mode · No co-writers · No theme/chord progression.
-              Edit the project anytime to add a creative brief and
-              collaborators.
+              Solo writing mode · Standard songwriting progression · AI chooses
+              the instruments, vocals, tempo and arrangement. Advanced details can be added later.
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t">
               <Button

@@ -3,6 +3,7 @@ import { useHubTileImage } from "@/hooks/useHubTileImage";
 import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 import { tileKeyFor, type HubTile } from "./types";
+import { useState } from 'react';
 
 export const TileImage = ({
   tile,
@@ -17,12 +18,14 @@ export const TileImage = ({
     tile.imagePrompt || t(tile.labelKey),
   );
   const Icon = tile.icon;
-  if (imageUrl) {
+  const [failedUrl, setFailedUrl] = useState<string>();
+  if (imageUrl && imageUrl !== failedUrl) {
     return (
       <img
         src={imageUrl}
         alt=""
         loading="lazy"
+        onError={() => setFailedUrl(imageUrl)}
         className={cn(
           "absolute inset-0 w-full h-full object-cover transition-transform duration-700",
           className,

@@ -1,11 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { financeService } from "@/services/finance/financeService";
 import { supabase } from "@/integrations/supabase/client";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
+const tipRpc = supabase as unknown as {
+  rpc(
+    name: "send_dikcok_tip",
+    args: { p_video_id: string; p_amount: number; p_request_id: string },
+  ): Promise<{ error: Error | null }>;
+};
+
 export const useDikCokTips = (videoId?: string) => {
-  const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
   // Get total tips for a video
@@ -25,62 +29,15 @@ export const useDikCokTips = (videoId?: string) => {
 
   // Send a tip
   const sendTip = useMutation({
-    mutationFn: async ({ videoId, amount, message }: { videoId: string; amount: number; message?: string }) => {
-      if (!profileId) throw new Error("Not logged in");
-
-      // Check player cash
-      const { data: profile, error: pErr } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-      if (pErr) throw pErr;
-      if ((profile?.cash || 0) < amount) throw new Error("Not enough cash");
-
-      // Credit to band balance
-      const { data: video } = await supabase
-        .from("dikcok_videos")
-        .select("band_id")
-        .eq("id", videoId)
-        .single();
-      if (video?.band_id) {
-        await financeService.transfer({
-          source: { ownerType: "player", ownerId: profileId },
-          destination: { ownerType: "band", ownerId: video.band_id },
-          amount,
-          category: "merchandise_revenue",
-          description: "DikCok fan tip",
-          idempotencyKey: `dikcok-tip-${profileId}-${videoId}-${Date.now()}`,
-          relatedEntityType: "dikcok_video",
-          relatedEntityId: videoId,
-          createdByProfileId: profileId,
-        });
-
-        // Compatibility mirrors while legacy balances remain deprecated.
-        const { error: deductErr } = await supabase
-          .from("profiles")
-          .update({ cash: (profile.cash || 0) - amount })
-          .eq("id", profileId);
-        if (deductErr) throw deductErr;
-        const { data: band } = await supabase
-          .from("bands")
-          .select("band_balance")
-          .eq("id", video.band_id)
-          .single();
-        if (band) {
-          await supabase
-            .from("bands")
-            .update({ band_balance: (band.band_balance || 0) + amount })
-            .eq("id", video.band_id);
-        }
-      }
-
-      // Record tip
-      const { error } = await supabase.from("dikcok_fan_tips").insert({
-        video_id: videoId,
-        tipper_profile_id: profileId,
-        amount,
-        message: message || null,
+    mutationFn: async ({ videoId, amount, requestId }: {
+      videoId: string;
+      amount: number;
+      requestId: string;
+    }) => {
+      const { error } = await tipRpc.rpc("send_dikcok_tip", {
+        p_video_id: videoId,
+        p_amount: amount,
+        p_request_id: requestId,
       });
       if (error) throw error;
     },
@@ -89,8 +46,8 @@ export const useDikCokTips = (videoId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["dikcok-tip-total"] });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Failed to send tip");
+    onError: (err) => {
+      toast.error(err.message === "insufficient_personal_funds" ? "Not enough cash" : err.message || "Failed to send tip");
     },
   });
 

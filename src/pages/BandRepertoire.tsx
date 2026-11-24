@@ -143,7 +143,7 @@ const BandRepertoire = () => {
           status,
           actual_earnings,
           actual_attendance,
-          venues(name, city)
+          venues!gigs_venue_id_fkey(name, cities:city_id(name))
         `)
         .eq("band_id", bandId)
         .order("gig_date", { ascending: false })
@@ -435,7 +435,7 @@ const BandRepertoire = () => {
                     <div>
                       <p className="font-medium">{gig.venues?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {gig.venues?.city} • {new Date(gig.gig_date).toLocaleDateString()}
+                        {gig.venues?.cities?.name} • {new Date(gig.gig_date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

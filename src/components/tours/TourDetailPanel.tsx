@@ -1,3 +1,4 @@
+import { TourSupportPanel } from './TourSupportPanel';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +17,7 @@ import { LiveTourHQPanel } from "@/components/tours/LiveTourHQPanel";
 import { TourOperationsCommandCenter } from "@/components/tours/TourOperationsCommandCenter";
 
 interface TourDetailPanelProps {
+  showSupportManagement?: boolean;
   tour: {
     id: string;
     name: string;
@@ -49,7 +51,7 @@ const travelIcon = (mode: string | null | undefined) => {
   }
 };
 
-export function TourDetailPanel({ tour }: TourDetailPanelProps) {
+export function TourDetailPanel({ tour, showSupportManagement = false }: TourDetailPanelProps) {
   const { data: stats, isLoading } = useTourStats(tour.id);
 
   const supportsTourOperations = ["scheduled", "active", "completed", "cancelled"].includes(tour.status);
@@ -253,6 +255,8 @@ export function TourDetailPanel({ tour }: TourDetailPanelProps) {
           <LiveTourHQPanel tourId={tour.id} tourStatus={tour.status} />
         </>
       )}
+
+      {showSupportManagement && tour.band?.id && <TourSupportPanel tourId={tour.id} headlinerBandId={tour.band.id} tourStatus={tour.status} />}
 
       {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
       {tour.band?.id && <TourMemberSyncStatus tourId={tour.id} bandId={tour.band.id} />}

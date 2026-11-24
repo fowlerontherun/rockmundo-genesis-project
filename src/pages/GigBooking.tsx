@@ -1,3 +1,5 @@
+import { TourProposalsPanel } from '@/features/support-bands/TourProposalsPanel';
+import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Sparkles, Star, Ticket, Users, XCircle } from 'lucide-react';
@@ -16,11 +18,11 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllVenues } from '@/utils/fetchAllVenues';
 import type { Database } from '@/lib/supabase-types';
+import { resolveGigsTab } from '@/lib/gigsTab';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
 import { getSlotById, getSlotBadgeVariant } from '@/utils/gigSlots';
-import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
@@ -57,7 +59,27 @@ const GigBooking = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedBandId = searchParams.get('bandId');
+  const linkedProposalId = searchParams.get('section') === 'offers' ? searchParams.get('proposalId') : null;
+  const showAllInvitations = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('proposalId');
+    setSearchParams(next, { replace: true });
+  };
+  const [bookingTab, setBookingTab] = useState(() => resolveGigsTab(searchParams.get('tab')));
+  useEffect(() => { setBookingTab(resolveGigsTab(searchParams.get('tab'))); }, [searchParams]);
+  const changeBookingTab = (tab: string) => {
+    const resolved = resolveGigsTab(tab);
+    setBookingTab(resolved);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', resolved);
+    if (tab !== 'play-together') {
+      next.delete('section');
+      next.delete('proposalId');
+    }
+    setSearchParams(next);
+  };
   const requestedCityId = searchParams.get('cityId');
   const requestedCity = searchParams.get('city');
   const requestedCountry = searchParams.get('country');
@@ -98,9 +120,7 @@ const GigBooking = () => {
   const { data: setlists } = useSetlists(band?.id || null);
   const eligibleSetlists = useMemo(() => (setlists ?? []).filter((sl) => (sl.song_count ?? 0) >= 6), [setlists]);
   const hasEligibleSetlists = eligibleSetlists.length > 0;
-  
-  // Auto-start gigs that are past their scheduled time
-  useAutoGigStart();
+
 
   const performanceSkill = skills?.performance ?? 0;
   const stagePresence = attributes?.stage_presence ?? 0;
@@ -619,8 +639,8 @@ const GigBooking = () => {
       }
     >
 
-      <Tabs defaultValue="book" className="space-y-4">
-        <TabsList>
+      <Tabs value={bookingTab} onValueChange={changeBookingTab} className="space-y-4">
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="book">
             <MapPin className="h-4 w-4 mr-1" />
             Book
@@ -638,7 +658,23 @@ const GigBooking = () => {
             <CheckCircle className="h-4 w-4 mr-1" />
             Gig History
           </TabsTrigger>
+          {(band || requestedBandId) && <TabsTrigger value="play-together">Play Together</TabsTrigger>}
         </TabsList>
+
+        {(band || requestedBandId) && (
+          <TabsContent value="play-together">
+            {requestedBandId && requestedBandId !== band?.id ? (
+              <p role="alert">This notification is for another band. Switch to that band’s character before responding.</p>
+            ) : band && (
+              linkedProposalId ? (
+                <div className="space-y-4">
+                  <Button variant="outline" onClick={showAllInvitations}>Back to all invitations</Button>
+                  <TourProposalsPanel key={`${band.id}:${linkedProposalId}`} bandId={band.id} proposalId={linkedProposalId} />
+                </div>
+              ) : <SupportMarketplacePanel key={band.id} bandId={band.id} />
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="book" className="space-y-4">
           {/* Performance Readiness Card */}
@@ -926,7 +962,7 @@ const GigBooking = () => {
                             <Link to={appearanceDetailHref(appearance)}>Festival details</Link>
                           </Button>
                           <Button asChild size="sm" variant="outline" className="border-fuchsia-400/50 bg-background/50">
-                            <Link to="/festival-opportunities">My festival bookings</Link>
+                            <Link to="/festival-opportunities">Manage or cancel booking</Link>
                           </Button>
                         </div>
                       </div>
@@ -1042,11 +1078,16 @@ const GigBooking = () => {
                   <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-fuchsia-500" />Festival appearances</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {pastFestivals.map((appearance) => (
-                      <Link to={appearanceDetailHref(appearance)} key={appearance.bookingId}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3 hover:bg-fuchsia-500/10">
-                        <span className="font-semibold">{appearance.festivalName}</span>
-                        <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
-                      </Link>
+                      <div key={appearance.bookingId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3">
+                        <Link to={appearanceDetailHref(appearance)} className="flex flex-1 flex-wrap items-center justify-between gap-2 hover:underline">
+                          <span className="font-semibold">{appearance.festivalName}</span>
+                          <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
+                        </Link>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to="/festival-opportunities">Manage or cancel booking</Link>
+                        </Button>
+                      </div>
                     ))}
                   </CardContent>
                 </Card>

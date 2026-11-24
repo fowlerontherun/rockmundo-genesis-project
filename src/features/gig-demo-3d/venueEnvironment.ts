@@ -28,6 +28,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
     if (p.kind !== 'church_hall') box(root, [p.roomWidth, .2, p.roomDepth - back], [0, p.roofHeight, (p.roomDepth + back) / 2], dark);
   } else {
     const sky = new T.Mesh(new T.SphereGeometry(180, 24, 12), new T.MeshBasicMaterial({ color: p.kind === 'beach_stage' ? '#1a2c3e' : '#090e18', side: T.BackSide })); sky.position.y = 20; root.add(sky);
+    root.userData.outdoorSurfaces = { sky: sky.material, ground: surfaces.floor, foliage: grass };
   }
 
   // Small material-aware architectural cues make the room read as its venue

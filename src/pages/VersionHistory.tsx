@@ -17,6 +17,173 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.819",
+    date: "2026-11-21",
+    changes: [
+      { type: "feature", description: "Outdoor festival stages now follow each edition’s game season with spring greenery, summer fields, autumn foliage and winter lights, plus saved theme-colour bunting." },
+      { type: "improvement", description: "City seasonal outlooks and fresh festival conditions shape stage skies, ground and rain or snow; lightweight views and reduced motion remain supported without changing rewards or results." },
+    ],
+  },
+  {
+    version: "1.1.818",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festival founding and annual editions now use five guided steps with six colour themes, three artwork motifs, a live preview and a final review." },
+      { type: "improvement", description: "Edition colours are saved safely with the annual plan and appear on public festival artwork and downloadable line-up posters; existing editions retain their original colours." },
+    ],
+  },
+  {
+    version: "1.1.817",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festival line-ups now show a classic billing poster (headliner, sub-headliners, support) with a Download poster button to share." },
+    ],
+  },
+  {
+    version: "1.1.816",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Friends list loads again instead of showing \"Friends page unavailable\"; band names on friend cards now resolve correctly." },
+    ],
+  },
+  {
+    version: "1.1.815",
+    date: "2026-11-20",
+    changes: [
+      { type: "improvement", description: "Gigs now open on Upcoming Gigs so you see what the band is playing next; Book, Gig History and Play Together still open straight from their links." },
+    ],
+  },
+  {
+    version: "1.1.814",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Player profiles now show real bands, city, bio and career numbers for characters without saved privacy settings." },
+      { type: "feature", description: "Player profiles have visual stat tiles with meters and a career scoreboard (gigs, songs, releases, awards, achievements, XP)." },
+    ],
+  },
+  {
+    version: "1.1.813",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Player profiles are viewable again: characters without saved social settings default to public instead of erroring." },
+      { type: "fix", description: "Completed activity notifications no longer fail when the account and character records disagree." },
+      { type: "fix", description: "Gig reminders and repertoire gig lists show the venue city instead of causing database errors." },
+    ],
+  },
+  {
+    version: "1.1.812",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Band chat sends with the correct account and character identity, resolves character names and recovers missed messages after sending." },
+      { type: "fix", description: "Roleplay rooms and scene lists reset per character; ended scenes are read-only, and loading failures have retry controls." },
+      { type: "improvement", description: "Friend requests and invitations refresh live with a polling fallback; direct messages show loading failures and reset drafts when switching conversations." },
+      { type: "feature", description: "Ended private scenes can open a personal Twaater recap draft for review, without copying scene names, guests or private dialogue." },
+    ],
+  },
+  {
+    version: "1.1.811",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "New Roleplay page (Social → Roleplay & scenes): live in-character city chat, /me actions, out-of-character (( )) lines, and private scenes for up to 6 players that save to everyone's history when ended." },
+      { type: "feature", description: "Quick interactions from any chat (buy a drink, compliment, flirt, insult, offer to jam, challenge) change relationships, respect the other player's preferences and blocks, have a 1-hour cooldown and give 10 XP (max 100 a day)." },
+      { type: "feature", description: "Roleplay profile: mood, roleplay hooks and what you're open to (romance, rivalry, collabs), shown on player profiles." },
+      { type: "improvement", description: "Nightclub chat now uses the roleplay chat for everyone inside, with report and block on every message." },
+    ],
+  },
+  {
+    version: "1.1.810",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Career Overview loads again: band memberships link to bands through two connections, so the lookup now names the exact one." },
+    ],
+  },
+  {
+    version: "1.1.809",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Christmas Charts now records past Christmas Number One winners for every finished year, not only when someone opened the page on Christmas Day." },
+    ],
+  },
+  {
+    version: "1.1.808",
+    date: "2026-11-20",
+    changes: [
+      { type: "feature", description: "Festive release bonus: releasing a song with Christmas, Xmas or Snow in the title during December (real or in-game) gives each band member 250 XP once per release." },
+      { type: "feature", description: "Game-wide popup announcement whenever a festive release earns the bonus; rules shown on the Christmas Charts page." },
+    ],
+  },
+  {
+    version: "1.1.807",
+    date: "2026-11-20",
+    changes: [
+      { type: "improvement", description: "Front screen logo and favicon updated to the Christmas artwork." },
+      { type: "feature", description: "Christmas cosmetics: gentle snowfall and twinkling fairy lights across the game, with a player toggle. They switch off automatically on 7 January 2027 and can be disabled globally." },
+    ],
+  },
+  {
+    version: "1.1.806",
+    date: "2026-11-20",
+    changes: [
+      { type: "fix", description: "Festival ticket prices, capacities and artist fees reject invalid input instead of silently saving earlier or capped amounts; setup compatibility, currency display and retry states are corrected." },
+      { type: "fix", description: "Festival final results wait until the final city-local day has ended; owner readiness refreshes after planning and booking changes, and missing live infrastructure no longer prevents verified final simulation." },
+      { type: "improvement", description: "Festival lineup posters resolve actual band/solo names; booking cards link to their annual timetable; stale attendance and history are hidden after failed verification." },
+      { type: "feature", description: "Mobile festival details share guarded ticket purchases and check-in; Festival Mode sections persist in the address. Artists and owners can send protected counteroffers, and bands can save booking-specific setlists and backstage preparation choices." },
+      { type: "improvement", description: "Festival route certification distinguishes mobile and desktop parent paths. Live gates and performance effects remain unavailable until canonical safety infrastructure is installed." },
+    ],
+  },
+  {
+    version: "1.1.805",
+    date: "2026-11-19",
+    changes: [
+      { type: "fix", description: "Clicking the city in the header no longer crashes before city data loads; unavailable cities keep working retry and back navigation." },
+    ],
+  },
+  {
+    version: "1.1.804",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Game-wide shared headings, panels and tabs have clearer hierarchy, neutral graphite surfaces and compact active indicators." },
+      { type: "improvement", description: "Hub artwork is brighter and unobscured, with separate readable destination captions and touch-visible navigation arrows." },
+      { type: "fix", description: "Long page headings and actions wrap on small screens; panel headings grow to fit their content and tabs retain scrollable widths." },
+      { type: "fix", description: "Missing hub pictures now show a clear destination icon rather than a blank or broken image." },
+    ],
+  },
+  {
+    version: "1.1.803",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Genre skin collection cards now show actual outfits on both character frames instead of placeholder graphics." },
+      { type: "improvement", description: "Instrument skin cards show rendered stage instruments with their selected paint and design instead of generic guitar icons and colour gradients." },
+    ],
+  },
+  {
+    version: "1.1.802",
+    date: "2026-11-19",
+    changes: [
+      { type: "improvement", description: "Genre-pack trainers and boots now have foot-bound laces and eyelets; shoe attachment uses up-to-date rig positions." },
+      { type: "improvement", description: "Stage guitars and basses now have properly covered frets, nut, inlays and individual bridge saddles; tuners and knobs match saved hardware colours." },
+      { type: "fix", description: "Additional pickup, black-chrome, brass and fretboard selections now retain their workshop appearance on stage, including clean ebony without inlays." },
+    ],
+  },
+  {
+    version: "1.1.801",
+    date: "2026-11-19",
+    changes: [
+      { type: "feature", description: "New Metal, Indie Rock, Electronic and Jazz skin packs with 12 rigged stage clothing pieces, using the existing £1.99 paid-set checkout." },
+      { type: "improvement", description: "Avatar Creator now includes owned skin-pack clothes with equip/remove controls; Skin Packs supports genre search and mobile scrolling tabs." },
+      { type: "fix", description: "Curated jeans now use full-length trouser meshes; stripes follow garment surfaces and ankle coverage respects equipped clothes." },
+      { type: "improvement", description: "Garment upload checks now reject missing or invalid animation weights, invalid vertices and excess materials with duplicate names." },
+    ],
+  },
+  {
+    version: "1.1.800",
+    date: "2026-11-05",
+    changes: [
+      { type: "fix", description: "University courses now finish after their saved course duration even if the final day's attendance was already recorded; four overdue courses were repaired." },
+      { type: "feature", description: "Completing a university course awards a one-time bonus of 20% of attendance XP, rounded down, with a completion receipt on the university page." },
+    ],
+  },
+  {
     version: "1.1.799",
     date: "2026-10-27",
     changes: [

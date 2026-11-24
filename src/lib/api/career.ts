@@ -124,7 +124,7 @@ export const fetchCareerOverview = async (profileId: string): Promise<CareerOver
   const { data: memberships, error: membershipError } = await (supabase as any)
     .from("band_members")
     .select(
-      `band_id, band:bands (id, name, fame, popularity, weekly_fans)`
+      `band_id, band:bands!band_members_band_id_fkey (id, name, fame, popularity, weekly_fans)`
     )
     .eq("profile_id", profileId)
     .order("joined_at", { ascending: false });

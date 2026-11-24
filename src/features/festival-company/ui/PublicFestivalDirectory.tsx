@@ -10,6 +10,7 @@ import { FestivalModeRewards } from "../attendance/FestivalModeRewards";
 import { useMyFestivalAttendance } from "../attendance/useFestivalAttendance";
 import { usePublicFestivalDirectory } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
+import { FestivalBrandArtwork } from "./FestivalBrandArtwork";
 
 const attendanceLabel = (status: string) => {
   switch (status) {
@@ -32,13 +33,13 @@ const hasFestivalStory = (status: string) => ["completed", "left_early"].include
 
 export default function PublicFestivalDirectory() {
   const { user } = useAuth();
-  const { data = [], isLoading, isError } = usePublicFestivalDirectory();
+  const { data = [], isLoading, isError, refetch: retryDirectory } = usePublicFestivalDirectory();
   const { data: attendance = [], isError: attendanceError, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
   const [storyAttendanceId, setStoryAttendanceId] = useState<string | null>(null);
 
   const activeAttendance = useMemo(
     () =>
-      attendance
+      (attendanceError ? [] : attendance)
         .filter((item) => !["cancelled", "refunded"].includes(item.status))
         .sort((left, right) => {
           const priority = (status: string) => {
@@ -50,7 +51,7 @@ export default function PublicFestivalDirectory() {
           };
           return priority(left.status) - priority(right.status);
         }),
-    [attendance],
+    [attendance, attendanceError],
   );
 
   const storyAttendance = activeAttendance.find((item) => item.id === storyAttendanceId) ?? null;
@@ -137,7 +138,14 @@ export default function PublicFestivalDirectory() {
       ) : null}
 
       {isLoading && <p role="status">Loading launched Festivals…</p>}
-      {isError && <p role="alert">The Festival directory is temporarily unavailable.</p>}
+      {isError && (
+        <div role="alert" className="rounded-lg border border-destructive/40 p-4 text-sm">
+          <p>The Festival directory is temporarily unavailable. Any previously shown availability may be outdated.</p>
+          <Button size="sm" variant="outline" className="mt-2" onClick={() => void retryDirectory()}>
+            Retry festival directory
+          </Button>
+        </div>
+      )}
       {!isLoading && !isError && data.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -147,7 +155,7 @@ export default function PublicFestivalDirectory() {
       ) : null}
 
       <section aria-label="Festival directory" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {data.map((festival) => {
+        {!isLoading && !isError && data.map((festival) => {
           const availableAdmission = festival.ticketProducts.filter((product) => product.productClass === "admission" && product.availableQuantity > 0 && product.saleStatus === "tickets_on_sale" && festival.launchStatus === "tickets_on_sale");
           const admissionCurrencies = new Set(availableAdmission.map((product) => product.currency));
           // Minor amounts cannot be compared across different currencies.
@@ -178,10 +186,7 @@ export default function PublicFestivalDirectory() {
               className="group rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <Card className="h-full overflow-hidden transition group-hover:-translate-y-1 group-hover:border-primary">
-                <div
-                  className="h-40 bg-gradient-to-br from-violet-700 to-fuchsia-600 bg-cover bg-center"
-                  style={festival.heroImageReference ? { backgroundImage: `url(${festival.heroImageReference})` } : undefined}
-                />
+                <FestivalBrandArtwork festival={festival} />
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>

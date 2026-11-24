@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const read = (name: string) => readFileSync(resolve(process.cwd(), name), "utf8");
-const sql = read("supabase/migrations/20300106160000_enforce_social_contact_consent_and_request_cooldowns.sql");
+const sql = read("supabase/migrations/20261013202702_enforce_social_contact_consent_and_request_cooldowns.sql");
 const permissions = read("src/features/direct-messages/services/messagingPermissions.ts");
 const ui = read("src/pages/PlayerProfile.tsx");
 const discovery = read("src/features/player-discovery/components/PlayerDiscoveryCard.tsx");

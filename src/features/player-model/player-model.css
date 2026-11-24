@@ -100,7 +100,11 @@
   .player-model-editor__showcase { position: sticky; top: 0; z-index: 8; box-shadow: 0 10px 24px #0008; }
   .player-model-preview { height: min(48vh, 390px); min-height: 300px; }
   .player-model-editor__showcase > .player-model-editor__hint { display: none; }
-  .player-model-editor__preview-role { display: none; }
+  .player-model-editor__preview-role { display: grid; padding: 8px 12px; grid-template-columns: 1fr 150px; gap: 6px; }
+  .player-model-editor__preview-role p { display: none; }
+  .player-model-preview { padding-bottom: 64px; }
+  .player-model-preview__controls { bottom: 6px; gap: 4px; padding: 0 6px; }
+  .player-model-preview__controls button { padding: 6px 9px; min-height: 34px; font-size: 11px; }
   .player-model-editor__tabs { top: min(48vh, 390px); margin: -23px -23px 20px; padding: 10px 12px; }
 }
 @media (max-width: 430px) {

@@ -3,7 +3,6 @@ import {
   readPublicFestivalStageCrowds,
   festivalCrowdBandLabels,
   festivalCrowdMoodLabels,
-  filterPublicFestivalStageCrowdsForUniqueStages,
   filterFreshPublicFestivalStageCrowds,
 } from "../domain/publicFestivalStageCrowds";
 
@@ -72,28 +71,10 @@ describe("public festival stage crowd snapshots", () => {
     ]), launchId)).toEqual([]);
   });
 
-  it("suppresses duplicate stage names instead of selecting an ambiguous snapshot", () => {
-    const duplicate = { ...crowd, stageId: "other-day", stageName: " MAIN STAGE ", mood: "tired" };
-    const secondary = { ...crowd, stageId: "other-stage", stageName: "Acoustic Stage", crowdBand: "quiet", mood: "calm" };
-    expect(readPublicFestivalStageCrowds(payload([crowd, duplicate, secondary]), launchId)).toEqual([{
-      stageId: "other-stage",
-      stageName: "Acoustic Stage",
-      festivalDate: crowd.festivalDate,
-      lastCalculatedAt: crowd.lastCalculatedAt,
-      crowdBand: "quiet",
-      mood: "calm",
-    }]);
-  });
-
-  it("suppresses ambiguous duplicate runtime stage names but retains distinct reports", () => {
-    const side = { ...crowd, stageId: "side-stage", stageName: "Side Stage", mood: "calm" };
-    const reports = readPublicFestivalStageCrowds(payload([crowd, side]), launchId);
-    expect(filterPublicFestivalStageCrowdsForUniqueStages(reports, [
-      { name: " Main Stage " }, { name: "MAIN STAGE" }, { name: "Side Stage" },
-    ])).toEqual([expect.objectContaining({ stageName: "Side Stage" })]);
-    expect(filterPublicFestivalStageCrowdsForUniqueStages(reports, [
-      { name: "Main Stage" }, { name: "Side Stage" },
-    ])).toHaveLength(2);
+  it("keeps reports from distinct stages with the same name", () => {
+    const duplicateName = { ...crowd, stageId: "second-stage", stageName: crowd.stageName };
+    expect(readPublicFestivalStageCrowds(payload([crowd, duplicateName]), launchId)
+      .map((report) => report.stageId)).toEqual([crowd.stageId, duplicateName.stageId]);
   });
 
   it("hides individual old stage observations while retaining fresh stage data", () => {

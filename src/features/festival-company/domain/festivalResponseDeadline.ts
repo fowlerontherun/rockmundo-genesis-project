@@ -9,12 +9,14 @@ const MIN_LEAD_MS = 60_000;
  * than accepting an invitation after the festival might already have started.
  */
 export function earliestFestivalStartBoundary(festivalDates: readonly string[]): number | null {
-  const validDays = festivalDates.filter((day) => {
+  // Do not silently ignore invalid dates: a bad earlier day may mean that
+  // a calculated invitation deadline overlaps the actual event opening.
+  if (!festivalDates.length || !festivalDates.every((day) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
     const parsed = Date.parse(day + "T00:00:00Z");
     return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === day;
-  }).sort();
-  if (!validDays.length) return null;
+  })) return null;
+  const validDays = [...festivalDates].sort();
   return Date.parse(validDays[0] + "T00:00:00Z") - EARLIEST_DATE_ZONE_HOURS * 60 * 60 * 1000;
 }
 

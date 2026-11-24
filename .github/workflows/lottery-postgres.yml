@@ -1,0 +1,44 @@
+name: Lottery PostgreSQL regression
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/lottery-postgres.yml'
+      - 'scripts/lottery/**'
+      - 'supabase/migrations/*lottery*.sql'
+      - 'supabase/tests/lottery_cron_only_draw_authority_harness.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  concurrent-settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rockmundo_lottery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d rockmundo_lottery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: test
+      PGPASSWORD: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'psycopg[binary]==3.2.13'
+      - run: python scripts/lottery/test-concurrent-settlement.py

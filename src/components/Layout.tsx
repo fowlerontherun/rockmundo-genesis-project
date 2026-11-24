@@ -11,7 +11,6 @@ import { AlertCircle } from "lucide-react";
 import { useGlobalGigExecution } from "@/hooks/useGlobalGigExecution";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { useAutoMajorEventCompletion } from "@/hooks/useAutoMajorEventCompletion";
-import { useAutoRejoinTour } from "@/hooks/useAutoRejoinTour";
 import { TutorialTooltip } from "@/components/tutorial/TutorialTooltip";
 import { useGameEventNotifications } from "@/hooks/useGameEventNotifications";
 import { EventNotificationModal } from "@/components/events/EventNotificationModal";
@@ -23,6 +22,7 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { BirthdayExperience } from "@/components/calendar/BirthdayExperience";
 import { FMShell } from "@/components/fm/FMShell";
 import { HalloweenLoginAnnouncement } from "@/features/seasonal/HalloweenEventNotice";
+import { ChristmasReleaseAnnouncement } from "@/features/seasonal/ChristmasReleaseAnnouncement";
 import { MobileShell } from "@/mobile/shell/MobileShell";
 import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
@@ -62,7 +62,6 @@ const Layout = () => {
   useGlobalGigExecution(user?.id || null);
   usePlaytimeTracker(profileId || null);
   useAutoMajorEventCompletion(user?.id || null);
-  useAutoRejoinTour();
   useGameEventNotifications();
   useGigDayReminders();
   useReachMilestoneReminders();
@@ -143,6 +142,7 @@ const Layout = () => {
       >
         <FestivalModeHome attendance={activeFestivalAttendance} />
         <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
       </FestivalModeShell>
     );
   }
@@ -181,6 +181,7 @@ const Layout = () => {
           <CharacterGate>
             <BirthdayExperience />
             <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
             <Outlet />
           </CharacterGate>
         </NoActiveCharacterGate>
@@ -203,6 +204,7 @@ const Layout = () => {
           <CharacterGate>
             <BirthdayExperience />
             <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
+            <ChristmasReleaseAnnouncement userId={user?.id} />
             <Breadcrumbs />
             <Outlet />
           </CharacterGate>

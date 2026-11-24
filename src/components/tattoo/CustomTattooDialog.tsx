@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,13 @@ export const CustomTattooDialog = ({
   const [description, setDescription] = useState("");
   const [bodySlot, setBodySlot] = useState<BodySlot | "">("");
 
+  useEffect(() => {
+    if (!open) {
+      setDescription("");
+      setBodySlot("");
+    }
+  }, [open]);
+
   if (!artist) return null;
 
   const quotedPrice = Math.round(CUSTOM_BASE_PRICE * parlourPriceMultiplier * artist.price_premium * CUSTOM_SURCHARGE);
@@ -61,8 +68,6 @@ export const CustomTattooDialog = ({
       quotedPrice,
       estimatedQuality: Math.round((estimatedQualityMin + estimatedQualityMax) / 2),
     });
-    setDescription("");
-    setBodySlot("");
   };
 
   return (

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { loadCompanyTransactionsSince } from "@/hooks/useCompanyFinance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -37,13 +38,7 @@ export function EmpireDashboard({ companyId, companyBalance }: EmpireDashboardPr
       // Fetch recent transactions for this company
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       
-      const { data: transactions } = await supabase
-        .from("company_transactions")
-        .select("transaction_type, amount, description, category, created_at")
-        .eq("company_id", companyId)
-        .gte("created_at", thirtyDaysAgo)
-        .order("created_at", { ascending: false })
-        .limit(2000);
+      const transactions = await loadCompanyTransactionsSince([companyId], thirtyDaysAgo);
 
       // Categorize by subsidiary type from description
       const subsidiaryData = new Map<string, SubsidiaryRevenue>();
@@ -66,10 +61,13 @@ export function EmpireDashboard({ companyId, companyBalance }: EmpireDashboardPr
         const key = `${type}:${name}`;
         const existing = subsidiaryData.get(key) || { type, name, revenue: 0, expenses: 0, net: 0 };
         
-        if (tx.amount > 0) {
-          existing.revenue += tx.amount;
+        if (tx.transaction_type === "income" && tx.category !== "tax") {
+          existing.revenue += Math.abs(Number(tx.amount));
+        } else if (["expense", "salary"].includes(tx.transaction_type) && tx.category !== "tax") {
+          existing.expenses += Math.abs(Number(tx.amount));
         } else {
-          existing.expenses += Math.abs(tx.amount);
+          // Capital contributions, intercompany transfers, taxes and dividends are not operating P&L.
+          continue;
         }
         existing.net = existing.revenue - existing.expenses;
         subsidiaryData.set(key, existing);
