@@ -50,6 +50,8 @@ jobs:
         run: npm run test:cooking
       - name: Typecheck
         run: npm run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Lint
         run: npm run lint:ci
       - name: Critical Live V1 journeys
