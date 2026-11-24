@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { loadCompanyTransactionsSince } from "@/hooks/useCompanyFinance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -37,13 +38,7 @@ export function EmpireDashboard({ companyId, companyBalance }: EmpireDashboardPr
       // Fetch recent transactions for this company
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       
-      const { data: transactions } = await supabase
-        .from("company_transactions")
-        .select("transaction_type, amount, description, category, created_at")
-        .eq("company_id", companyId)
-        .gte("created_at", thirtyDaysAgo)
-        .order("created_at", { ascending: false })
-        .limit(2000);
+      const transactions = await loadCompanyTransactionsSince([companyId], thirtyDaysAgo);
 
       // Categorize by subsidiary type from description
       const subsidiaryData = new Map<string, SubsidiaryRevenue>();
