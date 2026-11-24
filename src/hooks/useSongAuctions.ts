@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cancelSongMarketplaceListing } from "@/lib/marketplace/cancelSongMarketplaceListing";
+import { settleSongPurchase } from "@/lib/marketplace/settleSongPurchase";
 
 export interface MarketplaceListing {
   id: string;
@@ -77,7 +78,7 @@ export const useSongAuctions = (userId?: string) => {
 
       if (error) throw error;
       // Filter out own listings client-side
-      return (data || []).filter((l: any) => 
+      return (data || []).filter((l) =>
         l.seller_user_id !== userId
       ) as unknown as MarketplaceListing[];
     },
@@ -257,35 +258,26 @@ export const useSongAuctions = (userId?: string) => {
       });
 
       if (error) throw error;
-      const result = data as any;
-      if (!result.success) throw new Error(result.error);
+      const result = data as { success?: boolean; error?: string } | null;
+      if (result?.success !== true) throw new Error(result?.error ?? "Song bid was not accepted");
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });
       queryClient.invalidateQueries({ queryKey: ["song-market-my-listings"] });
-      toast({ title: "Bid Placed!", description: "Your bid has been submitted." });
+      toast({ title: "Bid Recorded", description: "No cash has been reserved. The winning-bid sale cannot complete until escrow is available." });
     },
     onError: (error: Error) => {
       toast({ title: "Bid Failed", description: error.message, variant: "destructive" });
     },
   });
 
-  // Buy now (fixed price) or accept winning bid
+  // Fixed-price buy-now or auction buyout only. The SQL RPC derives price,
+  // ownership and buyer identity; seller acceptance of unescrowed bids is off.
   const completeSale = useMutation({
-    mutationFn: async ({ listingId, salePrice }: { listingId: string; salePrice: number }) => {
+    mutationFn: async ({ listingId }: { listingId: string }) => {
       if (!userId) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase.rpc("complete_song_sale", {
-        p_listing_id: listingId,
-        p_buyer_user_id: userId,
-        p_sale_price: salePrice,
-      });
-
-      if (error) throw error;
-      const result = data as any;
-      if (!result.success) throw new Error(result.error);
-      return result;
+      return settleSongPurchase(supabase.rpc as Parameters<typeof settleSongPurchase>[0], listingId, profileId);
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });

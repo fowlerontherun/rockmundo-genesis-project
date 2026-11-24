@@ -33,8 +33,11 @@ describe("marketplace sale authority (#4229)", () => {
     );
     expect(migration).toContain("revoke insert on public.marketplace_transactions");
     expect(migration).toContain("revoke insert on public.marketplace_bids");
-    // The guarded legacy buyout RPC now authenticates identity/price at source.
-    expect(client).toContain('supabase.rpc("complete_song_sale"');
+    // The buy-now UI now uses the newer character-scoped server-priced RPC.
+    expect(client).toContain("settleSongPurchase(");
+    expect(client).not.toContain('supabase.rpc("complete_song_sale"');
+    expect(client).not.toContain("p_buyer_user_id:");
+    expect(client).not.toContain("p_sale_price:");
     expect(client).not.toContain('supabase.rpc("place_song_bid"');
   });
 
@@ -43,7 +46,7 @@ describe("marketplace sale authority (#4229)", () => {
     // Unescrowed seller-side acceptance is deliberately unavailable in UI.
     expect(client).not.toContain('p_action: "accept_bid"');
     expect(migration).toContain("settle_song_marketplace_sale_atomic");
-    expect(migration).toContain("v_account:=auth.uid()");
+    expect(migration).toContain("v_account uuid:=auth.uid()");
     expect(migration).toContain("v_listing.listing_type='fixed_price'");
     expect(migration).toContain("v_price:=v_listing.asking_price");
     expect(migration).toContain("v_price:=v_listing.buyout_price");
@@ -56,7 +59,7 @@ describe("marketplace sale authority (#4229)", () => {
   });
 
   it("binds auction bids to a real authenticated character", () => {
-    expect(client).toContain('supabase.rpc("place_song_bid_authorized"');
+    expect(client).toContain('authorizedBidRpc("place_song_bid_authorized"');
     expect(migration).toContain("bidder_profile_id");
     expect(migration).toContain("song_bid_profile_not_owned");
     expect(migration).toContain("song_bid_insufficient_cash");
@@ -64,6 +67,7 @@ describe("marketplace sale authority (#4229)", () => {
     expect(guard).toContain("song_sale_bid_escrow_required");
     expect(songGuard).toContain("v_song.band_id is not null");
     expect(songGuard).toContain("coalesce(v_song.archived,false)");
+    expect(client).toContain("No cash has been reserved");
 
   });
 

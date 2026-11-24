@@ -57,7 +57,9 @@ describe("authoritative song marketplace sale (#4229)", () => {
     expect(hooks).toContain("profile_id: profileId");
     expect(hooks).toContain('if (!userId || !profileId) throw new Error');
     expect(hooks).toContain('.is("band_id", null)');
-    expect(hooks).toContain('supabase.rpc("complete_song_sale"');
+    expect(hooks).toContain("settleSongPurchase(");
+    expect(hooks).not.toContain('supabase.rpc("complete_song_sale"');
+    expect(hooks).not.toContain("p_sale_price: salePrice");
   });
 
   it("retains a rollback-only validation fixture for spoofing, prices, replay and wallets", () => {
