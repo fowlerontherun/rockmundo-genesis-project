@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { loadCompanyTransactionsSince } from "@/hooks/useCompanyFinance";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,12 +57,7 @@ export const CompanyAnalytics = ({ companyId }: Props) => {
           .eq("company_id", companyId)
           .gte("resolved_for", sinceDate)
           .order("resolved_for", { ascending: true }),
-        (supabase as any)
-          .from("company_transactions")
-          .select("created_at, transaction_type, category, amount")
-          .eq("company_id", companyId)
-          .gte("created_at", since)
-          .order("created_at", { ascending: true }),
+        loadCompanyTransactionsSince([companyId], since).then(data => ({ data })),
         (supabase as any)
           .from("company_city_tax_payments")
           .select("paid_at, amount, tax_rate")
