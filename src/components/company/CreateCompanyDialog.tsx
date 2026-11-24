@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Building2, Disc, Shield, Factory, Building, Music, Plus, Loader2, Truck, AlertTriangle } from "lucide-react";
+import { Building2, Disc, Shield, Factory, Building, Music, Plus, Loader2, Truck, DollarSign, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
