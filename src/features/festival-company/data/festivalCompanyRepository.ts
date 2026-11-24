@@ -153,7 +153,8 @@ export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFes
     && typeof candidate.configurationComplete === "boolean"
     && typeof candidate.firstEditionExists === "boolean"
     && isFiniteNonNegative(candidate.companyBalance)
-    && typeof candidate.managementEnabled === "boolean";
+    && typeof candidate.managementEnabled === "boolean"
+    && typeof candidate.currencyCode === "string" && /^[A-Z]{3}$/.test(candidate.currencyCode);
 };
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {

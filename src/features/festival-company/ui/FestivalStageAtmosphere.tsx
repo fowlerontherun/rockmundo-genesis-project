@@ -1,8 +1,10 @@
 import type { FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
+import type { FestivalSeasonalAtmosphere } from "../domain/festivalSeasonalAtmosphere";
 
 interface FestivalStageAtmosphereProps {
   weatherState?: FestivalRuntimeWeatherState | null;
   activePerformance: boolean;
+  atmosphere?: FestivalSeasonalAtmosphere;
 }
 
 // Purely illustrative people: never use these counts for attendance, capacity,
@@ -13,14 +15,17 @@ const rainLines = [10, 21, 31, 43, 56, 67, 78, 91] as const;
 export function FestivalStageAtmosphere({
   weatherState,
   activePerformance,
+  atmosphere,
 }: FestivalStageAtmosphereProps) {
-  const rain = weatherState === "light_rain" || weatherState === "heavy_rain" || weatherState === "storm";
+  const rain = weatherState === "light_rain" || weatherState === "heavy_rain" || weatherState === "storm" || atmosphere?.condition === "rainy" || atmosphere?.condition === "stormy";
   const heavy = weatherState === "heavy_rain" || weatherState === "storm";
   const wind = weatherState === "high_wind" || weatherState === "storm";
-  const overcast = weatherState === "cloudy" || rain;
+  const overcast = weatherState === "cloudy" || atmosphere?.condition === "cloudy" || rain;
 
   return (
-    <div aria-hidden="true" data-testid="festival-stage-illustration" className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div aria-hidden="true" data-testid="festival-stage-illustration" className={`pointer-events-none absolute inset-0 overflow-hidden ${atmosphere ? `festival-season-${atmosphere.season} festival-season-stage` : ""}`}>
+      {atmosphere && <span className="festival-season-leaf absolute bottom-2 left-2 text-xl">{atmosphere.season === "spring" ? "✿" : atmosphere.season === "summer" ? "♣" : atmosphere.season === "autumn" ? "❧" : "✧"}</span>}
+      {atmosphere?.condition === "snowy" && rainLines.map((position, i) => <span key={`snow-${position}`} className="festival-season-snow absolute h-1 w-1 rounded-full" style={{ left: `${position}%`, top: `${8 + (i % 3) * 18}%` }} />)}
       {overcast && (
         <span data-weather-visual="cloud" className="absolute right-3 top-1 h-3 w-12 rounded-full bg-slate-300/30 blur-sm" />
       )}

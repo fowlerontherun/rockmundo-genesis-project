@@ -62,11 +62,12 @@ export function usePlayerSurvey() {
     enabled: !!userId && !!surveyConfig?.enabled && !!surveyConfig?.round,
     refetchOnMount: "always",
     queryFn: async () => {
+      if (!userId || !surveyConfig) return false;
       const { data, error } = await supabase
         .from("player_survey_completions")
         .select("id")
-        .eq("user_id", userId!)
-        .eq("survey_round", surveyConfig!.round)
+        .eq("user_id", userId)
+        .eq("survey_round", surveyConfig.round)
         .maybeSingle();
       if (error) throw error;
       return !!data;
@@ -87,7 +88,8 @@ export function usePlayerSurvey() {
     queryKey: ["survey-questions", userId, surveyConfig?.round, surveyConfig?.questions_per_session],
     enabled: shouldShowSurvey,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_player_survey_questions", { p_round: surveyConfig!.round });
+      if (!surveyConfig) return [];
+      const { data, error } = await (supabase as any).rpc("get_player_survey_questions", { p_round: surveyConfig.round });
       if (error) throw error;
       return data as SurveyQuestion[];
     },
@@ -97,7 +99,7 @@ export function usePlayerSurvey() {
     mutationFn: async (answers: SurveyAnswers) => {
       if (!userId || !profileId || !surveyConfig) throw new Error("The survey is still loading.");
 
-      const { data, error } = await supabase.rpc("submit_player_survey", {
+      const { data, error } = await (supabase as any).rpc("submit_player_survey", {
         p_round: surveyConfig.round,
         p_profile_id: profileId,
         p_answers: answers,

@@ -135,16 +135,19 @@ function applyLuthieryInstrumentVisual(root: T.Group, visual?: LuthieryInstrumen
         neck.scale.x = option('neck') === 'neck-slim-maple' ? .9 : option('neck') === 'neck-chunky-mahogany' ? 1.1 : 1;
     }
     const board = root.getObjectByName('fretboard') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
-    if (board) board.material.color.set(option('fretboard').includes('ebony') ? '#211f23' : option('fretboard').includes('maple') ? '#c89a62' : '#56372b');
+    if (board) board.material.color.set(['fret-macassar', 'fret-richlite'].includes(option('fretboard')) || option('fretboard').includes('ebony') ? '#211f23' : option('fretboard').includes('maple') ? '#c89a62' : '#56372b');
+    const single = ['elec-single', 'elec-alnico', 'elec-jazz', 'elec-noiseless', 'elec-bass-pj'].includes(option('electronics'));
+    const p90 = ['elec-p90', 'elec-p90-set'].includes(option('electronics'));
     root.traverse(object => {
+        if (object.name === 'instrument-inlay') object.visible = option('fretboard') !== 'fret-ebony-clean';
         if (!(object instanceof T.Mesh) || !object.name.startsWith('instrument-pickup-')) return;
         const material = object.material as T.MeshStandardMaterial;
-        material.color.set(option('electronics') === 'elec-boutique' ? '#b58a3e' : ['elec-single', 'elec-alnico', 'elec-jazz', 'elec-p90'].includes(option('electronics')) ? '#e7dfca' : '#111318');
-        object.scale.y = ['elec-single', 'elec-alnico', 'elec-jazz'].includes(option('electronics')) ? .6 : 1;
+        material.color.set(option('electronics') === 'elec-boutique' ? '#b58a3e' : single || p90 ? '#e7dfca' : '#111318');
+        object.scale.y = single ? .6 : p90 ? .8 : 1;
     });
     for (const object of root.children) {
         if (!(object instanceof T.Mesh) || !object.name.startsWith('instrument-hardware-')) continue;
-        (object.material as T.MeshStandardMaterial).color.set(option('hardware') === 'hw-black' ? '#111318' : option('hardware') === 'hw-gold' ? '#b58a3e' : option('hardware') === 'hw-aged' ? '#8f9189' : '#bdc2cb');
+        (object.material as T.MeshStandardMaterial).color.set(['hw-black', 'hw-black-chrome'].includes(option('hardware')) ? '#111318' : ['hw-gold', 'hw-brass'].includes(option('hardware')) ? '#b58a3e' : option('hardware') === 'hw-aged' ? '#8f9189' : '#bdc2cb');
     }
     root.userData.luthieryInstrument = {
         instrumentName: visual.instrumentName,

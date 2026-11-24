@@ -1,3 +1,4 @@
+import { useSocialUpdates } from "@/features/social-hub/useSocialUpdates";
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,6 +11,8 @@ export function useFriendships(profileId: string | null | undefined) {
   const queryClient = useQueryClient();
   const { profileId: activeProfileId } = useActiveProfile();
   const effectiveProfileId = activeProfileId ?? profileId ?? null;
+
+  useSocialUpdates(effectiveProfileId, "friendships");
 
   const query = useQuery<DecoratedFriendship[]>({
     queryKey: ["friendships", effectiveProfileId],

@@ -1,5 +1,6 @@
 import { TourSupportInviteShortcut } from '@/components/tours/TourSupportInviteShortcut';
 import { BookedTourSupportDialog } from '@/components/tours/BookedTourSupportDialog';
+import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import { TourPoster } from '@/components/game-art/TourPoster';
 import WorldAtlas from "@/components/map/WorldAtlas";
 import { useEffect, useState } from "react";
@@ -900,125 +901,40 @@ const TourManager = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="current" className="space-y-4">
-        <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-          <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-6">
-            <TabsTrigger value="atlas" className="whitespace-nowrap">World Atlas</TabsTrigger>
-            <TabsTrigger value="current" className="whitespace-nowrap">
-              Current
-            </TabsTrigger>
-            <TabsTrigger value="upcoming" className="whitespace-nowrap">
-              Upcoming
-            </TabsTrigger>
-            <TabsTrigger value="historic" className="whitespace-nowrap">
-              History
-            </TabsTrigger>
-            <TabsTrigger value="getting-started" className="whitespace-nowrap">
-              Getting Started
-            </TabsTrigger>
-            <TabsTrigger value="other-tours" className="whitespace-nowrap">
-              Other Bands
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      <Tabs defaultValue={searchParams.get('tab') === 'play-together' ? 'play-together' : 'my-tours'} className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-3">
+          <TabsTrigger value="my-tours">My Tours</TabsTrigger>
+          <TabsTrigger value="explore">Explore</TabsTrigger>
+          <TabsTrigger value="play-together">Play Together</TabsTrigger>
+        </TabsList>
 
-        <TabsContent value="atlas" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Explore tour destinations</CardTitle>
-              <CardDescription>Select a city to inspect local fame, then use the tour planner to schedule stops.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour"
-                onPlanRoute={ids => { setDraftRouteCityIds(ids); setWizardOpen(true); }} />
-              <div className="mt-4">
-                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>Create tour from destinations</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* My Current Tour */}
-        <TabsContent value="current" className="space-y-4">
+        <TabsContent value="my-tours" className="space-y-6">
           {loadingMyTours ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <div className="flex justify-center py-12" role="status"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : myToursError ? (
             <div role="alert" className="p-4 text-destructive">Your tours could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
-          ) : currentTours.length === 0 ? (
-            <EmptyState
-              icon={MapPin}
-              title="No Active Tour"
-              description="No active tour. Create one to start."
-              action={
-                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Tour
-                </Button>
-              }
-            />
+          ) : currentTours.length === 0 && upcomingTours.length === 0 && historicTours.length === 0 ? (
+            <EmptyState icon={MapPin} title="No tours yet" description="Create your first tour or explore destinations to get started."
+              action={<Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}><Plus className="mr-2 h-4 w-4" />Create Tour</Button>} />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {currentTours.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
-            </div>
+            <>
+              {currentTours.length > 0 && <section className="space-y-3" aria-label="Active tours">
+                <h2 className="text-lg font-semibold">Active tours ({currentTours.length})</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{currentTours.map(tour => <TourCard key={tour.id} tour={tour} />)}</div>
+              </section>}
+              {upcomingTours.length > 0 && <section className="space-y-3" aria-label="Upcoming tours">
+                <h2 className="text-lg font-semibold">Upcoming tours ({upcomingTours.length})</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{upcomingTours.map(tour => <TourCard key={tour.id} tour={tour} />)}</div>
+              </section>}
+              {historicTours.length > 0 && <details className="rounded-lg border p-4">
+                <summary className="cursor-pointer font-semibold">Tour history ({historicTours.length})</summary>
+                <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{historicTours.map(tour => <TourCard key={tour.id} tour={tour} />)}</div>
+              </details>}
+            </>
           )}
-        </TabsContent>
-
-        {/* Upcoming Tours */}
-        <TabsContent value="upcoming" className="space-y-4">
-          {loadingMyTours ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : myToursError ? (
-            <div role="alert" className="p-4 text-destructive">Tour history unavailable. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
-          ) : upcomingTours.length === 0 ? (
-            <EmptyState
-              icon={Calendar}
-              title="No Upcoming Tours"
-              description="No upcoming tours scheduled."
-              action={
-                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule a Tour
-                </Button>
-              }
-            />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingTours.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Historic Tours */}
-        <TabsContent value="historic" className="space-y-4">
-          {loadingMyTours ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : historicTours.length === 0 ? (
-            <EmptyState
-              icon={History}
-              title="No Tour History"
-              description="Your completed tours will appear here."
-            />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {historicTours.map((tour) => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Getting Started */}
-        <TabsContent value="getting-started">
+          <details className="rounded-lg border p-4">
+            <summary className="cursor-pointer font-medium">New to touring? View the guide</summary>
+            <div className="pt-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -1076,10 +992,26 @@ const TourManager = () => {
               </div>
             </CardContent>
           </Card>
+            </div>
+          </details>
         </TabsContent>
 
+        <TabsContent value="explore" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Explore tour destinations</CardTitle>
+              <CardDescription>Inspect local fame and venues, then add cities to a new route.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour"
+                onPlanRoute={ids => { setDraftRouteCityIds(ids); setWizardOpen(true); }} />
+              <div className="mt-4"><Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>Create tour from destinations</Button></div>
+            </CardContent>
+          </Card>
+
         {/* Other Bands Tours */}
-        <TabsContent value="other-tours" className="space-y-4">
+        <section className="space-y-4" aria-label="Other bands' tours">
+          <h2 className="text-lg font-semibold">Other bands on tour</h2>
           {/* Filters */}
           <Card>
             <CardContent className="pt-4">
@@ -1188,6 +1120,13 @@ const TourManager = () => {
               )}
             </>
           )}
+        </section>
+        </TabsContent>
+
+        <TabsContent value="play-together" className="space-y-4">
+          {currentBandId
+            ? <SupportMarketplacePanel key={currentBandId} bandId={currentBandId} />
+            : <EmptyState icon={Users} title="Join or select a band" description="You need a band to advertise availability, review invitations and recruit support acts." />}
         </TabsContent>
       </Tabs>
 

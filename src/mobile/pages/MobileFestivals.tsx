@@ -1,4 +1,6 @@
 import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import PublicFestivalPage from "@/features/festival-company/ui/PublicFestivalPage";
 import { ArrowLeft, CalendarDays, MapPin, Music2, Ticket } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +20,11 @@ import { MobileSectionHeader } from "../components/MobilePrimitives";
 /** The companion is a read-only festival guide; bookings and payments stay on desktop. */
 export default function MobileFestivals() {
   const { data: editions = [], isPending, isError, refetch } = usePublicFestivalDirectory();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10_000); return () => window.clearInterval(timer); }, []);
   return (
     <section className="min-w-0 space-y-4" aria-label="Festival guide">
-      <MobileSectionHeader eyebrow="Mobile Companion" title="Festivals" description="Follow public festival announcements and published line-ups. Bookings and purchases remain in the desktop game." />
+      <MobileSectionHeader eyebrow="Mobile Companion" title="Festivals" description="Festival tickets, line-ups and your wristband" />
       {isPending && <p role="status">Loading festivals…</p>}
       {isError && <div role="alert" className="rounded-xl border border-destructive/40 p-3 text-sm">
         Festival information is unavailable. The last published availability cannot be verified.
@@ -28,7 +32,7 @@ export default function MobileFestivals() {
       </div>}
       {!isPending && !isError && editions.length === 0 && <p role="status" className="rounded-xl border p-4 text-sm">No public festival editions are currently announced.</p>}
       {!isPending && !isError && editions.map((edition) => {
-        const phase = getFestivalPublicEventPhase(edition.startsAt, edition.endsAt, Date.now());
+        const phase = getFestivalPublicEventPhase(edition.startsAt, edition.endsAt, now);
         const sales = edition.soldOut && edition.launchStatus === "tickets_on_sale" && phase !== "dates_ended"
           ? "Sold out" : festivalVisitorSalesLabel(phase, edition.launchStatus);
         return <Link to={`/mobile/festivals/${encodeURIComponent(edition.slug)}`} key={edition.id} className="block rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
@@ -48,6 +52,11 @@ export default function MobileFestivals() {
 }
 
 export function MobileFestivalDetail() {
+  const { festivalCompanyIdentifier } = useParams();
+  return <section className="min-w-0"><Button variant="outline" size="sm" asChild><Link to="/mobile/festivals"><ArrowLeft className="mr-1 h-4 w-4" /> All festivals</Link></Button><PublicFestivalPage publicSlug={festivalCompanyIdentifier} /></section>;
+}
+
+export function MobileFestivalPublishedGuide() {
   const { festivalCompanyIdentifier } = useParams();
   const { data: edition, isPending, isError, refetch } = usePublicFestival(festivalCompanyIdentifier);
   const back = <Link to="/mobile/festivals" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary"><ArrowLeft className="h-4 w-4" /> All festivals</Link>;

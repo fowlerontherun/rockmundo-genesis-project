@@ -28,6 +28,16 @@ function item(overrides: Partial<ClothingItem> = {}): ClothingItem {
 }
 
 describe('curated donor garments', () => {
+  it('uses full-length rigged legs for jeans, including existing Britpop purchases', () => {
+    const jeans = item({ name: 'Baggy Stonewash Jeans', category: 'jeans', wearable_slot: 'bottom', render_config: { curatedSource: { kind: 'avatar-part', style: 'casual', part: 'legs' } } });
+    expect(curatedDonorSource(jeans)?.style).toBe('suit');
+    expect(requiredCuratedDonorModelFiles([{ item: jeans }], 'feminine')).toEqual(['female-suit.glb']);
+  });
+  it('preserves actual shorts instead of making all bottoms trousers', () => {
+    const shorts = item({ name: 'Festival Denim Shorts', category: 'shorts', render_config: { curatedSource: { kind: 'avatar-part', style: 'casual', part: 'legs' } } });
+    expect(curatedDonorSource(shorts)?.style).toBe('casual');
+    expect(curatedDonorSource(shorts)?.shape).toBe('shorts');
+  });
   it('parses a validated avatar-part source', () => {
     expect(curatedDonorSource(item())).toEqual({
       kind: 'avatar-part',

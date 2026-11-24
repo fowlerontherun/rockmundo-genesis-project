@@ -9008,6 +9008,51 @@ export type Database = {
           },
         ]
       }
+      christmas_release_bonuses: {
+        Row: {
+          artist_name: string
+          created_at: string
+          matched_title: string
+          recipients: number
+          release_id: string
+          release_title: string
+          xp_per_member: number
+        }
+        Insert: {
+          artist_name: string
+          created_at?: string
+          matched_title: string
+          recipients?: number
+          release_id: string
+          release_title: string
+          xp_per_member: number
+        }
+        Update: {
+          artist_name?: string
+          created_at?: string
+          matched_title?: string
+          recipients?: number
+          release_id?: string
+          release_title?: string
+          xp_per_member?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "christmas_release_bonuses_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "christmas_release_bonuses_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: true
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           climate_type: string | null
@@ -23624,6 +23669,9 @@ export type Database = {
       }
       festival_editions_v2: {
         Row: {
+          brand_motif: string
+          brand_theme: string | null
+          branding_version: number
           city_id: string | null
           completed_at: string | null
           configuration_locked_at: string | null
@@ -23655,6 +23703,9 @@ export type Database = {
           vibe: string | null
         }
         Insert: {
+          brand_motif?: string
+          brand_theme?: string | null
+          branding_version?: number
           city_id?: string | null
           completed_at?: string | null
           configuration_locked_at?: string | null
@@ -23686,6 +23737,9 @@ export type Database = {
           vibe?: string | null
         }
         Update: {
+          brand_motif?: string
+          brand_theme?: string | null
+          branding_version?: number
           city_id?: string | null
           completed_at?: string | null
           configuration_locked_at?: string | null
@@ -54407,6 +54461,54 @@ export type Database = {
           },
         ]
       }
+      profile_roleplay_settings: {
+        Row: {
+          hooks: string | null
+          mood: string | null
+          open_collab: boolean
+          open_rivalry: boolean
+          open_romance: boolean
+          profile_id: string
+          rp_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          hooks?: string | null
+          mood?: string | null
+          open_collab?: boolean
+          open_rivalry?: boolean
+          open_romance?: boolean
+          profile_id: string
+          rp_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          hooks?: string | null
+          mood?: string | null
+          open_collab?: boolean
+          open_rivalry?: boolean
+          open_romance?: boolean
+          profile_id?: string
+          rp_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_roleplay_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_roleplay_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number
@@ -57979,6 +58081,91 @@ export type Database = {
           subcategory?: string
         }
         Relationships: []
+      }
+      roleplay_scene_members: {
+        Row: {
+          joined_at: string
+          profile_id: string
+          scene_id: string
+        }
+        Insert: {
+          joined_at?: string
+          profile_id: string
+          scene_id: string
+        }
+        Update: {
+          joined_at?: string
+          profile_id?: string
+          scene_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roleplay_scene_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roleplay_scene_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roleplay_scene_members_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "roleplay_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roleplay_scenes: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          host_profile_id: string
+          id: string
+          setting: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          host_profile_id: string
+          id?: string
+          setting?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          host_profile_id?: string
+          id?: string
+          setting?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roleplay_scenes_host_profile_id_fkey"
+            columns: ["host_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roleplay_scenes_host_profile_id_fkey"
+            columns: ["host_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       romantic_events: {
         Row: {
@@ -62129,6 +62316,65 @@ export type Database = {
         }
         Relationships: []
       }
+      social_interactions: {
+        Row: {
+          actor_profile_id: string
+          created_at: string
+          id: string
+          kind: string
+          room_key: string | null
+          target_profile_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          actor_profile_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          room_key?: string | null
+          target_profile_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          actor_profile_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          room_key?: string | null
+          target_profile_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_interactions_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_interactions_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_interactions_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_interactions_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_invites: {
         Row: {
           created_at: string
@@ -62559,6 +62805,48 @@ export type Database = {
             columns: ["rivalry_id"]
             isOneToOne: false
             referencedRelation: "social_rivalries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_room_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          profile_id: string
+          room_key: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          profile_id: string
+          room_key: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          profile_id?: string
+          room_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_room_messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_room_messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -74231,6 +74519,10 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      _simplified_festival_run_readiness_before_final_day_guard: {
+        Args: { p_festival_company_id: string; p_festival_edition_id: string }
+        Returns: Json
+      }
       _simplified_festival_run_readiness_pre_operating_ceiling: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
@@ -77072,17 +77364,27 @@ export type Database = {
             Returns: string
           }
       coop_quest_pair_key: { Args: { _a: string; _b: string }; Returns: string }
-      counter_festival_artist_offer: {
-        Args: {
-          p_expected_version?: number
-          p_fee_minor: number
-          p_idempotency_key?: string
-          p_message?: string
-          p_offer_id: string
-          p_set_minutes?: number
-        }
-        Returns: Json
-      }
+      counter_festival_artist_offer:
+        | {
+            Args: {
+              p_expected_version: number
+              p_idempotency_key: string
+              p_offer_id: string
+              p_terms: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_expected_version?: number
+              p_fee_minor: number
+              p_idempotency_key?: string
+              p_message?: string
+              p_offer_id: string
+              p_set_minutes?: number
+            }
+            Returns: Json
+          }
       counter_festival_offer: {
         Args: {
           p_change_summary?: string
@@ -77656,6 +77958,15 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: string
       }
+      create_roleplay_scene: {
+        Args: {
+          p_invitees: string[]
+          p_profile: string
+          p_setting: string
+          p_title: string
+        }
+        Returns: string
+      }
       create_savings_goal: {
         Args: {
           p_linked_account?: string
@@ -78019,6 +78330,10 @@ export type Database = {
         Args: { p_amount: number; p_note?: string; p_party_id: string }
         Returns: string
       }
+      end_roleplay_scene: {
+        Args: { p_profile: string; p_scene: string }
+        Returns: undefined
+      }
       endorse_candidate: {
         Args: {
           p_candidate_id: string
@@ -78243,6 +78558,15 @@ export type Database = {
       festival_award_public_json: {
         Args: {
           p_award: Database["public"]["Tables"]["festival_awards"]["Row"]
+        }
+        Returns: Json
+      }
+      festival_booking_preparation: {
+        Args: {
+          p_backstage_choice?: string
+          p_booking_id: string
+          p_expected_version?: number
+          p_song_ids?: string[]
         }
         Returns: Json
       }
@@ -79160,6 +79484,10 @@ export type Database = {
         Returns: Json
       }
       get_banking_dashboard: { Args: never; Returns: Json }
+      get_canonical_festival_live_day_availability: {
+        Args: { p_company_id: string; p_edition_id: string }
+        Returns: Json
+      }
       get_city_scene_band_supporters: {
         Args: { p_cadence?: string; p_city_id: string; p_limit?: number }
         Returns: Json
@@ -79410,6 +79738,10 @@ export type Database = {
       }
       get_festival_edition_audit_log: {
         Args: { p_edition_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_festival_edition_branding: {
+        Args: { p_edition_id: string }
         Returns: Json
       }
       get_festival_edition_budget_forecast: {
@@ -79874,10 +80206,6 @@ export type Database = {
       get_player_education_classes: {
         Args: { p_profile_id: string }
         Returns: Json
-      }
-      get_player_survey_questions: {
-        Args: { p_round: string }
-        Returns: Database["public"]["Tables"]["player_survey_questions"]["Row"][]
       }
       get_profile_achievement_stat: {
         Args: { p_key: string; p_profile_id: string }
@@ -80622,6 +80950,7 @@ export type Database = {
         Args: { p_band_id: string; p_profile_id?: string }
         Returns: boolean
       }
+      is_festive_release_window: { Args: { p_at?: string }; Returns: boolean }
       is_label_team_member: {
         Args: { p_label_id: string; p_roles?: string[] }
         Returns: boolean
@@ -81233,6 +81562,15 @@ export type Database = {
         }
         Returns: Json
       }
+      perform_social_interaction: {
+        Args: {
+          p_actor: string
+          p_kind: string
+          p_room?: string
+          p_target: string
+        }
+        Returns: Json
+      }
       perform_wellness_activity: {
         Args: { _catalog_slug: string; _profile_id: string }
         Returns: Json
@@ -81303,6 +81641,15 @@ export type Database = {
       post_next_festival_edition_settlement_item: {
         Args: { p_idempotency_key: string; p_settlement_id: string }
         Returns: Json
+      }
+      post_social_room_message: {
+        Args: {
+          p_body: string
+          p_kind: string
+          p_profile: string
+          p_room: string
+        }
+        Returns: string
       }
       prepare_festival_edition_runtime: {
         Args: {
@@ -82347,6 +82694,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_social_room_message: {
+        Args: { p_message: string; p_profile: string; p_reason: string }
+        Returns: string
+      }
       report_social_target: {
         Args: {
           category: string
@@ -83295,6 +83646,16 @@ export type Database = {
         }
         Returns: Json
       }
+      save_festival_edition_branding: {
+        Args: {
+          p_company_id: string
+          p_edition_id: string
+          p_expected_version: number
+          p_motif: string
+          p_theme: string
+        }
+        Returns: Json
+      }
       save_festival_edition_ticket_plan: {
         Args: {
           p_capacity_allocations: Json
@@ -83317,6 +83678,17 @@ export type Database = {
           p_festival_edition_id: string
           p_idempotency_key: string
           p_sections: Json
+        }
+        Returns: Json
+      }
+      save_festival_edition_wizard: {
+        Args: {
+          p_branding: Json
+          p_expected_version: number
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
+          p_plan: Json
         }
         Returns: Json
       }
@@ -84354,6 +84726,7 @@ export type Database = {
         Returns: Json
       }
       snapshot_company_kpis: { Args: never; Returns: number }
+      social_active_room_access: { Args: { p_room: string }; Returns: boolean }
       spend_attribute_points_atomic: {
         Args: { p_attribute: string; p_cost: number; p_profile_id: string }
         Returns: undefined
@@ -84882,10 +85255,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      submit_player_survey: {
-        Args: { p_round: string; p_profile_id: string; p_answers: Json }
-        Returns: Json
       }
       submit_podcast_appearance: {
         Args: {

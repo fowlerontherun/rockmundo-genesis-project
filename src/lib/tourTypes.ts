@@ -55,8 +55,8 @@ export interface TourWizardState {
   name: string;
   startingCityId: string | null;
   startDate: string;
-  durationDays: number | null;
   targetShowCount: number | null;
+  consecutiveShowCount: number;
   minRestDays: number;
   setlistId: string | null;
   
@@ -154,8 +154,8 @@ export const DEFAULT_WIZARD_STATE: TourWizardState = {
   name: '',
   startingCityId: null,
   startDate: '',
-  durationDays: 30,
-  targetShowCount: null,
+  targetShowCount: 10,
+  consecutiveShowCount: 3,
   minRestDays: 1,
   setlistId: null,
   scope: 'country',

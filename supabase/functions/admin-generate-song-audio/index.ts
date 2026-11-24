@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
+import { buildSongStylePrompt, prepareSongLyricsForModel } from "../_shared/songSoundPrompt.ts"
 import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 
 
@@ -173,6 +173,7 @@ serve(async (req) => {
           lyrics,
           creative_brief,
           genres,
+          instruments,
           chord_progression_id,
           theme_id,
           quality_score,
@@ -203,6 +204,13 @@ serve(async (req) => {
         .single()
       creatorGender = profile?.gender || null
       addLog(`Creator gender: ${creatorGender || 'not set'}`)
+    }
+
+    let bandSoundDescription: string | null = null
+    if (song.band_id) {
+      const { data: band } = await supabase.from('bands')
+        .select('sound_description').eq('id', song.band_id).maybeSingle()
+      bandSoundDescription = band?.sound_description || null
     }
 
     // The reservation transaction has already updated the song status.
@@ -342,76 +350,15 @@ serve(async (req) => {
     
     addLog(`Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder (fallback)'}`)
 
-    // Build the style prompt for MiniMax Music-1.5
-    let styleParts: string[] = []
-    // Acoustic takes retain the stored song genre, but force an acoustic arrangement even with a custom prompt.
-    if (String(song.version || "").toLowerCase() === "acoustic") {
-      styleParts.push("stripped-back acoustic guitar-led arrangement")
-    }
-
-    // Use custom prompt if provided, otherwise build from metadata
-    if (customPrompt) {
-      addLog('Using custom prompt provided by admin')
-      styleParts.push(customPrompt)
-    } else {
-      // Primary genre
-      styleParts.push(primaryGenre)
-
-      // Add gender-based vocal style first
-      const genderVocalStyle = getGenderVocalStyle(creatorGender)
-      if (genderVocalStyle) {
-        styleParts.push(genderVocalStyle)
-        addLog(`Gender vocal style: ${genderVocalStyle}`)
-      }
-
-      // Add chord progression context
-      if (chordProgression) {
-        styleParts.push(`${chordName || chordProgression}`)
-      }
-
-      // Add theme and mood
-      if (themeName) {
-        styleParts.push(themeName)
-      }
-      if (themeMood) {
-        styleParts.push(`${themeMood} mood`)
-      }
-
-      // Add mood palette (limit to first 2)
-      if (Array.isArray(moodPalette) && moodPalette.length > 0) {
-        styleParts.push(moodPalette.slice(0, 2).join(', '))
-      }
-
-      // Add quality descriptors
-      if (quality >= 80) {
-        styleParts.push('polished production')
-        addLog('Quality tier: Professional (80+)')
-      } else if (quality >= 60) {
-        styleParts.push('clean mix')
-        addLog('Quality tier: Good (60-79)')
-      } else if (quality >= 40) {
-        styleParts.push('demo quality')
-        addLog('Quality tier: Decent (40-59)')
-      } else {
-        styleParts.push('lo-fi')
-        addLog('Quality tier: Lo-fi (<40)')
-      }
-
-      // Add energy based on genre
-      const highEnergyGenres = ['rock', 'punk', 'metal', 'edm', 'dance', 'hip-hop', 'electronic']
-      const lowEnergyGenres = ['ambient', 'classical', 'jazz', 'folk', 'acoustic', 'ballad']
-      
-      if (highEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-        styleParts.push('high energy')
-        addLog('Energy level: High')
-      } else if (lowEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-        styleParts.push('mellow')
-        addLog('Energy level: Low')
-      }
-    }
-
-    // MiniMax uses comma-separated style description
-    const validatedStyle = normalizeMiniMaxStylePrompt(['complete song around 110 seconds, recurring chorus, bridge and outro', ...styleParts].join(', '), primaryGenre)
+    // Admin custom prompts remain supported; otherwise use the same musical
+    // direction as player generation, including saved instruments and mood.
+    const validatedStyle = buildSongStylePrompt({
+      model: generationModel, genre: primaryGenre, creatorGender,
+      chordProgression: chordName || chordProgression,
+      bandSoundDescription, themeName, themeMood, quality, instruments: project?.instruments,
+      creativeBrief, isAcousticVersion: String(song.version || '').toLowerCase() === 'acoustic',
+      customPrompt,
+    })
     const stylePrompt = validatedStyle.prompt
     addLog(`MiniMax prompt: ${validatedStyle.finalLength} characters (required 10–300)`)
     if (validatedStyle.removedEmbeddedLyrics) addLog('Separated embedded Lyrics section from admin custom style prompt')
@@ -420,7 +367,10 @@ serve(async (req) => {
 
     // Format lyrics for MiniMax Music - standard section markers
     addLog('Formatting lyrics for MiniMax Music (standard format)...')
-    const formattedLyrics = formatLyricsForMiniMax(compactLyricsForShortAudio(rawLyrics), cleanedSongTitle, primaryGenre, 600)
+    const providerLyrics = generationModel === 'music-1.5'
+      ? compactLyricsForShortAudio(rawLyrics)
+      : prepareSongLyricsForModel(rawLyrics, generationModel, creativeBrief?.sound_profile?.arrangement)
+    const formattedLyrics = formatLyricsForMiniMax(providerLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
     addLog(`Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
@@ -647,7 +597,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     .replace(/\([A-Gm#b\-\/\s]+\)/g, '')
     .replace(/\((She|He|Both|You|Me)\)\s*/gi, '')
 
-  const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus)\]/i.test(normalized)
+  const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus|Solo|Inst|Build Up|Drop|Interlude|Break|Transition)\]/i.test(normalized)
 
   if (!hasMarkers) {
     const lines = normalized.split('\n').filter(l => l.trim())
@@ -667,7 +617,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   if (normalized.length > maxCharacters) {
     console.log(`[admin-generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
     // Try to truncate at a section boundary
-    const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
+    const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus|Solo|Inst|Build Up|Drop|Interlude|Break|Transition))/i)
     let truncated = ''
     for (const section of sections) {
       if ((truncated + section).length <= maxCharacters) {

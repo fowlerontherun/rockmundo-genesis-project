@@ -55,6 +55,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
           <Button asChild><Link to="/social/players"><Compass className="mr-2 h-4 w-4" />Find players</Link></Button>
           <Button asChild><Link to="/social/share-studio"><Share2 className="mr-2 h-4 w-4" />Share Studio</Link></Button>
           <Button asChild variant="outline"><Link to="/social/referrals"><Gift className="mr-2 h-4 w-4" />Invite friends</Link></Button>
+          <Button asChild><Link to="/social/roleplay"><MessageSquare className="mr-2 h-4 w-4" />Roleplay &amp; scenes</Link></Button>
           <Button asChild variant="outline"><Link to="/social/messages"><MessageSquare className="mr-2 h-4 w-4" />Open messages</Link></Button>
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/contracts"><FileSignature className="mr-2 h-4 w-4" />Contracts</Link></Button>

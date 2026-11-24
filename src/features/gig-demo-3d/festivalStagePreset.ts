@@ -2,6 +2,7 @@ import { hashSeed } from "@/features/gig-experience/viewer/engine/SeededRandom";
 import type { CrowdCueRequest } from "@/features/gig-experience/audio/crowdCueSelection";
 import type { ConcertOptions } from "./liveTypes";
 import { DEFAULT_SETTINGS, type DemoSettings } from "./config";
+import type { FestivalSeasonalAtmosphere } from "@/features/festival-company/domain/festivalSeasonalAtmosphere";
 
 const audience = {
   quiet: [.08, 1], building: [.25, 2], busy: [.5, 3],
@@ -9,10 +10,11 @@ const audience = {
 } as const;
 
 export function festivalStagePreset({
-  editionId, stageId, stageName, capacity, artist, localHour, crowdBand, reducedMotion,
+  editionId, stageId, stageName, capacity, artist, localHour, crowdBand, reducedMotion, atmosphere,
 }: {
   editionId: string; stageId: string; stageName: string; capacity: number;
   artist?: string; localHour?: number; crowdBand?: keyof typeof audience; reducedMotion: boolean;
+  atmosphere?: FestivalSeasonalAtmosphere;
 }) {
   const seed = `${editionId}:${stageId}`;
   const daylight = localHour !== undefined && localHour >= 6 && localHour < 20;
@@ -23,6 +25,7 @@ export function festivalStagePreset({
     venue: { id: stageId, name: stageName, bandName: artist ?? stageName, type: "festival_stage",
       archetype: "festival", capacity, seed: hashSeed(seed) },
     outdoorDaylight: daylight,
+    outdoorAtmosphere: atmosphere,
   };
   const settings: DemoSettings = {
     ...DEFAULT_SETTINGS, camera: "front", look: daylight ? "amber" : "electric",

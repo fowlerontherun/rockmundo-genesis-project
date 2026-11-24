@@ -1688,6 +1688,7 @@ export function assemblePlayerModel(
       fabric: curatedTop?.source.fabric ?? visualEquipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
       assetKey: curatedTop?.source.assetKey,
+      secondaryPattern: curatedTop?.source.fabric === 'stripe',
     },
     {
       part: 'legs',
@@ -1897,6 +1898,12 @@ export function assemblePlayerModel(
               material.envMapIntensity = profile.envMapIntensity;
               material.needsUpdate = true;
             }
+            // Woven stripes belong to the skinned garment UVs, not a floating
+            // chest panel. Preserve the existing normal/roughness fabric maps.
+            if ('secondaryPattern' in choice && choice.secondaryPattern) {
+              material.map = clothingPatternTexture('stripes', choice.dye, choice.secondaryColor ?? '#eee8db');
+              material.color.set('#ffffff');
+            }
           }
           if (skinMaterial) {
             return upgradeSkinMaterial(material, appearance, quality);
@@ -2014,7 +2021,7 @@ export function assemblePlayerModel(
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
   // them closes the exposed ankle when a player equips low shoes instead.
-  if (!skirt && appearance.body.frame === 'feminine' && equipmentStyle(appearance, 'bottom') === 'punk' && equipmentStyle(appearance, 'footwear') !== 'punk') {
+  if (!skirt && appearance.body.frame === 'feminine' && (curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom')) === 'punk' && (curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear')) !== 'punk') {
     result.updateMatrixWorld(true);
     for (const side of ['L', 'R']) {
       const bone = (name: string) => [...bones.values()].find(value => value.name.replace(/[_.]/g, '') === `${name}${side}`);

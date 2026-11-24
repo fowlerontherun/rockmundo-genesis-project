@@ -8,6 +8,7 @@ import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES
 import { HeadStyling } from './HeadStyling';
 import { AccessoryStyling } from './AccessoryStyling';
 import { OwnedAccessories } from './OwnedAccessories';
+import { OwnedClothingWardrobe } from './OwnedClothingWardrobe';
 import { StarterWardrobe } from './StarterWardrobe';
 import { OutfitLooks } from './OutfitLooks';
 import { BandMerchWardrobe } from './BandMerchWardrobe';
@@ -103,7 +104,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
       </details>}
     </div>}
     {newerRevision && dirty && <p role="alert" className="text-sm text-destructive">A newer saved avatar is available. Reload it before saving to avoid overwriting newer changes.</p>}
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE AVATAR · VERSION 1</span></div>
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Your character</h2></div></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
         <PlayerModelPreview appearance={draft} role={previewAssignment.role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} merchWearable={merchWearable} luthieryInstrument={previewLuthieryInstrument} />
@@ -149,6 +150,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
             {merchControl.error && <p role="alert">{merchControl.error.message}</p>}
           </div>}
           <OutfitLooks appearance={draft} onChange={change} />
+          <OwnedClothingWardrobe profileId={profileId} />
           {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} topIsOverridden={!!merchWearable} />)}
           <BandMerchWardrobe profileId={profileId} />
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" disabled={Boolean(previewLuthieryInstrument)} title={previewLuthieryInstrument ? "Equipped crafted instrument controls its own finish" : undefined} value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} />{previewLuthieryInstrument && <p className="player-model-editor__hint">The equipped crafted instrument controls its own finish.</p>}</div>

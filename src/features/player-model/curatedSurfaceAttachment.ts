@@ -32,7 +32,12 @@ export function findFrontSurfaceAttachment(
 
   const meshes: T.SkinnedMesh[] = [];
   root.traverse(node => {
-    if (node instanceof T.SkinnedMesh && node.visible && belongsToPart(node, part)) meshes.push(node);
+    if (node instanceof T.SkinnedMesh && node.visible && belongsToPart(node, part)) {
+      node.skeleton.update();
+      node.computeBoundingBox();
+      node.computeBoundingSphere();
+      meshes.push(node);
+    }
   });
   if (!meshes.length) return null;
 

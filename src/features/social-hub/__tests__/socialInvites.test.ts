@@ -27,6 +27,10 @@ describe("social invite safety service", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("rejects IDs missing the fourth UUID group", () => {
+    expect(() => __socialInviteTestUtils.validateSocialInviteInput({ toProfileId: "22222222-2222-4222-8222222222222222", kind: "jam" })).toThrow("valid player");
+  });
+
   it("rejects overlong invite messages before backend writes", async () => {
     await expect(sendSocialInvite({ toProfileId: profileId, kind: "jam", message: "x".repeat(281) })).rejects.toThrow("280");
     expect(rpc).not.toHaveBeenCalled();

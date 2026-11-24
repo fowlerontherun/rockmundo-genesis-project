@@ -4,6 +4,8 @@ import type { CameraShot } from "@/features/gig-demo-3d/config";
 import { festivalStagePreset } from "@/features/gig-demo-3d/festivalStagePreset";
 import { CrowdAudioManager } from "@/features/shared-audio/CrowdAudioManager";
 import { loadCuratedCrowdAssets, selectCuratedCrowdClip } from "@/features/shared-audio/crowdAudioCatalogue";
+import { Button } from "@/components/ui/button";
+import { useFestivalArtworkBranding } from "./useFestivalArtworkBranding";
 
 const cameras = [
   { id: "front", label: "Stage wide" },
@@ -26,6 +28,8 @@ export default function FestivalOutdoorStage(props: Parameters<typeof festivalSt
   cameraRef.current = camera;
   const { stageId, editionId, capacity, stageName, artist } = props;
   const daylight = preset.options.outdoorDaylight;
+  const atmosphereKey = JSON.stringify(props.atmosphere);
+  const branding = useFestivalArtworkBranding(editionId);
 
   useEffect(() => {
     if (!canvas.current) return;
@@ -44,7 +48,7 @@ export default function FestivalOutdoorStage(props: Parameters<typeof festivalSt
       scene.current?.destroy();
       scene.current = null;
     };
-  }, [stageId, editionId, capacity, stageName, artist, daylight, attempt]);
+  }, [stageId, editionId, capacity, stageName, artist, daylight, atmosphereKey, branding.theme, attempt]);
 
   useEffect(() => {
     scene.current?.setSettings({ ...latest.current.settings, camera });
@@ -96,20 +100,19 @@ export default function FestivalOutdoorStage(props: Parameters<typeof festivalSt
   }
 
   return (
-    <div className="mt-3 space-y-2">
-      <div className="relative aspect-video min-h-36 overflow-hidden rounded-lg bg-slate-950">
+    <div className={`mt-3 space-y-2 ${branding.theme ? `festival-theme-${branding.theme}` : ""}`}>
+      <div className="relative aspect-video min-h-36 overflow-hidden rounded-lg bg-background">
         <canvas className="block h-full w-full" ref={canvas} role="img" aria-label={`Illustrative 3D view of ${stageName}`} />
         {status !== "ready" && (
-          <div className="absolute inset-0 grid place-content-center gap-2 bg-slate-950 px-3 text-center text-sm text-white"
+          <div className="absolute inset-0 grid place-content-center gap-2 bg-background px-3 text-center text-sm text-foreground"
             role={status === "error" ? "alert" : "status"}>
             {status === "loading" ? "Loading outdoor stage…" : <>
               <p>3D stage unavailable. The stage guide is still available.</p>
-              <button type="button" className="min-h-11 rounded border px-3" onClick={() => setAttempt((value) => value + 1)}>Retry 3D stage</button>
+              <Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>Retry 3D stage</Button>
             </>}
           </div>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Stage and crowd illustration based on the selected stage. Official activity is listed above.</p>
       {status === "ready" && <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-sm">Camera
           <select className="min-h-11 rounded border bg-background px-2" value={camera}
@@ -118,10 +121,10 @@ export default function FestivalOutdoorStage(props: Parameters<typeof festivalSt
           </select>
         </label>
         {preset.crowdCue && (
-          <button type="button" className="min-h-11 rounded border px-3 text-sm"
+          <Button type="button" variant="outline"
             onClick={sound === "playing" || sound === "loading" ? stopSound : () => void playSound()}>
             {sound === "playing" || sound === "loading" ? "Stop crowd audio" : "Play crowd audio"}
-          </button>
+          </Button>
         )}
       </div>}
       {sound !== "off" && <p role="status" className="text-xs text-muted-foreground">

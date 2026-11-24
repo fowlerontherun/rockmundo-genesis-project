@@ -8,6 +8,7 @@ import { useActiveProfile } from '@/hooks/useActiveProfile';
 import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Send } from 'lucide-react';
 import { format } from 'date-fns';
+import { bandChatPayload, isOwnBandMessage } from '@/features/social-hub/services/bandChatIdentity';
 
 interface BandChatProps {
   bandId: string;
@@ -16,6 +17,7 @@ interface BandChatProps {
 interface ChatMessage {
   id: string;
   user_id: string;
+  profile_id: string | null;
   message: string;
   created_at: string;
   profile?: {
@@ -25,17 +27,20 @@ interface ChatMessage {
 }
 
 export function BandChat({ bandId }: BandChatProps) {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesGeneration = useRef(0);
 
   useEffect(() => {
     const generation = ++messagesGeneration.current;
     setMessages([]);
+    setLoadError(false);
+    setSending(false);
     setNewMessage('');
     // A character switch must unsubscribe even if both characters share a band.
     if (!profileId) return () => { messagesGeneration.current++; };
@@ -50,11 +55,13 @@ export function BandChat({ bandId }: BandChatProps) {
 
   const loadMessages = async (generation: number) => {
     try {
+      setLoadError(false);
       const { data, error } = await supabase
         .from('band_chat_messages')
         .select(`
           id,
           user_id,
+          profile_id,
           message,
           created_at
         `)
@@ -66,15 +73,15 @@ export function BandChat({ bandId }: BandChatProps) {
 
       // Load profiles separately
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(m => m.user_id))];
+        const profileIds = [...new Set(data.flatMap(m => m.profile_id ? [m.profile_id] : []))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username')
-          .in('user_id', userIds);
+          .select('id, display_name, username')
+          .in('id', profileIds);
 
         const messagesWithProfiles = [...data].reverse().map(msg => ({
           ...msg,
-          profile: profiles?.find(p => p.user_id === msg.user_id),
+          profile: profiles?.find(p => p.id === msg.profile_id),
         }));
 
         if (generation !== messagesGeneration.current) return;
@@ -87,12 +94,13 @@ export function BandChat({ bandId }: BandChatProps) {
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+      if (generation === messagesGeneration.current) setLoadError(true);
     }
   };
 
   const subscribeToMessages = (generation: number) => {
     const channel = supabase
-      .channel(`band_chat_${bandId}`)
+      .channel(`band_chat_${bandId}_${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {
@@ -103,15 +111,15 @@ export function BandChat({ bandId }: BandChatProps) {
         },
         async (payload) => {
           // Load the profile for the new message
-          const { data: profile } = await supabase
+          const { data: profile } = payload.new.profile_id ? await supabase
             .from('profiles')
-            .select('user_id, display_name, username')
-            .eq('user_id', payload.new.user_id)
-            .single();
+            .select('id, display_name, username')
+            .eq('id', payload.new.profile_id)
+            .maybeSingle() : { data: null };
 
           const newMsg = {
-            ...(payload.new as any),
-            profile,
+            ...(payload.new as Omit<ChatMessage, "profile">),
+            profile: profile ?? undefined,
           };
 
           if (generation !== messagesGeneration.current) return;
@@ -134,21 +142,21 @@ export function BandChat({ bandId }: BandChatProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !profileId) return;
+    if (!newMessage.trim() || !profileId || !userId || sending) return;
+    const generation = messagesGeneration.current;
 
     setSending(true);
     try {
       const { error } = await supabase
         .from('band_chat_messages')
-        .insert({
-          band_id: bandId,
-          user_id: profileId,
-          message: newMessage.trim(),
-        });
+        .insert(bandChatPayload(bandId, { userId, profileId }, newMessage));
 
       if (error) throw error;
 
-      setNewMessage('');
+      if (generation === messagesGeneration.current) {
+        setNewMessage('');
+        await loadMessages(generation);
+      }
     } catch (error: any) {
       console.error('Error sending message:', error);
       toast({
@@ -157,11 +165,11 @@ export function BandChat({ bandId }: BandChatProps) {
         variant: 'destructive',
       });
     } finally {
-      setSending(false);
+      if (generation === messagesGeneration.current) setSending(false);
     }
   };
 
-  const isOwnMessage = (userId: string) => userId === profileId;
+  const isOwnMessage = (msg: ChatMessage) => isOwnBandMessage(msg, profileId);
 
   return (
     <Card className="flex flex-col h-[600px]">
@@ -175,6 +183,7 @@ export function BandChat({ bandId }: BandChatProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
+        {loadError && <div role="alert" className="flex items-center gap-2 text-xs text-destructive">Couldn't load band chat.<Button size="sm" variant="outline" onClick={() => void loadMessages(messagesGeneration.current)}>Retry</Button></div>}
         <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
           <div className="space-y-4">
             {messages.length === 0 ? (
@@ -185,11 +194,11 @@ export function BandChat({ bandId }: BandChatProps) {
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${isOwnMessage(msg.user_id) ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${isOwnMessage(msg) ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-[70%] rounded-lg p-3 ${
-                      isOwnMessage(msg.user_id)
+                      isOwnMessage(msg)
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     }`}
@@ -218,7 +227,7 @@ export function BandChat({ bandId }: BandChatProps) {
             disabled={sending}
             maxLength={500}
           />
-          <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
+          <Button type="submit" size="icon" aria-label="Send band message" disabled={sending || !newMessage.trim() || !profileId || !userId}>
             <Send className="h-4 w-4" />
           </Button>
         </form>

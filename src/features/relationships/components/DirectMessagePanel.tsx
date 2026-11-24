@@ -24,9 +24,10 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
     const participants = channel.slice(3).split(":").filter(Boolean);
     return participants.find((id) => id !== profileId) ?? null;
   }, [channel, profileId]);
-  const { messages, isLoading: loading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(profileId, otherProfileId);
+  const { messages, isLoading: loading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages, isError, retry, error } = useDirectMessages(profileId, otherProfileId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { setDraft(""); }, [profileId, otherProfileId]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -57,6 +58,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
         <CardDescription>Private chat with {otherDisplayName}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
+        {isError && <div role="alert" className="mb-2 text-xs text-destructive">{error instanceof Error ? error.message : "Could not load this conversation."} <Button size="sm" variant="outline" onClick={() => void retry()}>Retry</Button></div>}
         <ScrollArea className="h-[320px]" ref={scrollRef}>
           <div className="space-y-3 pr-4">
             {hasOlderMessages && (
@@ -71,7 +73,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
               <div className="flex h-32 items-center justify-center text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading conversation...
               </div>
-            ) : messages.length === 0 ? (
+            ) : isError ? null : messages.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No messages yet. Say hello and start planning your next collaboration!
               </p>

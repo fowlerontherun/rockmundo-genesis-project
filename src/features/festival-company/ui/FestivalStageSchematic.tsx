@@ -6,6 +6,7 @@ import type { AttendanceBand, FestivalPublicLiveStatus, FestivalRuntimeWeatherSt
 import { FestivalStageAtmosphere } from "./FestivalStageAtmosphere";
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, type PublicFestivalStageCrowd } from "../domain/publicFestivalStageCrowds";
 import { stagePublishedHeadliners, stageVisualScale } from "../domain/festivalVisualIdentity";
+import { festivalSeasonLabels, type FestivalSeasonalAtmosphere } from "../domain/festivalSeasonalAtmosphere";
 
 interface FestivalStageSchematicProps {
   lightweight?: boolean;
@@ -20,6 +21,7 @@ interface FestivalStageSchematicProps {
   stageCrowds?: PublicFestivalStageCrowd[];
   weatherState?: FestivalRuntimeWeatherState | null;
   localHour?: number;
+  atmosphere?: FestivalSeasonalAtmosphere;
   onSelectStage: (id: string) => void;
 }
 
@@ -36,8 +38,8 @@ const atmosphereBands: Record<AttendanceBand, { label: string; intensity: number
   full: { label: "At capacity", intensity: 5 },
 };
 
-export function FestivalStageSchematic({ lightweight = false, stages, lineup, now, timezone, cancelled, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, localHour, onSelectStage }: FestivalStageSchematicProps) {
-  const atmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
+export function FestivalStageSchematic({ lightweight = false, stages, lineup, now, timezone, cancelled, selectedStageId, attendanceBand, performances = [], stageCrowds = [], weatherState, atmosphere, localHour, onSelectStage }: FestivalStageSchematicProps) {
+  const crowdAtmosphere = attendanceBand ? atmosphereBands[attendanceBand] : null;
   const afterDark = localHour !== undefined && (localHour >= 20 || localHour < 6);
   const lightingLabel = localHour === undefined ? "Local time unavailable" : afterDark ? "Night-time stage lighting" : "Daytime stage lighting";
   return (
@@ -49,19 +51,19 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Festival grounds · visual stage directory</p>
           <p className="text-xs text-muted-foreground">Illustrative arrangement only — not a walking map</p>
-          {!lightweight && <p className="mt-1 text-xs font-medium" role="status">{lightingLabel} · Fixed clock-based effect, not actual sunrise or weather</p>}
+          {!lightweight && <p className="mt-1 text-xs font-medium" role="status">{lightingLabel}{atmosphere ? ` · ${festivalSeasonLabels[atmosphere.season]}` : ""} · Illustrative scenery, not a live forecast</p>}
         </div>
         <span className="rounded-full border bg-background/80 px-3 py-1 text-xs">{stages.length} stages</span>
       </div>
       <div className="relative mb-5 rounded-xl border bg-background/75 p-3" role="status">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm font-semibold">Festival-wide crowd atmosphere</span>
-          <span className="text-sm">{atmosphere ? atmosphere.label : "Attendance not available"}</span>
+          <span className="text-sm">{crowdAtmosphere ? crowdAtmosphere.label : "Attendance not available"}</span>
         </div>
-        {atmosphere ? (
-          <div className="mt-2 flex gap-1" role="img" aria-label={`Reported festival attendance: ${atmosphere.label}`}>
+        {crowdAtmosphere ? (
+          <div className="mt-2 flex gap-1" role="img" aria-label={`Reported festival attendance: ${crowdAtmosphere.label}`}>
             {Array.from({ length: 5 }, (_, index) => (
-              <div key={index} aria-hidden="true" className={`h-3 flex-1 rounded-sm ${index < atmosphere.intensity ? "bg-emerald-500/80" : "bg-muted"}`} />
+              <div key={index} aria-hidden="true" className={`h-3 flex-1 rounded-sm ${index < crowdAtmosphere.intensity ? "bg-emerald-500/80" : "bg-muted"}`} />
             ))}
           </div>
         ) : null}
@@ -100,9 +102,10 @@ export function FestivalStageSchematic({ lightweight = false, stages, lineup, no
                 <span className="h-10 w-1 -rotate-12 bg-cyan-300/70 shadow-[0_0_15px_rgba(103,232,249,.6)]" />
               </div>
               <div className="h-2 bg-slate-950" />
-              <FestivalStageAtmosphere weatherState={weatherState} activePerformance={isPerforming} />
+              <FestivalStageAtmosphere weatherState={weatherState} atmosphere={atmosphere} activePerformance={isPerforming} />
             </div>}
             <span className="block text-base font-bold">{stage.name}</span>
+            {atmosphere && <span className="mt-1 block text-xs text-muted-foreground">{festivalSeasonLabels[atmosphere.season]}</span>}
             <span className="mt-1 block text-xs font-medium text-muted-foreground">{stageScale.label}</span>
             {headliners.length > 0 && (
               <span className="mt-2 block text-xs font-semibold text-primary">Headliner{headliners.length === 1 ? "" : "s"}: {headliners.map((act) => act.artistName).join(" · ")}</span>

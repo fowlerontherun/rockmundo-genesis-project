@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -47,6 +47,11 @@ import { festivalRoutes } from "@/features/festivals/routes";
 import { getAnnualPlanReadinessLabel, getReadinessAction } from "./readinessActions";
 import { FestivalPlanningOverlay } from "./FestivalPlanningOverlay";
 
+import { FestivalSetupSteps } from "@/features/festival-company/ui/FestivalSetupSteps";
+import { FestivalThemePicker, FestivalThemePreview } from "@/features/festival-company/ui/FestivalThemePicker";
+import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { defaultFestivalBranding, festivalBrandingKey, type FestivalBranding } from "@/features/festival-company/domain/festivalBranding";
+
 type PlanningSection = "when" | "festival" | "promotion" | "values";
 
 const formatMoney = (minor: number, currencyCode: string) =>
@@ -85,11 +90,12 @@ export function FestivalAnnualPlan({
     queryFn: () => getFestivalAnnualPlan(festivalCompanyId, editionId),
   });
   const [draft, setDraft] = useState<FestivalAnnualPlanDraft | null>(null);
-  const [section, setSection] = useState<PlanningSection | null>(null);
+  const [step, setStep] = useState(0);
+  const [branding, setBranding] = useState<FestivalBranding>(defaultFestivalBranding);
   const retry = useRef<{ hash: string; key: string } | null>(null);
 
   useEffect(() => {
-    if (query.data) setDraft(annualPlanToDraft(query.data));
+    if (query.data) { setDraft(annualPlanToDraft(query.data)); setBranding(query.data.branding ?? defaultFestivalBranding); }
   }, [query.data]);
 
   const save = useMutation({
@@ -97,6 +103,7 @@ export function FestivalAnnualPlan({
       expectedVersion: number;
       plan: FestivalAnnualPlanDraft;
       idempotencyKey: string;
+      branding: FestivalBranding;
     }) =>
       saveFestivalAnnualPlan({
         festivalCompanyId,
@@ -105,6 +112,8 @@ export function FestivalAnnualPlan({
       }),
     onSuccess: async (result) => {
       setDraft(annualPlanToDraft(result));
+      setBranding(result.branding ?? branding);
+      queryClient.setQueryData(festivalBrandingKey(editionId), result.branding ?? branding);
       retry.current = null;
       queryClient.setQueryData(
         festivalAnnualPlanQueryKey(festivalCompanyId, editionId),
@@ -113,9 +122,13 @@ export function FestivalAnnualPlan({
       await queryClient.invalidateQueries({
         queryKey: ["festival-company-editions", festivalCompanyId],
       });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["festival-run-readiness", festivalCompanyId, editionId] }),
+        queryClient.invalidateQueries({ queryKey: ["festival-live-day-availability", festivalCompanyId, editionId] }),
+      ]);
       toast.success("Festival plan saved");
     },
-    onError: () => toast.error("Festival plan could not be saved"),
+    onError: (error) => toast.error(/stale|conflict/.test(error.message) ? "This edition changed elsewhere. Your draft is kept; reload before saving." : "Festival plan could not be saved. Your draft is kept."),
   });
 
   if (query.isLoading) return <p role="status">Loading Festival plan…</p>;
@@ -143,7 +156,8 @@ export function FestivalAnnualPlan({
   const endDate = calculateAnnualPlanEndDate(draft.startsOn, draft.durationDays);
   const projection = getAnnualPlanCapacityProjection(data);
   const complete = annualPlanDraftIsComplete(draft);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(annualPlanToDraft(data));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(annualPlanToDraft(data)) || JSON.stringify(branding) !== JSON.stringify(data.branding ?? defaultFestivalBranding);
+  const canEdit = data.editable && data.canWrite && !save.isPending;
   const countdown = daysUntil(draft.startsOn);
   const demandShift = selectedMarketing
     ? Math.round((selectedMarketing.demandBasisPoints - 10000) / 100)
@@ -153,16 +167,16 @@ export function FestivalAnnualPlan({
   const planReady = readinessLabel === "Plan ready";
 
   const openPlanningSection = (target: PlanningSection) => {
-    setSection(target);
-    document.getElementById(`annual-plan-${target}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStep(target === "when" ? 1 : target === "promotion" ? 3 : 2);
+    requestAnimationFrame(() => document.getElementById(`annual-plan-${target}`)?.scrollIntoView({ block: "start" }));
   };
 
   const patch = (values: Partial<FestivalAnnualPlanDraft>) =>
     setDraft((current) => (current ? { ...current, ...values } : current));
 
   const persist = () => {
-    if (!complete || !dirty || save.isPending || !data.canWrite) return;
-    const hash = JSON.stringify({ version: data.version, draft });
+    if (!complete || !dirty || save.isPending || !data.canWrite || !data.editable) return;
+    const hash = JSON.stringify({ version: data.version, draft, branding });
     if (retry.current?.hash !== hash) {
       retry.current = { hash, key: crypto.randomUUID() };
     }
@@ -170,6 +184,7 @@ export function FestivalAnnualPlan({
       expectedVersion: data.version,
       plan: draft,
       idempotencyKey: retry.current.key,
+      branding,
     });
   };
 
@@ -254,14 +269,18 @@ export function FestivalAnnualPlan({
 
       <FestivalPlanningOverlay plan={data} unsavedChanges={dirty} onOpenSection={openPlanningSection} />
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <FestivalSetupSteps step={step} onChange={setStep} busy={save.isPending}
+        canContinue={step !== 1 || Boolean(draft.startsOn && draft.cityId && draft.festivalScale)}>
+      {step === 0 && <FestivalThemePicker value={branding} onChange={setBranding} disabled={!canEdit}
+        name={data.name} place={selectedCity?.name ?? ""} dates={formatDate(draft.startsOn)} />}
+      <fieldset disabled={!canEdit} className="grid min-w-0 gap-5 sm:grid-cols-2">
         <ChoiceCard
           id="annual-plan-when"
           icon={<CalendarDays className="h-5 w-5" />}
           title="When & where"
           summary={`${selectedCity?.name ?? "Choose city"} · ${formatDate(draft.startsOn)}${endDate && endDate !== draft.startsOn ? ` – ${formatDate(endDate)}` : ""}`}
-          open={section === "when"}
-          onClick={() => setSection(section === "when" ? null : "when")}
+          open={step === 1}
+          onClick={() => setStep(1)}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -300,8 +319,8 @@ export function FestivalAnnualPlan({
           icon={<Tent className="h-5 w-5" />}
           title="Festival"
           summary={`${selectedScale?.displayName ?? "Choose size"} · ${draft.durationDays} day${draft.durationDays === 1 ? "" : "s"} · ${selectedVibe?.displayName ?? "Choose vibe"}`}
-          open={section === "festival"}
-          onClick={() => setSection(section === "festival" ? null : "festival")}
+          open={step === 2}
+          onClick={() => setStep(2)}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <SelectField label="Size" value={draft.festivalScale} disabled={!data.editable} options={data.scales} onChange={(festivalScale) => {
@@ -329,8 +348,8 @@ export function FestivalAnnualPlan({
           icon={<Megaphone className="h-5 w-5" />}
           title="Promotion"
           summary={`${selectedMarketing?.displayName ?? "Choose campaign"}${demandShift === 0 ? "" : ` · ${demandShift > 0 ? "+" : ""}${demandShift}% demand effect`}`}
-          open={section === "promotion"}
-          onClick={() => setSection(section === "promotion" ? null : "promotion")}
+          open={step === 3}
+          onClick={() => setStep(3)}
         >
           <SelectField label="Marketing emphasis" value={draft.marketingEmphasis} disabled={!data.editable} options={data.marketingEmphases} onChange={(marketingEmphasis) => patch({ marketingEmphasis })} />
           {selectedMarketing ? (
@@ -343,19 +362,34 @@ export function FestivalAnnualPlan({
           icon={<Sparkles className="h-5 w-5" />}
           title="Values"
           summary={selectedEnvironment?.displayName ?? "Choose approach"}
-          open={section === "values"}
-          onClick={() => setSection(section === "values" ? null : "values")}
+          open={step === 2}
+          onClick={() => setStep(2)}
         >
           <SelectField label="Environmental approach" value={draft.environmentalPolicy} disabled={!data.editable} options={data.environmentalPolicies} onChange={(environmentalPolicy) => patch({ environmentalPolicy })} />
           {selectedEnvironment ? (
             <p className="mt-3 text-sm text-muted-foreground">{selectedEnvironment.description}</p>
           ) : null}
         </ChoiceCard>
+      </fieldset>
+      {step === 3 && <div className="space-y-3 border-t pt-4">
+        <Summary label="Last saved operating estimate" value={formatMoney(data.estimatedOperatingCostMinor, data.currencyCode)} />
+        {dirty ? <Button disabled={!complete || !canEdit} onClick={persist}>{save.isPending ? "Saving…" : "Save plan & refresh ticket budget"}</Button> : <>
+          <FestivalTicketPlanner festivalCompanyId={festivalCompanyId} festivalEditionId={editionId} />
+          <Button asChild variant="outline"><Link to={festivalRoutes.sponsorship(festivalCompanyId, editionId)}>Full ticket budget & sponsorship</Link></Button>
+        </>}
+      </div>}
+      {step === 4 && <div className="grid gap-5 lg:grid-cols-[1fr_240px]">
+      <div className="space-y-4">
+      <h4 className="font-semibold">Edition summary</h4>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Summary label="Location & dates" value={`${selectedCity?.name ?? "Choose city"} · ${formatDate(draft.startsOn)} – ${formatDate(endDate ?? draft.startsOn)}`} />
+        <Summary label="Size & duration" value={`${selectedScale?.displayName ?? "Choose size"} · ${draft.durationDays} days`} />
+        <Summary label="Atmosphere" value={`${selectedVibe?.displayName ?? "—"} · ${selectedEnvironment?.displayName ?? "—"}`} />
+        <Summary label="Promotion" value={selectedMarketing?.displayName ?? "—"} />
       </div>
-
       <Card>
         <CardHeader>
-          <CardTitle>What these choices mean</CardTitle>
+          <CardTitle>Last saved projections</CardTitle>
           <CardDescription>
             The useful consequences stay visible without making you manage suppliers, staff or infrastructure manually.
           </CardDescription>
@@ -368,30 +402,18 @@ export function FestivalAnnualPlan({
         </CardContent>
       </Card>
 
-      {countdown !== null && countdown >= 0 ? (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle>Festival countdown</CardTitle>
-            <CardDescription>
-              This is the event pulse players can return to as Festival day approaches.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            <Pulse title="Planning" body={`${data.readinessScore}% planning progress. ${data.blockers.length ? `${data.blockers.length} blocker${data.blockers.length === 1 ? "" : "s"} still need attention.` : planReady ? "Annual plan ready." : "Plan still under review."}`} />
-            <Pulse title="Buzz" body={selectedMarketing ? `${selectedMarketing.displayName} promotion is shaping demand for the event.` : "Choose a marketing emphasis to start building buzz."} />
-            <Pulse title="Next move" body={data.blockers.length ? "Resolve the readiness checklist above, then review the line-up and tickets." : planReady ? "Review the line-up, tickets and Run Festival screen to check launch readiness." : "Review the plan status, line-up and tickets before launch."} />
-          </CardContent>
-        </Card>
-      ) : null}
+      </div>
+      <FestivalThemePreview branding={branding} name={data.name} place={selectedCity?.name ?? ""} dates={formatDate(draft.startsOn)} />
+      </div>}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Staffing, suppliers, stage requirements, security and operating detail are generated automatically.
-        </p>
-        <Button disabled={!complete || !dirty || save.isPending || !data.canWrite} onClick={persist}>
+      {step === 4 && <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">{dirty ? "Estimates and readiness refresh after saving." : "Edition choices saved."}</p>
+        <Button disabled={!complete || !dirty || !canEdit} onClick={persist}>
           {save.isPending ? "Saving…" : dirty ? "Save Festival choices" : "Festival choices saved"}
         </Button>
-      </div>
+      </div>}
+      {save.isError && <Alert variant="destructive"><AlertDescription>Your changes have not been saved. The draft is still available.</AlertDescription></Alert>}
+      </FestivalSetupSteps>
     </section>
   );
 }
@@ -413,19 +435,12 @@ function ChoiceCard({
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  return (
-    <Card id={id} className={open ? "border-primary/40" : ""}>
-      <button type="button" className="flex w-full items-center gap-3 p-5 text-left" onClick={onClick}>
-        <span className="rounded-md bg-muted p-2">{icon}</span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold">{title}</span>
-          <span className="block truncate text-sm text-muted-foreground">{summary}</span>
-        </span>
-        <ChevronRight className={`h-5 w-5 transition-transform ${open ? "rotate-90" : ""}`} />
-      </button>
-      {open ? <CardContent className="border-t pt-5">{children}</CardContent> : null}
-    </Card>
-  );
+  if (!open) return null;
+  return <section id={id} className="min-w-0 space-y-4">
+    <h4 className="flex items-center gap-2 font-semibold">{icon}{title}</h4>
+    <p className="text-xs text-muted-foreground">{summary}</p>
+    {children}
+  </section>;
 }
 
 function SelectField({

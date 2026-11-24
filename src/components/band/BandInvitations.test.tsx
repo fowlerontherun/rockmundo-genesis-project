@@ -25,6 +25,8 @@ type MutationOptions = {
 
 let queryState: QueryState;
 let capturedQueryOptions: QueryOptions;
+let membershipQueryOptions: QueryOptions;
+let membershipQueryState: { data: unknown; isLoading: boolean; isError: boolean; error: Error | null; refetch: typeof refetch };
 
 const invitation = {
   id: "33333333-3333-4333-8333-333333333333",
@@ -39,7 +41,8 @@ const invitation = {
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (options: QueryOptions) => {
     if (options.queryKey[0] === "active-band-membership") {
-      return { data: null, isLoading: false };
+      membershipQueryOptions = options;
+      return membershipQueryState;
     }
     capturedQueryOptions = options;
     return queryState;
@@ -87,9 +90,47 @@ beforeEach(() => {
     error: null,
     refetch,
   };
+  membershipQueryState = { data: null, isLoading: false, isError: false, error: null, refetch };
 });
 
 describe("BandInvitations", () => {
+  it("uses the explicit band foreign key so a player with no membership can join", async () => {
+    const chain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      order: vi.fn(),
+    };
+    chain.select.mockReturnValue(chain);
+    chain.eq.mockReturnValue(chain);
+    chain.order.mockResolvedValue({ data: [], error: null });
+    vi.mocked(supabase.from).mockReturnValueOnce(chain as never);
+
+    render(<BandInvitations />);
+    expect(await membershipQueryOptions.queryFn()).toBeNull();
+    expect(chain.select).toHaveBeenCalledWith(
+      "band_id, bands:bands!band_members_band_id_fkey(name, status, is_solo_artist)",
+    );
+    expect(chain.eq).toHaveBeenCalledWith("profile_id", "profile-1");
+    expect(chain.eq).toHaveBeenCalledWith("member_status", "active");
+    expect(chain.eq).toHaveBeenCalledWith("is_touring_member", false);
+    expect(screen.getByRole("button", { name: /accept invitation/i })).toBeEnabled();
+  });
+
+  it("shows the membership query error and keeps invitation acceptance blocked", () => {
+    membershipQueryState = {
+      data: null,
+      isLoading: false,
+      isError: true,
+      error: new Error("Multiple relationships found between band_members and bands"),
+      refetch,
+    };
+    render(<BandInvitations />);
+    expect(screen.getByText(/Multiple relationships found/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /accept invitation/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry membership/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it("refreshes an incoming invitation immediately and invalidates membership after acceptance", () => {
     render(<BandInvitations />);
     const realtime = vi.mocked(useBandInvitationsRealtime).mock.calls[0][0];

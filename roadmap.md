@@ -1,5 +1,34 @@
 # Roadmap
 
+- [x] Seasonal festival stages: edition-date scenery, city seasonal weather and fresh runtime overrides; cosmetic only, with lightweight and reduced-motion support.
+- [x] Verify seasonal rules (30 tests), all four stage seasons and mobile view without page errors or overflow; version 1.1.819. Signed-in real edition weather unverified with the external account service.
+
+- [x] Festival wizard: guided founding and annual-edition steps, persistent themes/motifs, shared artwork and poster colours, protected saving and review; version 1.1.818.
+- [x] Festival wizard: 55 focused tests passed across overlapping runs; desktop/mobile visual fixture completed theme selection, review and saved-result feedback without page errors or horizontal overflow. Build OK; changes committed.
+- [ ] Festival wizard: real signed-in founding/annual save verification is blocked by the external unmanaged account service; browser fixture checks are not authenticated gameplay verification. New migrations introduced no remaining security warnings; existing project-wide findings remain separate.
+
+- [x] Social continuation: corrected band-chat account/character IDs and malformed invitation UUID validation; added character-scoped room access, ended-scene write guards/history, message retry and live friend/invite refresh.
+- [x] Social continuation: personal Twaater recap drafts without scene details; 81 focused tests passed, version 1.1.812. Browser page has no errors; authenticated message/scene/publishing journeys remain unavailable with external unmanaged auth.
+
+- [x] Festival repair: protected counteroffers and booking-specific saved setlists/backstage choices; legacy contracts remain isolated.
+- [ ] Festival repair: live gates and performance effects blocked by missing canonical crowd/tick/action infrastructure; availability fails closed, final-local-day simulation guard restored.
+- [x] Festival repair: validate financial inputs; refresh readiness; show real act names, currencies and booking details.
+- [x] Festival repair: stale history/attendance recovery, shared mobile ticket/check-in page and persistent Festival Mode navigation.
+- [x] Festival repair: 46 focused tests and 3 route tests pass, active inventory certified, version 1.1.806. Full suite: 793 pass, 27 failures remain. Authenticated transactions unavailable with external unmanaged sessions; no claim of complete live performance restoration.
+
+- [x] Extend graphics refresh across shared game headings, panels, tabs and hub artwork; preserve dense layouts and gameplay. Missing artwork uses destination icons.
+- [x] Verify Music, Character, Skin Store and Skills pages with no page errors; four hub navigation tests pass, mobile companion has no horizontal overflow, version 1.1.804. Signed-in data-rich pages and every individual page are not exhaustively verified with external account sessions unavailable.
+
+- [x] Improve clothing collection pictures and instrument store graphics; nine shared-renderer tests pass, desktop/mobile card controls verified, version 1.1.803. Local screenshot checks used original images because localhost does not serve hosted asset URLs; hosted delivery and signed-in store journey remain unverified.
+
+- [x] Continue clothing detail improvements with smaller surface-bound laces and eyelets on genre-pack footwear.
+- [x] Improve stage guitar/bass fret coverage, nut, inlays, saddles and saved hardware colours without changing crafting rules.
+- [x] Run clothing/instrument tests (25 pass), review desktop/mobile model previews with no page errors, and update version 1.1.802. Signed-in equip remains unverified because external account sessions are unavailable.
+
+- [x] Review the production avatar creator and shared clothing fit; improve genre pack discovery and stage previews.
+- [x] Add four genre packs with twelve published garments through the existing paid-set catalogue, preserving ownership and stage compatibility.
+- [x] Test garment validation and shared rendering (40 tests pass), review desktop/mobile previews, update version 1.1.801 and commit. Authenticated purchase/equip checks unavailable with external account sessions; older wardrobe not fully clipping-certified.
+
 - [x] Fix university completion at the saved duration and add one-time completion XP: four overdue courses repaired, zero remain overdue, 16 tests pass, version 1.1.800. Signed-in course receipt display remains unverified because external account sessions are unavailable.
 
 - [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.

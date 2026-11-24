@@ -8,8 +8,12 @@ import type { FestivalPublicConfirmedAct, FestivalPublicStage } from "../domain/
 import { festivalCrowdBandLabels, festivalCrowdMoodLabels, readPublicFestivalStageCrowds, filterFreshPublicFestivalStageCrowds } from "../domain/publicFestivalStageCrowds";
 import { stageTimetableProgress } from "../domain/stageTimetableProgress";
 import { festivalLiveSnapshotFreshness } from "../domain/festivalLiveSnapshotFreshness";
+import { publicFestivalStageEventLabels, readPublicFestivalActivityFeed } from "../domain/publicFestivalActivityFeed";
 import { FESTIVAL_WEATHER_STATES, type FestivalRuntimeWeatherState } from "../domain/festivalRuntime";
 import { formatFestivalEditionDate, getFestivalLocalClockHour, getFestivalLocalDate, festivalTimeZoneLabel } from "./festivalPublicDisplay";
+import { useFestivalSeasonalAtmosphere } from "../application/useFestivalSeasonalAtmosphere";
+import { festivalAtmosphere, festivalSeasonLabels } from "../domain/festivalSeasonalAtmosphere";
+import { getSeasonEmoji } from "@/utils/gameCalendar";
 
 interface FestivalGroundsProps {
   slug: string;
@@ -19,6 +23,10 @@ interface FestivalGroundsProps {
   stages: FestivalPublicStage[];
   lineup: FestivalPublicConfirmedAct[];
   timezone: string;
+  city?: string;
+  country?: string;
+  startsAt?: string;
+  endsAt?: string;
   visitorInformation: {
     travel: string | null;
     camping: string | null;
@@ -48,7 +56,7 @@ function prefersLightweightGrounds() {
  * A stage discovery view, not a geographic site plan. Positions are deliberately
  * non-geographic until the published festival site plan provides coordinates.
  */
-export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, cancelled, stages, lineup, timezone, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
+export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, cancelled, stages, lineup, timezone, city, country, startsAt, endsAt, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   // A cancelled edition cannot have active live-stage observations. Keep the
   // historic programme while avoiding unnecessary runtime polling.
   const live = usePublicFestivalLiveStatus(cancelled ? "" : slug);
@@ -78,8 +86,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const weather = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
   const weatherNames: Record<string, string> = { clear: "Clear skies", cloudy: "Cloudy", light_rain: "Light rain", heavy_rain: "Heavy rain", hot: "Hot", cold: "Cold", high_wind: "High winds", storm: "Storm" };
   const weatherIcons: Record<string, string> = { clear: "☀️", cloudy: "☁️", light_rain: "🌦️", heavy_rain: "🌧️", hot: "🌞", cold: "❄️", high_wind: "💨", storm: "⛈️" };
-  const weatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
-  const groundCondition = typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
+  const reportedWeatherState: FestivalRuntimeWeatherState | null = typeof weather?.state === "string" && (FESTIVAL_WEATHER_STATES as readonly string[]).includes(weather.state) ? weather.state as FestivalRuntimeWeatherState : null;
   const [lightweightOverride, setLightweightOverride] = useState<boolean | null>(null);
   const [reduceMotion, setReduceMotion] = useState(() => window.matchMedia?.(reducedMotionQuery).matches === true);
   const [preferLightweight, setPreferLightweight] = useState(prefersLightweightGrounds);
@@ -100,6 +107,13 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
   const now = Math.max(currentTime, Date.now());
   const localDate = getFestivalLocalDate(now, timezone);
   const currentRuntimeDay = freshness === "current" && Boolean(localDate) && verifiedLive?.currentDay === localDate;
+  const weatherState = currentRuntimeDay ? reportedWeatherState : null;
+  const groundCondition = currentRuntimeDay && typeof weather?.groundCondition === "string" ? weather.groundCondition : null;
+  const duringEdition = !cancelled && startsAt && endsAt && now >= Date.parse(startsAt) && now <= Date.parse(endsAt);
+  const atmosphereDate = duringEdition ? new Date(now).toISOString() : startsAt;
+  const seasonal = useFestivalSeasonalAtmosphere(city, country, atmosphereDate);
+  const atmosphere = seasonal.date ? festivalAtmosphere(seasonal.date.season, seasonal.weather, weatherState, groundCondition) : undefined;
+  const conditionLabels = { sunny: "Clear skies", cloudy: "Cloudy", rainy: "Rain", stormy: "Stormy", snowy: "Snow", windy: "High winds" };
   const stageCrowds = currentRuntimeDay && (verifiedLive?.runtimeStatus === "live" || verifiedLive?.runtimeStatus === "gates_open")
     ? filterFreshPublicFestivalStageCrowds(readPublicFestivalStageCrowds(verified, festivalLaunchId), now)
     : [];
@@ -108,7 +122,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     return () => window.clearInterval(timer);
   }, []);
   // Clock-based visual styling only; not astronomical sunrise/sunset or weather.
-  const localHour = getFestivalLocalClockHour(currentTime, timezone);
+  const localHour = getFestivalLocalClockHour(atmosphereDate ? Date.parse(atmosphereDate) : currentTime, timezone);
   const selectedStage = stages.find((stage) => stage.id === selectedStageId) ?? stages[0];
   const selectedCrowd = selectedStage
     ? stageCrowds.find((item) => item.stageId === selectedStage.id)
@@ -144,6 +158,19 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
     { label: "Food & drink", icon: "🍲", details: visitorInformation.foodAndDrink },
     { label: "Accessibility", icon: "♿", details: visitorInformation.accessibility },
   ].filter((facility) => facility.details?.trim());
+
+  const feedActive = currentRuntimeDay && (verifiedLive?.runtimeStatus === "live" || verifiedLive?.runtimeStatus === "gates_open");
+  const feedEvents = feedActive
+    ? readPublicFestivalActivityFeed(verified?.messages, stages, lineup, verifiedLive?.currentDay ?? null, timezone, now)
+    : [];
+  const feedAvailability = cancelled ? "This festival was cancelled; there is no live feed."
+    : livePending ? "Checking official festival updates…"
+    : staleLive || unverifiedLive ? "Festival updates are stale or unverified. Reconnect to see current events."
+    : liveFailed ? "Festival updates are unavailable. Retry to reconnect."
+    : !verifiedLive ? "No verified live feed for this edition."
+    : !feedActive ? "No active festival-day feed. Published information is still available."
+    : verified?.feedAvailable !== true ? "The official stage event feed is not available on this server yet. Live status and timetable remain available."
+    : null;
 
   return (
     <section aria-labelledby="festival-grounds-title" className="space-y-4">
@@ -184,17 +211,39 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
           <span className="text-3xl" aria-hidden="true">{weatherState ? weatherIcons[weatherState] : "❔"}</span>
           <div>
             <h3 className="font-semibold">Festival site conditions</h3>
-            <p className="text-sm">{weatherState ? weatherNames[weatherState] : livePending ? "Checking festival site conditions…" : "Weather information unavailable"}</p>
+            <p className="text-sm">{weatherState ? weatherNames[weatherState] : atmosphere?.condition ? `${conditionLabels[atmosphere.condition]}${atmosphere.temperature !== null ? ` · ${atmosphere.temperature}°C` : ""}` : livePending || seasonal.pending ? "Checking festival site conditions…" : "Weather information unavailable"}</p>
             {groundCondition && <p className="text-xs text-muted-foreground">Ground: {groundCondition.replaceAll("_", " ")}</p>}
-            <p className="text-xs text-muted-foreground">Festival runtime conditions, not a live forecast.</p>
+            {atmosphere && <p className="mt-1 text-sm font-medium">{getSeasonEmoji(atmosphere.season)} {festivalSeasonLabels[atmosphere.season]} · {city}</p>}
+            <p className="text-xs text-muted-foreground">{weatherState ? "Festival runtime conditions, not a live forecast." : "Seasonal outlook · game calendar"}</p>
           </div>
         </div>
       </div>
+      <section className="rounded-xl border bg-card p-4" aria-labelledby="festival-public-feed-title" aria-live="polite">
+        <h3 id="festival-public-feed-title" className="font-semibold">Official festival updates</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Verified edition events only. Reconnecting replays the latest official snapshot without duplicating announcements.</p>
+        {feedAvailability ? <p className="mt-3 text-sm text-muted-foreground">{feedAvailability}</p> : (
+          <>
+            {weatherState && <p className="mt-3 rounded-md bg-muted/40 p-2 text-sm">Current site conditions: {weatherNames[weatherState]}. <span className="text-xs text-muted-foreground">Runtime conditions, not a forecast.</span></p>}
+            {feedEvents.length > 0 ? (
+              <ol className="mt-3 space-y-2">
+                {feedEvents.map((event) => (
+                  <li key={event.id} className="rounded-md border p-3 text-sm">
+                    <p className="font-medium">{publicFestivalStageEventLabels[event.status]} · {event.stageName}</p>
+                    {event.artistName && <p>{event.artistName}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">{formatFestivalEditionDate(event.observedAt, timezone, { dateStyle: "medium", timeStyle: "short" })} ({festivalTimeZoneLabel(timezone)})</p>
+                  </li>
+                ))}
+              </ol>
+            ) : <p className="mt-3 text-sm text-muted-foreground">No verified stage updates have been published for this festival day.</p>}
+            <p className="mt-2 text-xs text-muted-foreground">Private artist check-ins, security incidents and operational notes are never shown in this feed.</p>
+          </>
+        )}
+      </section>
       {stages.length === 0 ? (
         <p className="rounded-xl border p-5 text-muted-foreground">The festival grounds and stages have not been announced yet.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={stageObservations} stageCrowds={stageCrowds} weatherState={weatherState} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
+          <FestivalStageSchematic lightweight={lightweight} stages={stages} lineup={lineup} now={currentTime} timezone={timezone} selectedStageId={selectedStage?.id} attendanceBand={verifiedLive?.attendanceBand} performances={stageObservations} stageCrowds={stageCrowds} weatherState={weatherState} atmosphere={atmosphere} localHour={localHour} cancelled={cancelled} onSelectStage={setSelectedStageId} />
           <div id="festival-stage-details" className="rounded-2xl border bg-card p-5" aria-live="polite">
             <h3 className="text-xl font-bold">{selectedStage?.name}</h3>
             {selectedStage && <p className="mt-1 text-sm text-muted-foreground">Stage capacity: {selectedStage.capacity.toLocaleString("en-GB")}</p>}
@@ -275,7 +324,7 @@ export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, can
                     <FestivalOutdoorStage key={stageViewKey} editionId={festivalEditionId}
                       stageId={selectedStage.id} stageName={selectedStage.name} capacity={selectedStage.capacity}
                       artist={stageArtist} localHour={localHour} crowdBand={freshness === "current" ? selectedCrowd?.crowdBand : undefined}
-                      reducedMotion={reduceMotion} />
+                      reducedMotion={reduceMotion} atmosphere={atmosphere} />
                   </Suspense>
                   </GigViewerErrorBoundary>
                 )}

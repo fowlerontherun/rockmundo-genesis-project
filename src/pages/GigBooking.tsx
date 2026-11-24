@@ -18,6 +18,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllVenues } from '@/utils/fetchAllVenues';
 import type { Database } from '@/lib/supabase-types';
+import { resolveGigsTab } from '@/lib/gigsTab';
 import { useSetlists } from '@/hooks/useSetlists';
 import { GigBookingDialog, GigBookingSubmission } from '@/components/gig/GigBookingDialog';
 import { GigHistoryTab } from '@/components/band/GigHistoryTab';
@@ -66,12 +67,13 @@ const GigBooking = () => {
     next.delete('proposalId');
     setSearchParams(next, { replace: true });
   };
-  const [bookingTab, setBookingTab] = useState(searchParams.get('tab') === 'play-together' ? 'play-together' : 'book');
-  useEffect(() => { const requested = searchParams.get('tab'); setBookingTab(requested && ['book','upcoming','history','play-together'].includes(requested) ? requested : 'book'); }, [searchParams]);
+  const [bookingTab, setBookingTab] = useState(() => resolveGigsTab(searchParams.get('tab')));
+  useEffect(() => { setBookingTab(resolveGigsTab(searchParams.get('tab'))); }, [searchParams]);
   const changeBookingTab = (tab: string) => {
-    setBookingTab(tab);
+    const resolved = resolveGigsTab(tab);
+    setBookingTab(resolved);
     const next = new URLSearchParams(searchParams);
-    next.set('tab', tab);
+    next.set('tab', resolved);
     if (tab !== 'play-together') {
       next.delete('section');
       next.delete('proposalId');
@@ -960,7 +962,7 @@ const GigBooking = () => {
                             <Link to={appearanceDetailHref(appearance)}>Festival details</Link>
                           </Button>
                           <Button asChild size="sm" variant="outline" className="border-fuchsia-400/50 bg-background/50">
-                            <Link to="/festival-opportunities">My festival bookings</Link>
+                            <Link to="/festival-opportunities">Manage or cancel booking</Link>
                           </Button>
                         </div>
                       </div>
@@ -1076,11 +1078,16 @@ const GigBooking = () => {
                   <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-fuchsia-500" />Festival appearances</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {pastFestivals.map((appearance) => (
-                      <Link to={appearanceDetailHref(appearance)} key={appearance.bookingId}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3 hover:bg-fuchsia-500/10">
-                        <span className="font-semibold">{appearance.festivalName}</span>
-                        <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
-                      </Link>
+                      <div key={appearance.bookingId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3">
+                        <Link to={appearanceDetailHref(appearance)} className="flex flex-1 flex-wrap items-center justify-between gap-2 hover:underline">
+                          <span className="font-semibold">{appearance.festivalName}</span>
+                          <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
+                        </Link>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to="/festival-opportunities">Manage or cancel booking</Link>
+                        </Button>
+                      </div>
                     ))}
                   </CardContent>
                 </Card>

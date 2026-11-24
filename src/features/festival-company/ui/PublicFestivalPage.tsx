@@ -26,6 +26,7 @@ import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { FestivalGrounds } from "./FestivalGrounds";
 import { FestivalPublishedTimetable } from "./FestivalPublishedTimetable";
 import { FestivalVisitorGuide } from "./FestivalVisitorGuide";
+import { FestivalLineupPoster } from "./poster/FestivalLineupPoster";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
@@ -415,11 +416,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="grounds">
-            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
+            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
           </TabsContent>
 
           <TabsContent value="lineup">
             <section aria-label="Confirmed festival line-up" className="space-y-4">
+              <FestivalLineupPoster editionId={f.editionId} name={f.name} place={[f.city, f.country].filter(Boolean).join(", ")} dates={formatFestivalEditionDate(f.startsAt, f.timezone)} artists={confirmedLineup.map((e) => e.artistName ?? "")} />
               <div>
                 <h2 className="text-xl font-bold">Confirmed line-up</h2>
                 <p className="text-sm text-muted-foreground">

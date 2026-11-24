@@ -11,7 +11,7 @@ describe("Festival simplified launch authority", () => {
       "supabase/migrations/20291218252600_festival_player_act_launch_authority.sql",
     );
     const reconciliation = read(
-      "supabase/reconciliation/festival/20260823_festival_player_act_launch_authority.sql",
+      "supabase/migrations/20291218252600_festival_player_act_launch_authority.sql",
     );
 
     for (const sql of [canonical, reconciliation]) {
@@ -42,7 +42,7 @@ describe("Festival simplified launch authority", () => {
       "supabase/migrations/20291218252700_restrict_legacy_festival_runtime_rpcs.sql",
     );
     const reconciliation = read(
-      "supabase/reconciliation/festival/20260823_restrict_legacy_festival_runtime_rpcs.sql",
+      "supabase/migrations/20291218252700_restrict_legacy_festival_runtime_rpcs.sql",
     );
     const service = read("src/features/festivals/runtime/service.ts");
 

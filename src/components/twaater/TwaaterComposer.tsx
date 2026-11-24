@@ -1,3 +1,4 @@
+import { consumePersonalSceneRecap } from "@/features/roleplay/sceneRecap";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +109,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
       if (!profileId) return [];
       const { data, error } = await (supabase as any)
         .from("band_members")
-        .select("band_id, bands:bands(id, name)")
+        .select("band_id, bands:bands!band_members_band_id_fkey(id, name)")
         .eq("profile_id", profileId)
         .eq("member_status", "active");
 
@@ -147,6 +148,14 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   useEffect(() => { setBody(""); setLinkedType(null); setLinkedId(null); setLinkedTitle(null); setMediaUrl(""); setMediaType(null); setQuotedTwaat(null); setPollDraft(null); setFailedPollPost(null); setScheduledFor(""); setVisibility("public"); }, [accountId]);
 
   useEffect(() => { setBody(""); setPollDraft(null); setMediaUrl(""); setLinkedId(null); setLinkedType(null); setQuotedTwaat(null); setVisibility("public"); }, [accountId]);
+
+  useEffect(() => {
+    if (!profileId) return;
+    try {
+      const recap = consumePersonalSceneRecap(profileId);
+      if (recap) setBody(recap);
+    } catch { /* Storage unavailable: leave the normal composer usable. */ }
+  }, [accountId, profileId]);
 
   const resetComposer = () => {
     setBody("");

@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TileImage } from "./TileImage";
 import type { HubTile } from "./types";
+import { Button } from '@/components/ui/button';
 
 /**
  * Hub tile — clean, dense card.
@@ -22,16 +23,17 @@ export const MagazineTile = ({ tile }: { tile: HubTile }) => {
   const Icon = tile.icon;
 
   return (
-    <button
+    <Button variant="ghost"
       type="button"
       onClick={() => navigate(tile.path)}
-      className="group relative aspect-square text-left overflow-hidden rounded-lg border border-fm-border bg-fm-panel rm-card-hover"
+      className="group relative flex h-auto w-full flex-col items-stretch whitespace-normal p-0 text-left overflow-hidden rounded-lg border border-fm-border bg-fm-panel rm-card-hover"
     >
+      <div className="relative w-full aspect-[4/3] overflow-hidden">
       <TileImage
         tile={tile}
-        className="opacity-80 group-hover:opacity-100 group-hover:scale-[1.04]"
+        className="group-hover:scale-[1.04] motion-reduce:transition-none"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-fm-bg via-fm-bg/40 to-transparent" />
+      </div>
 
       {/* Accent stripe */}
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-fm-accent" />
@@ -42,7 +44,7 @@ export const MagazineTile = ({ tile }: { tile: HubTile }) => {
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-0 inset-x-0 p-3">
+      <div className="relative flex-1 border-t border-fm-border p-2.5 pr-7">
         <h3 className="font-display text-sm md:text-base text-fm-fg leading-tight tracking-tight font-medium">
           {label}
         </h3>
@@ -51,10 +53,10 @@ export const MagazineTile = ({ tile }: { tile: HubTile }) => {
             {tile.description}
           </p>
         )}
-        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-fm-accent opacity-0 group-hover:opacity-100 transition-opacity">
-          Open <ArrowUpRight className="h-3 w-3" />
+        <div className="absolute right-2.5 top-3 text-fm-accent">
+          <ArrowUpRight className="h-3.5 w-3.5" />
         </div>
       </div>
-    </button>
+    </Button>
   );
 };

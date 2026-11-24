@@ -239,7 +239,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           payment,
           attendance,
           tickets_sold,
-          venues!gigs_venue_id_fkey(name, city)
+          venues!gigs_venue_id_fkey(name, cities:city_id(name))
         `)
         .eq("band_id", bandId)
         .order("scheduled_date", { ascending: false })
@@ -710,7 +710,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
                     <div>
                       <p className="font-medium">{gig.venues?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {gig.venues?.city} • {gig.scheduled_date ? new Date(gig.scheduled_date).toLocaleDateString() : "No date"}
+                        {gig.venues?.cities?.name} • {gig.scheduled_date ? new Date(gig.scheduled_date).toLocaleDateString() : "No date"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

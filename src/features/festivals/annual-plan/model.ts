@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { festivalBrandingSchema } from "@/features/festival-company/domain/festivalBranding";
 
 const nullableDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
 const currencyCode = z
@@ -71,6 +72,7 @@ export const festivalAnnualPlanSchema = z.object({
   siteTypes: z.array(catalogueOptionSchema),
   environmentalPolicies: z.array(catalogueOptionSchema),
   marketingEmphases: z.array(annualPlanMarketingSchema),
+  branding: festivalBrandingSchema.optional(),
 });
 
 export type FestivalAnnualPlan = z.infer<typeof festivalAnnualPlanSchema>;

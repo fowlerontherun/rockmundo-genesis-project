@@ -96,20 +96,37 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
                 />
               </div>
               <div>
-                <Label>Duration (days)</Label>
+                <Label htmlFor="tour-gig-dates">Number of Gig Dates</Label>
                 <Input
+                  id="tour-gig-dates"
                   type="number"
-                  value={wizard.state.durationDays || ''}
-                  onChange={(e) => wizard.updateState({ durationDays: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="30"
-                  min={7}
+                  value={initialRouteCityIds.length > 0 ? wizard.requestedShowCount : wizard.state.targetShowCount ?? ''}
+                  onChange={(e) => wizard.updateState({ targetShowCount: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="10"
+                  min={1}
                   max={365}
+                  disabled={initialRouteCityIds.length > 0}
                 />
               </div>
             </div>
-            
+
+            {initialRouteCityIds.length > 0 && <p className="text-sm text-muted-foreground">Your imported route sets the number of gigs: one date per map destination.</p>}
+
             <div>
-              <Label>Minimum Rest Days Between Shows: {wizard.state.minRestDays}</Label>
+              <Label htmlFor="tour-consecutive-gigs">Consecutive Gigs Before Rest</Label>
+              <Input
+                id="tour-consecutive-gigs"
+                type="number"
+                min={1}
+                max={30}
+                value={wizard.state.consecutiveShowCount}
+                onChange={(e) => wizard.updateState({ consecutiveShowCount: Number(e.target.value) })}
+                className="mt-2"
+              />
+            </div>
+
+            <div>
+              <Label>Rest Days After Each Run: {wizard.state.minRestDays}</Label>
               <Slider
                 value={[wizard.state.minRestDays]}
                 onValueChange={([v]) => wizard.updateState({ minRestDays: v })}
@@ -119,6 +136,11 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
                 className="mt-2"
               />
             </div>
+
+            {wizard.plannedEndDate && <div className="rounded-lg border bg-muted/30 p-3 text-sm" role="status">
+              <strong>Planned schedule:</strong> {wizard.requestedShowCount} gig dates, up to {wizard.state.consecutiveShowCount} consecutive gigs, then {wizard.state.minRestDays} rest day{wizard.state.minRestDays === 1 ? '' : 's'}.
+              {' '}The tour runs for {wizard.plannedDurationDays} calendar days, ending {wizard.plannedEndDate}. No rest days are added after the final gig.
+            </div>}
             
             {wizard.setlists && wizard.setlists.length > 0 && (
               <div>
@@ -244,8 +266,20 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
             </div>
             
             <p className="text-sm text-muted-foreground">
-              {wizard.venuesLoading ? 'Loading...' : `${wizard.venueMatches.length} venues matched for ${wizard.venueMatches.length} shows`}
+              {wizard.venuesLoading ? 'Loading...' : `${wizard.venueMatches.length} of ${wizard.requestedShowCount} gig dates have eligible venues`}
             </p>
+            {!wizard.venuesLoading && wizard.venueMatches.length !== wizard.requestedShowCount && <p role="alert" className="text-sm text-destructive">
+              {wizard.venueMatches.length < wizard.requestedShowCount
+                ? 'Not enough venues matched. Add eligible destinations or reduce the number of gig dates before continuing.'
+                : 'You selected more venues than gig dates. Remove some venues or increase the gig date count.'}
+            </p>}
+            {wizard.venueMatches.length > 0 && <div className="max-h-64 overflow-y-auto rounded-lg border p-3 space-y-2">
+              <p className="font-medium text-sm">Gig date preview</p>
+              {wizard.venueMatches.map((venue, index) => <div key={`${venue.venueId}-${index}`} className="flex justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">{index + 1}. {venue.venueName} · {venue.cityName}</span>
+                <span className="shrink-0 font-medium">{venue.date || 'Choose a start date'}</span>
+              </div>)}
+            </div>}
           </div>
         )}
 
@@ -295,7 +329,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
             value={wizard.state.vehicleTier}
             onChange={(tier) => wizard.updateState({ vehicleTier: tier })}
             bandFame={wizard.band?.fame || 0}
-            tourDurationDays={wizard.state.durationDays || 30}
+            tourDurationDays={wizard.tourDurationDays}
             stageHaulRequirement={getHaulRequirement(calculateTotalHaulWeight(wizard.state.stageComponents))}
           />
         )}
@@ -305,7 +339,9 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
           <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-muted/30 space-y-2">
               <p><strong>Tour:</strong> {wizard.state.name}</p>
-              <p><strong>Shows:</strong> {wizard.venueMatches.length} venues</p>
+              <p><strong>Gig dates:</strong> {wizard.venueMatches.length}</p>
+              <p><strong>Dates:</strong> {wizard.state.startDate} to {wizard.plannedEndDate} ({wizard.tourDurationDays} calendar days)</p>
+              <p><strong>Rest pattern:</strong> {wizard.state.consecutiveShowCount} consecutive gigs, then {wizard.state.minRestDays} rest day{wizard.state.minRestDays === 1 ? '' : 's'}</p>
               <p><strong>Countries:</strong> {wizard.state.selectedCountries.join(', ')}</p>
               <p><strong>Support:</strong> After booking, open this tour’s details to find available bands, shortlist favourites and send support offers. Bands must accept before they are confirmed.</p>
             </div>

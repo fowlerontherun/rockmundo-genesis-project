@@ -18,6 +18,8 @@ import {
 } from "../application/useFestivalArtistWorkflows";
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
 import type { FestivalArtistOpportunity } from "../domain/festivalArtistWorkflows";
+import { parseFestivalFee } from "../domain/festivalOwnerInputs";
+import { FestivalBookingPreparation } from "./FestivalBookingPreparation";
 
 
 
@@ -64,6 +66,33 @@ const dateLabel = (raw: unknown) => {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(parsed);
 };
 
+/** Confirmed but never-scheduled bookings may stay stale after the festival date. */
+const canCancelBooking = (
+  row: WorkflowRow,
+  permissions: { profileId: string; managedBandIds: string[] },
+  now = new Date(),
+) => {
+  const status = text(row, "status", "status");
+  // Published stage assignments need the separate canonical cancellation flow.
+  if (!["awaiting_schedule", "confirmed"].includes(status)) return false;
+
+  const artistType = text(row, "artistType", "artist_type");
+  const allowed = artistType === "band"
+    ? permissions.managedBandIds.includes(text(row, "bandId", "band_id"))
+    : artistType === "solo" && permissions.profileId === text(row, "artistProfileId", "artist_profile_id");
+  if (!allowed) return false;
+
+  const start = text(row, "startsAt", "starts_at") || text(row, "scheduledStart", "scheduled_start");
+  if (status === "scheduled" && !start) return false;
+  if (start) {
+    const startsAt = Date.parse(start);
+    if (!Number.isFinite(startsAt) || startsAt <= now.getTime()) return false;
+  }
+  // provisional_date is not a published start time. An unassigned booking may
+  // still need withdrawal after that date passes (e.g. an old Oktoberfest gig).
+  return true;
+};
+
 const message: Record<string, string> = {
   FESTIVAL_APPLICATION_ALREADY_EXISTS:
     "This act already has an active application or invitation.",
@@ -91,6 +120,8 @@ const message: Record<string, string> = {
     "That Festival offer changed. Refresh and review the latest terms.",
   festival_artist_offer_budget_exceeded:
     "The Festival no longer has enough artist budget for this offer.",
+  festival_artist_booking_invalid_transition:
+    "This Festival gig can no longer be cancelled.",
 };
 
 const friendly = (error: unknown) => {
@@ -125,10 +156,14 @@ export default function FestivalArtistOpportunitiesPage() {
   const respondInvitation = useFestivalArtistAction("respondInvitation");
   const withdrawInvitation = useFestivalArtistAction("withdrawInvitation");
   const respondOffer = useFestivalArtistAction("respondOffer");
+  const counterOffer = useFestivalArtistAction("counterOffer");
+  const cancelBooking = useFestivalArtistAction("cancelBooking");
+  const [counterFees, setCounterFees] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [artist, setArtist] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [bookingNotice, setBookingNotice] = useState("");
   const requestIds = useRef(new Map<string,string>());
   const id = (key: string) => { if (!requestIds.current.has(key)) requestIds.current.set(key, crypto.randomUUID()); return requestIds.current.get(key)!; };
 
@@ -242,6 +277,27 @@ export default function FestivalArtistOpportunitiesPage() {
         p_idempotency_key: id(`withdraw:${row.id}:${number(row, "version", "version", 1)}`),
       });
       setNotice("Festival invitation interest withdrawn.");
+    });
+  };
+
+  const cancelFestivalGig = (row: WorkflowRow) => {
+    if (cancelBooking.isPending || !query.data || !canCancelBooking(row, query.data.permissions)) return;
+    const bookingVersion = number(row, "version", "version", -1);
+    if (!Number.isSafeInteger(bookingVersion) || bookingVersion < 0) return;
+    if (!window.confirm(
+      `Cancel your performance at ${festivalForRow(row, query.data.openApplications)}?\n\n` +
+      "This withdraws the artist from the Festival and releases the reserved performance fee. " +
+      "You cannot undo this action."
+    )) return;
+    setBookingNotice("");
+    void run(async () => {
+      await cancelBooking.mutateAsync({
+        p_booking_id: row.id,
+        p_reason: "Withdrawn by artist",
+        p_expected_version: bookingVersion,
+        p_idempotency_key: id(`cancel-booking:${row.id}:${bookingVersion}`),
+      });
+      setBookingNotice("Festival gig cancelled. Your performance schedule will refresh shortly.");
     });
   };
 
@@ -409,7 +465,7 @@ export default function FestivalArtistOpportunitiesPage() {
           <CardDescription>{data.invitations.length} invitation(s)</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
-          {notice ? <p role="status" className="text-sm text-muted-foreground">{notice}</p> : null}
+          {bookingNotice ? <p role="status" className="text-sm text-muted-foreground">{bookingNotice}</p> : null}
           {data.invitations.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No invitations right now.
@@ -554,6 +610,14 @@ export default function FestivalArtistOpportunitiesPage() {
                       below.
                     </p>
                   ) : null}
+                  {status === "sent" ? <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <label className="space-y-1 text-xs">Counteroffer fee ({currency})<Input aria-label={`Counteroffer fee for ${row.id}`} inputMode="decimal" value={counterFees[String(row.id)] ?? (fee / 100).toFixed(2)} onChange={event => setCounterFees(current => ({ ...current, [String(row.id)]: event.target.value }))} /></label>
+                    <Button variant="outline" disabled={counterOffer.isPending || parseFestivalFee(counterFees[String(row.id)] ?? (fee / 100).toFixed(2)) === null} onClick={() => {
+                      const feeMinor = parseFestivalFee(counterFees[String(row.id)] ?? (fee / 100).toFixed(2));
+                      if (feeMinor === null) return;
+                      void run(() => counterOffer.mutateAsync({ p_offer_id: row.id, p_expected_version: number(row, "offerVersion", "offer_version", 1), p_terms: { feeMinor, setMinutes }, p_idempotency_key: id(`counter:${row.id}:${feeMinor}:${number(row, "offerVersion", "offer_version", 1)}`) }));
+                    }}>Send counteroffer</Button>
+                  </div> : null}
                 </article>
               );
             })
@@ -567,6 +631,7 @@ export default function FestivalArtistOpportunitiesPage() {
           <CardDescription>{data.bookings.length} booking(s)</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
+          {notice ? <p role="status" className="text-sm text-muted-foreground">{notice}</p> : null}
           {data.bookings.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Accepted Festival performances will appear here.
@@ -586,6 +651,9 @@ export default function FestivalArtistOpportunitiesPage() {
               const provisionalDate = dateLabel(
                 value(row, "provisionalDate", "provisional_date"),
               );
+              const startsAt = text(row, "startsAt", "starts_at") || text(row, "scheduledStart", "scheduled_start");
+              const stageName = text(row, "stageName", "stage_name");
+              const companyId = text(row, "festivalCompanyId", "festival_company_id");
 
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
@@ -610,10 +678,26 @@ export default function FestivalArtistOpportunitiesPage() {
                     {billing ? ` · ${statusLabel(billing)}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {provisionalDate
+                    {status === "scheduled"
+                      ? `Scheduled${startsAt && !Number.isNaN(Date.parse(startsAt)) ? ` · ${new Date(startsAt).toLocaleString("en-GB", { timeZone: "UTC" })} UTC` : " · See the published festival timetable for stage times"}${stageName ? ` · ${stageName}` : ""}.`
+                      : status === "confirmed" ? `Booking confirmed${provisionalDate ? ` · ${provisionalDate}` : ""}. Stage times will be published in the festival timetable.`
+                      : provisionalDate
                       ? `Provisional performance date ${provisionalDate}. The game will create the final running order automatically.`
                       : "The game will assign the performance to the automatic running order."}
                   </p>
+                  {companyId ? <Button size="sm" variant="outline" asChild className="mt-2"><Link to={`/world/festivals/${encodeURIComponent(companyId)}${text(row, "festivalEditionId", "festival_edition_id") ? `/editions/${encodeURIComponent(text(row, "festivalEditionId", "festival_edition_id"))}` : ""}?tab=timetable`}>View festival timetable</Link></Button> : null}
+                  {text(row, "artistType", "artist_type") === "band" && ["confirmed", "awaiting_schedule", "scheduled"].includes(status) ? <FestivalBookingPreparation bookingId={String(row.id)} /> : null}
+                  {canCancelBooking(row, data.permissions) && Number.isSafeInteger(number(row, "version", "version", -1)) && number(row, "version", "version", -1) >= 0 ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={cancelBooking.isPending}
+                      onClick={() => cancelFestivalGig(row)}
+                    >
+                      {cancelBooking.isPending ? "Cancelling…" : "Cancel festival gig"}
+                    </Button>
+                  ) : null}
                 </article>
               );
             })

@@ -6,6 +6,32 @@
 
 @layer base {
   :root {
+    /* Seasonal festival scenery and shared Three.js material roles. */
+    --festival-outdoor-spring-sky: #acd3e6;
+    --festival-outdoor-summer-sky: #80c6e5;
+    --festival-outdoor-autumn-sky: #c0bbc7;
+    --festival-outdoor-winter-sky: #bbcedb;
+    --festival-outdoor-overcast: #7e939f;
+    --festival-outdoor-night: #101923;
+    --festival-outdoor-spring-ground: #73915a;
+    --festival-outdoor-summer-ground: #667e40;
+    --festival-outdoor-autumn-ground: #85734c;
+    --festival-outdoor-winter-ground: #6d7773;
+    --festival-outdoor-spring-foliage: #a9ba78;
+    --festival-outdoor-summer-foliage: #4f8055;
+    --festival-outdoor-autumn-foliage: #c88b45;
+    --festival-outdoor-winter-foliage: #7c8f88;
+    --festival-outdoor-mud: #655c4e;
+    --festival-outdoor-snow: #e1eef1;
+    --festival-outdoor-rain: #bbd5e3;
+    --festival-outdoor-lamp: #ffe0a1;
+    --festival-outdoor-accent: var(--festival-accent, var(--festival-electric-accent));
+    --festival-electric-dark: #111820; --festival-electric-mid: #087a89; --festival-electric-light: #b8fff3; --festival-electric-accent: #f4ff62;
+    --festival-vintage-dark: #262126; --festival-vintage-mid: #a64240; --festival-vintage-light: #fcefc4; --festival-vintage-accent: #c9ebaf;
+    --festival-indie-dark: #131b2c; --festival-indie-mid: #bc263a; --festival-indie-light: #faf4ef; --festival-indie-accent: #82c8ff;
+    --festival-industrial-dark: #171a1a; --festival-industrial-mid: #6c4640; --festival-industrial-light: #e6e5df; --festival-industrial-accent: #ffb34d;
+    --festival-sunset-dark: #321a31; --festival-sunset-mid: #bd386b; --festival-sunset-light: #ffe3ed; --festival-sunset-accent: #ffdc79;
+    --festival-forest-dark: #122c26; --festival-forest-mid: #36755b; --festival-forest-light: #eaf4d9; --festival-forest-accent: #f1ce70;
     /* Instrument material tokens: shared artwork colours, not UI surfaces. */
     --luth-maple: #c4935d;
     --luth-mahogany: #74452f;
@@ -134,10 +160,12 @@
        Brand accent #7D4DFF (violet). Per-module hues still override
        --fm-accent for wayfinding, but --fm-brand stays violet everywhere. */
     /* Spec tokens (docs/ui-redesign-spec.md §1.1) */
-    --fm-bg: 257 14% 6%;         /* #0E0D12 */
-    --fm-panel: 260 14% 10%;     /* #17151D */
-    --fm-panel-2: 257 18% 13%;   /* #1F1C28 */
-    --fm-border: 257 14% 18%;    /* #2A2733 */
+    --fm-bg: 220 6% 7%;
+    --fm-panel: 220 5% 11%;
+    --fm-panel-2: 220 5% 15%;
+    --fm-border: 220 5% 23%;
+    --rm-panel-edge: inset 0 1px 0 hsl(var(--fm-fg) / 0.035);
+    --rm-featured-shade: linear-gradient(90deg, hsl(var(--fm-bg) / .94), hsl(var(--fm-bg) / .55) 50%, hsl(var(--fm-bg) / .08));
     --fm-fg: 270 18% 96%;        /* #F5F3F7 */
     --fm-fg-muted: 257 11% 63%;  /* #9B96A8 */
     --fm-fg-subtle: 257 8% 50%;  /* #7A7588 */
@@ -550,10 +578,15 @@
    on top of the FM panel base. Kept very low opacity so KPI panels
    and data tables remain perfectly legible. */
 .fm-module-bg {
-  background-image:
-    radial-gradient(60% 60% at 15% 0%,  hsl(var(--fm-mod-1) / 0.10), transparent 60%),
-    radial-gradient(50% 70% at 100% 100%, hsl(var(--fm-mod-2) / 0.09), transparent 65%),
-    linear-gradient(180deg, hsl(var(--fm-bg)) 0%, hsl(var(--fm-bg)) 100%);
+  background: hsl(var(--fm-bg));
+}
+
+.rm-game-panel { box-shadow: var(--rm-panel-edge); }
+.rm-page-heading { position: relative; }
+.rm-page-heading::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 56px; height: 2px; background: hsl(var(--fm-accent)); }
+.rm-featured-shade { background: var(--rm-featured-shade); }
+@media (max-width: 640px) {
+  .rm-featured-shade { background: linear-gradient(0deg, hsl(var(--fm-bg) / .96), hsl(var(--fm-bg) / .55) 60%, hsl(var(--fm-bg) / .15)); }
 }
 
 /* Subtle 1px diagonal scanline texture — invisible at distance but
@@ -821,3 +854,37 @@
     inset 0 0 0 2px hsl(var(--fm-bg) / 0.25);
   transform: rotate(-8deg);
 }
+
+/* Christmas cosmetics (src/features/seasonal/ChristmasDecorations.tsx) */
+@keyframes xmas-fall { 0% { transform: translate3d(0,-10px,0) rotate(0deg); opacity: 0; } 10% { opacity: .8; } 100% { transform: translate3d(30px,105vh,0) rotate(240deg); opacity: 0; } }
+@keyframes xmas-twinkle { 0%,100% { opacity: 1; filter: brightness(1.3); } 50% { opacity: .35; filter: brightness(.8); } }
+.xmas-flake { animation-name: xmas-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+.xmas-bulb { animation: xmas-twinkle 1.6s ease-in-out infinite; box-shadow: 0 0 6px currentColor; }
+
+.festival-theme-electric { --festival-dark: var(--festival-electric-dark); --festival-mid: var(--festival-electric-mid); --festival-light: var(--festival-electric-light); --festival-accent: var(--festival-electric-accent); }
+
+.festival-theme-vintage { --festival-dark: var(--festival-vintage-dark); --festival-mid: var(--festival-vintage-mid); --festival-light: var(--festival-vintage-light); --festival-accent: var(--festival-vintage-accent); }
+
+.festival-theme-indie { --festival-dark: var(--festival-indie-dark); --festival-mid: var(--festival-indie-mid); --festival-light: var(--festival-indie-light); --festival-accent: var(--festival-indie-accent); }
+
+.festival-theme-industrial { --festival-dark: var(--festival-industrial-dark); --festival-mid: var(--festival-industrial-mid); --festival-light: var(--festival-industrial-light); --festival-accent: var(--festival-industrial-accent); }
+
+.festival-theme-sunset { --festival-dark: var(--festival-sunset-dark); --festival-mid: var(--festival-sunset-mid); --festival-light: var(--festival-sunset-light); --festival-accent: var(--festival-sunset-accent); }
+
+.festival-theme-forest { --festival-dark: var(--festival-forest-dark); --festival-mid: var(--festival-forest-mid); --festival-light: var(--festival-forest-light); --festival-accent: var(--festival-forest-accent); }
+
+.festival-colour-swatch { background: linear-gradient(135deg, var(--festival-mid) 0 50%, var(--festival-accent) 50%); }
+.festival-theme-art { color: var(--festival-light); background: linear-gradient(145deg, var(--festival-dark), var(--festival-mid)); }
+.festival-theme-art::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .22; }
+.festival-motif-spotlight::before { background: conic-gradient(from 215deg at 70% 0%, transparent 0deg 20deg, var(--festival-accent) 20deg 45deg, transparent 45deg); }
+.festival-motif-stripes::before { background: repeating-linear-gradient(135deg, transparent 0 28px, var(--festival-accent) 28px 32px); }
+.festival-motif-sunburst::before { background: repeating-conic-gradient(from 0deg at 50% 80%, transparent 0deg 15deg, var(--festival-accent) 15deg 20deg); }
+.festival-theme-art .festival-billing { color: var(--festival-accent); }
+
+.festival-season-spring { --festival-season-ground: var(--festival-outdoor-spring-ground); --festival-season-leaf: var(--festival-outdoor-spring-foliage); }
+.festival-season-summer { --festival-season-ground: var(--festival-outdoor-summer-ground); --festival-season-leaf: var(--festival-outdoor-summer-foliage); }
+.festival-season-autumn { --festival-season-ground: var(--festival-outdoor-autumn-ground); --festival-season-leaf: var(--festival-outdoor-autumn-foliage); }
+.festival-season-winter { --festival-season-ground: var(--festival-outdoor-winter-ground); --festival-season-leaf: var(--festival-outdoor-winter-foliage); }
+.festival-season-stage { border-bottom: 4px solid var(--festival-season-ground); }
+.festival-season-leaf { color: var(--festival-season-leaf); }
+.festival-season-snow { background: var(--festival-outdoor-snow); }

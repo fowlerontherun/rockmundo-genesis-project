@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -65,6 +66,7 @@ export function FestivalLiveControlRoom({
     queryKey: ["festival-run-readiness", companyId, editionId],
     queryFn: () => getFestivalRunReadiness(companyId, editionId),
     enabled: query.isSuccess && query.data === null,
+    refetchInterval: 10_000,
   });
   const openRequest = useRef<{ editionId: string; key: string } | null>(null);
   const availability = useQuery({
@@ -89,6 +91,7 @@ export function FestivalLiveControlRoom({
       });
     },
     onSuccess: updateRuntime,
+    onError: () => { void readinessQuery.refetch(); void availability.refetch(); },
   });
   const runMutation = useMutation({
     mutationFn: (expectedEditionVersion: number) =>
@@ -102,6 +105,7 @@ export function FestivalLiveControlRoom({
         queryKey: ["festival-edition-history", editionId],
       });
     },
+    onError: () => { void readinessQuery.refetch(); void availability.refetch(); },
   });
 
   if (query.isLoading) return <section role="status">Loading Festival Day…</section>;
@@ -140,6 +144,7 @@ export function FestivalLiveControlRoom({
                 <Button size="sm" variant="outline" onClick={() => void availability.refetch()}>Retry live-day checks</Button>
               </div>
             ) : availability.isPending ? <p role="status">Verifying live-day availability…</p> : null}
+            {availability.data?.liveDaySupported === false ? <p role="status" className="text-sm text-muted-foreground">Live gate controls are unavailable for this edition. Final simulation is available after the festival ends and all planning checks pass.</p> : null}
             {readiness ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -163,6 +168,10 @@ export function FestivalLiveControlRoom({
                   <div key={blocker.code} role="alert" className="flex gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
                     <AlertTriangle className="h-5 w-5 shrink-0" />
                     <span>{blocker.message}</span>
+                    {(() => {
+                      const section = /ticket|budget/.test(blocker.code) ? "finance" : /act|artist|lineup/.test(blocker.code) ? "applications" : /plan|stage|licence/.test(blocker.code) ? "overview" : null;
+                      return section ? <Button size="sm" variant="outline" asChild><Link to={`/festival-company/${companyId}/editions/${editionId}${section === "overview" ? "" : `/${section}`}`}>Review {section === "applications" ? "line-up" : section === "finance" ? "tickets" : "plan"}</Link></Button> : null;
+                    })()}
                   </div>
                 ))}
 
@@ -183,7 +192,7 @@ export function FestivalLiveControlRoom({
                 {availability.data?.canOpen && (
                   <Button
                     size="lg"
-                    disabled={availability.isPending || readiness.blockers.some((blocker) => blocker.code !== "festival_not_due") || openMutation.isPending || runMutation.isPending}
+                    disabled={availability.isPending || readinessQuery.isError || readiness.blockers.some((blocker) => !["festival_not_due", "festival_final_results_not_due"].includes(blocker.code)) || openMutation.isPending || runMutation.isPending}
                     onClick={() => openMutation.mutate(readiness.editionVersion)}
                   >Open festival gates</Button>
                 )}

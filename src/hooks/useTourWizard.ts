@@ -32,6 +32,7 @@ import {
   canAccessScope,
   generateTourSchedule,
   calculateTourEndDate,
+  calculateTourDurationDays,
   calculateTicketPrice,
   estimateTicketSalesPercent,
   calculateBookingFee,
@@ -341,14 +342,13 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     return result;
   }, [cityCoordinates, haversineDistance]);
 
+  // Imported map routes have one gig date per destination; otherwise the
+  // requested number of gig dates drives venue selection and scheduling.
+  const requestedShowCount = routeCityIds.length || state.targetShowCount || 0;
+
   // Generate venue matches for the tour
   const venueMatches = useMemo((): VenueMatch[] => {
     if (!availableVenues || availableVenues.length === 0) return [];
-    
-    const showCount = routeCityIds.length > 0 ? routeCityIds.length : (state.targetShowCount || Math.min(
-      Math.floor((state.durationDays || 30) / (1 + state.minRestDays)),
-      availableVenues.length
-    ));
     
     let rawMatches: VenueMatch[];
     
@@ -389,7 +389,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       for (const venue of (routeCityIds.length > 0
         ? [...sortedVenues].sort((a, b) => routeCityIds.indexOf(a.city_id || '') - routeCityIds.indexOf(b.city_id || ''))
         : sortedVenues)) {
-        if (rawMatches.length >= showCount) break;
+        if (rawMatches.length >= requestedShowCount) break;
         if (citiesUsed.has(venue.city_id || '')) continue;
         
         citiesUsed.add(venue.city_id || '');
@@ -417,14 +417,20 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
 
     // Assign dates after geographic ordering
     const schedule = state.startDate 
-      ? generateTourSchedule(new Date(state.startDate), sorted.length, state.minRestDays)
+      ? generateTourSchedule(new Date(state.startDate), sorted.length, state.consecutiveShowCount, state.minRestDays)
       : [];
 
     return sorted.map((v, i) => ({
       ...v,
       date: schedule[i]?.toISOString().split('T')[0] || '',
     }));
-  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
+  }, [availableVenues, requestedShowCount, state.consecutiveShowCount, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
+
+  const tourDurationDays = calculateTourDurationDays(venueMatches.length, state.consecutiveShowCount, state.minRestDays);
+  const plannedDurationDays = calculateTourDurationDays(requestedShowCount, state.consecutiveShowCount, state.minRestDays);
+  const plannedEndDate = state.startDate && requestedShowCount > 0
+    ? calculateTourEndDate(new Date(state.startDate), requestedShowCount, state.consecutiveShowCount, state.minRestDays).toISOString().slice(0, 10)
+    : null;
 
   const missingRouteCityIds = findUnmatchedRouteStops(routeCityIds, venueMatches);
 
@@ -475,10 +481,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     const travelCosts = venueMatches.length * 100;
     
     // Vehicle costs (replaces old tour bus logic)
-    const tourDays = state.durationDays || 30;
-    const vehicleCosts = vehicle.dailyCost * tourDays;
+    const vehicleCosts = vehicle.dailyCost * tourDurationDays;
     const equipTruckCostPerDay = getEquipmentTruckCost(haulReq, vehicle.gearHaulCapacity);
-    const tourBusCosts = vehicleCosts + (equipTruckCostPerDay * tourDays);
+    const tourBusCosts = vehicleCosts + (equipTruckCostPerDay * tourDurationDays);
     
     // Stage setup costs (from component selections)
     const stageSetupCosts = stageCostPerShow * venueMatches.length;
@@ -518,7 +523,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       estimatedProfit,
       showCount: venueMatches.length,
     };
-  }, [venueMatches, state, band?.fame, band?.total_fans, recommendedTicketPrice]);
+  }, [venueMatches, state, band?.fame, band?.total_fans, recommendedTicketPrice, tourDurationDays]);
 
   // Update state helpers
   const updateState = useCallback((updates: Partial<TourWizardState>) => {
@@ -568,12 +573,14 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       if (routeCitiesLoading || venuesLoading) throw new Error('Please wait for the map destinations and venue checks to finish.');
       if (routeCitiesError || venuesError) throw new Error('Could not verify all destinations and venues. Retry after the data loads.');
       if (missingRouteCityIds.length > 0) throw new Error('Some map destinations have no eligible venue. Update the route or venue filters before booking.');
+      if (venueMatches.length !== requestedShowCount || requestedShowCount < 1) throw new Error('Choose enough eligible venues to cover every requested gig date.');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
             new Date(state.startDate), 
             venueMatches.length, 
-            state.minRestDays
+            state.consecutiveShowCount,
+            state.minRestDays,
           ).toISOString().split('T')[0]
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -591,6 +598,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           end_date: endDate,
           scope: state.scope,
           min_rest_days: state.minRestDays,
+          consecutive_show_count: state.consecutiveShowCount,
           travel_mode: state.travelMode,
           tour_bus_daily_cost: getVehicleTier(state.vehicleTier).dailyCost,
           total_upfront_cost: costEstimate.netUpfrontCost,
@@ -619,9 +627,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
           equipment_hauling_cost: getEquipmentTruckCost(
             getHaulRequirement(calculateTotalHaulWeight(state.stageComponents)),
             getVehicleTier(state.vehicleTier).gearHaulCapacity
-          ) * (state.durationDays || 30),
+          ) * tourDurationDays,
           stage_components: state.stageComponents,
-        })
+        } as Database['public']['Tables']['tours']['Insert'] & { consecutive_show_count: number })
         .select()
         .single();
 
@@ -917,13 +925,16 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   const canProceed = useMemo(() => {
     switch (currentStep) {
       case 0: // Basics
-        return state.name.trim() !== '' && state.startDate !== '' && state.startingCityId !== null;
+        return state.name.trim() !== '' && state.startDate !== '' && state.startingCityId !== null
+          && Number.isInteger(requestedShowCount) && requestedShowCount >= 1 && requestedShowCount <= 365
+          && Number.isInteger(state.consecutiveShowCount) && state.consecutiveShowCount >= 1 && state.consecutiveShowCount <= 30
+          && Number.isInteger(state.minRestDays) && state.minRestDays >= 1 && state.minRestDays <= 7;
       case 1: // Scope
         return scopeAccess[state.scope];
       case 2: // Countries
         return state.selectedCountries.length > 0;
       case 3: // Venues
-        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && state.venueTypes.length > 0 && venueMatches.length > 0 && missingRouteCityIds.length === 0;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && state.venueTypes.length > 0 && venueMatches.length === requestedShowCount && missingRouteCityIds.length === 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
       case 5: // Stage Production
@@ -933,11 +944,11 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review
-        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && venueMatches.length > 0 && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && venueMatches.length === requestedShowCount && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
       default:
         return false;
     }
-  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length, routeCitiesLoading, venuesLoading, routeCitiesError, venuesError]);
+  }, [currentStep, state, requestedShowCount, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length, routeCitiesLoading, venuesLoading, routeCitiesError, venuesError]);
 
   return {
     state,
@@ -960,6 +971,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     venuesLoading,
     setlists,
     venueMatches,
+    requestedShowCount,
+    tourDurationDays,
+    plannedDurationDays,
+    plannedEndDate,
     missingRouteCityIds,
     routeCitiesLoading,
     routeValidationError: routeCitiesError || venuesError,

@@ -571,7 +571,7 @@ const StageEquipmentSystem = () => {
                 stat_boosts: item.stat_boosts as Record<string, number> | null,
               }))}
               ownedItemNames={inventory.map((item) => item.equipment_name || "")}
-              onPurchase={openDbPurchaseDialog}
+              onPurchase={(item) => { const catalogItem = dbCatalog.find(row => row.id === item.id); if (catalogItem) openDbPurchaseDialog(catalogItem); }}
               isPurchasing={purchaseMutation.isPending}
             />
           </TabsContent>

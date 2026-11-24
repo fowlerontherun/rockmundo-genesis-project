@@ -39,7 +39,7 @@ export default function PublicFestivalDirectory() {
 
   const activeAttendance = useMemo(
     () =>
-      attendance
+      (attendanceError ? [] : attendance)
         .filter((item) => !["cancelled", "refunded"].includes(item.status))
         .sort((left, right) => {
           const priority = (status: string) => {
@@ -51,7 +51,7 @@ export default function PublicFestivalDirectory() {
           };
           return priority(left.status) - priority(right.status);
         }),
-    [attendance],
+    [attendance, attendanceError],
   );
 
   const storyAttendance = activeAttendance.find((item) => item.id === storyAttendanceId) ?? null;

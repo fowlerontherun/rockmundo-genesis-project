@@ -24,7 +24,7 @@ export default function FestivalLegacyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   useEffect(() => {
-    let live = true; setLoading(true); setError(""); setDetail(null); setStatistics(null);
+    let live = true; setLoading(true); setError(""); setDetail(null); setStatistics(null); setItems([]);
     const request: Promise<unknown> = resultId ? festivalLegacyService.detail(resultId).then(value => { if(live)setDetail(value); })
       : section === "awards" ? festivalLegacyService.awards(filter.year).then(value=>{if(live)setItems(value)})
       : section === "records" ? festivalLegacyService.records().then(value=>{if(live)setItems(value)})
@@ -48,11 +48,11 @@ export default function FestivalLegacyPage() {
     {loading && <p role="status" aria-live="polite">Loading {title[section]?.toLowerCase()}…</p>}
     {error && <Card role="alert"><CardContent className="space-y-3 py-8"><p>{error}</p><Button onClick={()=>setFilter(v=>({...v}))}>Try again</Button></CardContent></Card>}
     {!loading && !error && resultId && !detail && <Empty/>}
-    {!loading && detail && <Detail value={detail}/>}
+    {!loading && !error && detail && <Detail value={detail}/>}
     {!loading && !error && statistics && <Statistics value={statistics}/>}
     {!loading && !error && !resultId && !statistics && items.length===0 && <Empty/>}
-    {!loading && !resultId && !statistics && <section aria-label={title[section]} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map(item=><LegacyCard key={item.id} item={item} section={section}/>)}</section>}
-    {filters && items.length>0 && <nav className="flex justify-center gap-3" aria-label="Results pages"><Button variant="outline" disabled={!filter.offset} onClick={()=>setFilter(v=>({...v,offset:Math.max(0,(v.offset??0)-(v.limit??24))}))}>Previous</Button><Button variant="outline" disabled={items.length<(filter.limit??24)} onClick={()=>setFilter(v=>({...v,offset:(v.offset??0)+(v.limit??24)}))}>Next</Button></nav>}
+    {!loading && !error && !resultId && !statistics && <section aria-label={title[section]} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map(item=><LegacyCard key={item.id} item={item} section={section}/>)}</section>}
+    {!loading && !error && filters && items.length>0 && <nav className="flex justify-center gap-3" aria-label="Results pages"><Button variant="outline" disabled={!filter.offset} onClick={()=>setFilter(v=>({...v,offset:Math.max(0,(v.offset??0)-(v.limit??24))}))}>Previous</Button><Button variant="outline" disabled={items.length<(filter.limit??24)} onClick={()=>setFilter(v=>({...v,offset:(v.offset??0)+(v.limit??24)}))}>Next</Button></nav>}
   </main>;
 }
 
