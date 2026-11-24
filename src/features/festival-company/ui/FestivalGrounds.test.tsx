@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
 import { FestivalGrounds } from "./FestivalGrounds";
@@ -41,6 +41,12 @@ it("keeps the lightweight directory usable during loading, failure and retry", a
     expect(screen.getByText("Checking official stage status…")).toBeVisible();
     expect(screen.getByText("Checking festival site conditions…")).toBeVisible();
 
+    fireEvent.click(screen.getByRole("button", { name: /Second Stage/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Explore illustrated grounds map" }));
+    const groundsMap = screen.getByTestId("festival-svg-grounds");
+    fireEvent.click(within(groundsMap).getByRole("button", { name: /Explore Main Stage/ }));
+    expect(screen.getByRole("heading", { name: "Main Stage" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Hide illustrated grounds map" }));
     fireEvent.click(screen.getByRole("button", { name: /Second Stage/ }));
     fireEvent.click(toggle);
     expect(screen.getByRole("button", { name: /Second Stage/ })).toHaveAttribute("aria-pressed", "true");

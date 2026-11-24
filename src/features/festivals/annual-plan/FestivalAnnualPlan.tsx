@@ -45,6 +45,7 @@ import {
 } from "./repository";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { getAnnualPlanReadinessLabel, getReadinessAction } from "./readinessActions";
+import { FestivalPlanningOverlay } from "./FestivalPlanningOverlay";
 
 import { FestivalSetupSteps } from "@/features/festival-company/ui/FestivalSetupSteps";
 import { FestivalThemePicker, FestivalThemePreview } from "@/features/festival-company/ui/FestivalThemePicker";
@@ -265,6 +266,8 @@ export function FestivalAnnualPlan({
           </CardContent>
         ) : null}
       </Card>
+
+      <FestivalPlanningOverlay plan={data} unsavedChanges={dirty} onOpenSection={openPlanningSection} />
 
       <FestivalSetupSteps step={step} onChange={setStep} busy={save.isPending}
         canContinue={step !== 1 || Boolean(draft.startsOn && draft.cityId && draft.festivalScale)}>
