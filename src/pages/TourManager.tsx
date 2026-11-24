@@ -1,7 +1,7 @@
 import { TourSupportInviteShortcut } from '@/components/tours/TourSupportInviteShortcut';
-import { BookedTourSupportDialog } from '@/components/tours/BookedTourSupportDialog';
 import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
 import { TourSupportPanel } from '@/components/tours/TourSupportPanel';
+import { TourReadinessPanel } from '@/components/tours/TourReadinessPanel';
 import { TourPoster } from '@/components/game-art/TourPoster';
 import WorldAtlas from "@/components/map/WorldAtlas";
 import { useEffect, useState } from "react";
@@ -163,6 +163,7 @@ const TourManager = () => {
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [tourHQTab, setTourHQTab] = useState('overview');
   const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   const [wizardOpen, setWizardOpen] = useState(() => Boolean(requestedCityId));
   const [newTourSupportPrompt, setNewTourSupportPrompt] = useState<{ id: string; name: string } | null>(null);
@@ -668,8 +669,9 @@ const TourManager = () => {
     });
   };
 
-  const openTourDetails = (tour: Tour) => {
+  const openTourDetails = (tour: Tour, section = 'overview') => {
     setSelectedTour(tour);
+    setTourHQTab(section);
     setDetailsOpen(true);
   };
 
@@ -757,7 +759,7 @@ const TourManager = () => {
           )}
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="flex-1" onClick={() => openTourDetails(tour)}>
-              View Details
+              Open Tour HQ
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
             {canPromote && (
@@ -766,7 +768,8 @@ const TourManager = () => {
               </Button>
             )}
           </div>
-          {tour.band_id === currentBandId && <BookedTourSupportDialog tourId={tour.id} bandId={tour.band_id} tourName={tour.name} status={tour.status} />}
+          {tour.band_id === currentBandId && (tour.status === 'scheduled' || tour.status === 'active') &&
+            <Button variant="secondary" size="sm" className="w-full" onClick={() => openTourDetails(tour, 'support')}><Users className="mr-2 h-4 w-4" />Manage support acts</Button>}
         </CardContent>
       </Card>
     );
@@ -1135,7 +1138,7 @@ const TourManager = () => {
 
       {/* Tour Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
@@ -1145,10 +1148,29 @@ const TourManager = () => {
           </DialogHeader>
 
           {selectedTour && (
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea className="max-h-[75vh]">
               <div className="space-y-6 pr-4">
-                {/* New Detail Panel with real stats */}
-                <TourDetailPanel tour={selectedTour} showSupportManagement={selectedTour.band_id === currentBandId} />
+                {selectedTour.band_id === currentBandId && (selectedTour.status === 'scheduled' || selectedTour.status === 'active') && <TourReadinessPanel
+                  tourId={selectedTour.id} bandId={selectedTour.band_id}
+                  venueCount={tourVenues.length} venuesVerified={!loadingVenues && !venuesError}
+                  onDates={() => setTourHQTab('dates')}
+                  onSupport={() => setTourHQTab('support')}
+                  onOperations={() => setTourHQTab('operations')}
+                />}
+                <Tabs value={tourHQTab} onValueChange={setTourHQTab} className="space-y-4">
+                  <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="dates">Dates &amp; Route</TabsTrigger>
+                    <TabsTrigger value="support">Support Acts</TabsTrigger>
+                    <TabsTrigger value="operations">Operations</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="overview">
+                    <TourDetailPanel tour={selectedTour} section="overview" />
+                  </TabsContent>
+                  <TabsContent value="support">
+                    <TourDetailPanel tour={selectedTour} showSupportManagement={selectedTour.band_id === currentBandId} section="support" />
+                  </TabsContent>
+                  <TabsContent value="dates" className="space-y-4">
                 {venuesError && <div role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">Tour stops, venues or gig details could not be loaded. <button className="underline" type="button" onClick={() => void retryTourVenues()}>Retry details</button></div>}
 
                 {selectedTour.description && (
@@ -1292,6 +1314,10 @@ const TourManager = () => {
                   )}
                 </div>
 
+                  </TabsContent>
+                  <TabsContent value="operations" className="space-y-4">
+                    <TourDetailPanel tour={selectedTour} section="operations" />
+
                 {/* Management actions */}
                 {selectedTour.band_id === currentBandId &&
                   selectedTour.status !== "completed" &&
@@ -1391,6 +1417,8 @@ const TourManager = () => {
                       </AlertDialog>}
                     </div>
                   )}
+                  </TabsContent>
+                </Tabs>
               </div>
             </ScrollArea>
           )}

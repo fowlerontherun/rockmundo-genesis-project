@@ -18,6 +18,7 @@ import { TourOperationsCommandCenter } from "@/components/tours/TourOperationsCo
 
 interface TourDetailPanelProps {
   showSupportManagement?: boolean;
+  section?: 'overview' | 'support' | 'operations';
   tour: {
     id: string;
     name: string;
@@ -51,7 +52,7 @@ const travelIcon = (mode: string | null | undefined) => {
   }
 };
 
-export function TourDetailPanel({ tour, showSupportManagement = false }: TourDetailPanelProps) {
+export function TourDetailPanel({ tour, showSupportManagement = false, section = 'overview' }: TourDetailPanelProps) {
   const { data: stats, isLoading } = useTourStats(tour.id);
 
   const supportsTourOperations = ["scheduled", "active", "completed", "cancelled"].includes(tour.status);
@@ -62,6 +63,7 @@ export function TourDetailPanel({ tour, showSupportManagement = false }: TourDet
 
   return (
     <div className="space-y-4">
+      {section === 'overview' && <>
       {/* Header stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
@@ -248,21 +250,23 @@ export function TourDetailPanel({ tour, showSupportManagement = false }: TourDet
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No performance data yet.</p>
       )}
+      </>}
 
-      {supportsTourOperations && (
+      {section === 'operations' && supportsTourOperations && (
         <>
           <TourOperationsCommandCenter tourId={tour.id} />
           <LiveTourHQPanel tourId={tour.id} tourStatus={tour.status} />
         </>
       )}
 
-      {showSupportManagement && tour.band?.id && <TourSupportPanel tourId={tour.id} headlinerBandId={tour.band.id} tourStatus={tour.status} />}
+      {section === 'support' && showSupportManagement && tour.band?.id && <TourSupportPanel tourId={tour.id} headlinerBandId={tour.band.id} tourStatus={tour.status} />}
+      {section === 'support' && !showSupportManagement && <p className="text-sm text-muted-foreground">Only the headlining band can manage invitations and confirmed support acts.</p>}
 
       {/* Per-member live sync status (current city, assigned leg, ETA, sync health) */}
-      {tour.band?.id && <TourMemberSyncStatus tourId={tour.id} bandId={tour.band.id} />}
+      {section === 'operations' && tour.band?.id && <TourMemberSyncStatus tourId={tour.id} bandId={tour.band.id} />}
 
       {/* Per-member travel timeline log */}
-      <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />
+      {section === 'operations' && <TravelTimelineLog tourId={tour.id} includeAllMembers limit={150} />}
     </div>
   );
 }
