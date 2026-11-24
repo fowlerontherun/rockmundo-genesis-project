@@ -1,6 +1,7 @@
 import { TourSupportInviteShortcut } from '@/components/tours/TourSupportInviteShortcut';
 import { BookedTourSupportDialog } from '@/components/tours/BookedTourSupportDialog';
 import { SupportMarketplacePanel } from '@/features/support-bands/SupportMarketplacePanel';
+import { TourSupportPanel } from '@/components/tours/TourSupportPanel';
 import { TourPoster } from '@/components/game-art/TourPoster';
 import WorldAtlas from "@/components/map/WorldAtlas";
 import { useEffect, useState } from "react";
@@ -164,6 +165,8 @@ const TourManager = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   const [wizardOpen, setWizardOpen] = useState(() => Boolean(requestedCityId));
+  const [newTourSupportPrompt, setNewTourSupportPrompt] = useState<{ id: string; name: string } | null>(null);
+  const [newTourSupportFinderOpen, setNewTourSupportFinderOpen] = useState(false);
   const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>(() => requestedCityId ? [requestedCityId] : []);
 
   // Other tours filters
@@ -1409,10 +1412,38 @@ const TourManager = () => {
             <TourWizard
               bandId={currentBandId}
               initialRouteCityIds={draftRouteCityIds}
-              onComplete={() => setWizardOpen(false)}
+              onComplete={tour => {
+                setWizardOpen(false);
+                setNewTourSupportFinderOpen(false);
+                setNewTourSupportPrompt(tour);
+              }}
               onCancel={() => setWizardOpen(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!newTourSupportPrompt} onOpenChange={open => {
+        if (!open) { setNewTourSupportPrompt(null); setNewTourSupportFinderOpen(false); }
+      }}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{newTourSupportFinderOpen ? 'Invite support bands' : 'Your tour is booked!'}</DialogTitle>
+          </DialogHeader>
+          {newTourSupportPrompt && currentBandId && (newTourSupportFinderOpen ? (
+            <TourSupportPanel tourId={newTourSupportPrompt.id} headlinerBandId={currentBandId} tourStatus="scheduled" />
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {newTourSupportPrompt.name} is booked. Would you like to invite eligible support acts to the open dates now?
+                Invitations are sent only after you choose a band and dates, and the invited band must accept.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setNewTourSupportFinderOpen(true)}><Users className="mr-2 h-4 w-4" />Find support bands</Button>
+                <Button variant="outline" onClick={() => setNewTourSupportPrompt(null)}>I'll do this later</Button>
+              </div>
+            </div>
+          ))}
         </DialogContent>
       </Dialog>
     </FMPageScaffold>

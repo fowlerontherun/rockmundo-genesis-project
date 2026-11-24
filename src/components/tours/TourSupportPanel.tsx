@@ -62,6 +62,10 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
     [assignments],
   );
 
+  const confirmedCount = assignments.filter(row => row.support_status === 'accepted' || row.support_status === 'completed').length;
+  const pendingCount = assignments.filter(row => row.support_status === 'pending').length;
+  const openFutureCount = assignments.filter(row => !blockedGigIds.has(row.gig_id) && new Date(row.scheduled_date).getTime() > Date.now()).length;
+
   const selectedCoverage = useMemo(() => {
     if (!selectedBandId) return [];
     return showCandidates.filter((row) => row.support_band_id === selectedBandId && !blockedGigIds.has(row.gig_id) && row.travel_feasible && new Date(row.scheduled_date).getTime() > Date.now());
@@ -135,6 +139,11 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
           </div>
           <Badge variant="outline">1 support act per show</Badge>
         </div>
+        <div className="flex flex-wrap gap-2 pt-2 text-xs" aria-label="Support coverage summary">
+          <Badge variant="secondary">{confirmedCount}/{assignments.length} confirmed</Badge>
+          {pendingCount > 0 && <Badge variant="outline">{pendingCount} awaiting reply</Badge>}
+          <Badge variant="outline">{openFutureCount} open future dates</Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-5">
         {editable && (
@@ -142,6 +151,8 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
             <h4 className="text-sm font-semibold">Fill open dates</h4>
             {loadingAssignments || loadingCandidates || loadingShows ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Matching support bands across the tour…</div>
+            ) : openFutureCount === 0 ? (
+              <p className="text-sm text-muted-foreground">All future dates are covered or awaiting a response. You can review the lineup and invitations below.</p>
             ) : remainingCandidates.length === 0 ? (
               <p className="text-sm text-muted-foreground">No eligible support bands currently cover the remaining tour dates.</p>
             ) : (
@@ -181,14 +192,14 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
                 )}
                 <details open={!selectedCandidate}>
                   <summary className="cursor-pointer py-2 text-sm font-medium">{selectedCandidate ? 'Choose a different band' : 'Browse available bands'}</summary>
-                  <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} preferredId={initialSupportBandId} onSelect={id => {
+                  <PlayTogetherPicker bandId={headlinerBandId} selectedId={selectedBandId} preferredId={initialSupportBandId} actionLabel="Review available dates" onSelect={id => {
                   if (id === selectedBandId) return;
                   setSelectedBandId(id);
                   setExcludedDates([]);
                 }}
                   disabled={sendOffers.isPending}
                   candidates={remainingCandidates.map(candidate => ({ id: candidate.support_band_id, name: candidate.support_band_name,
-                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates` }))} />
+                    fame: candidate.fame, detail: `${candidate.eligible_shows} remaining open dates`, eligibleShows: candidate.eligible_shows }))} />
                 </details>
               </>
             )}
@@ -196,7 +207,7 @@ export function TourSupportPanel({ tourId, headlinerBandId, tourStatus, initialS
         )}
         <TourProposalsPanel bandId={headlinerBandId} tourId={tourId} />
         <section className="space-y-2">
-          <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Tour coverage</h4><span className="text-xs text-muted-foreground">{assignments.filter((a) => a.support_status === 'accepted' || a.support_status === 'completed').length}/{assignments.length} confirmed</span></div>
+          <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Tour lineup by date</h4><span className="text-xs text-muted-foreground">{confirmedCount}/{assignments.length} confirmed</span></div>
           {loadingAssignments ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading support assignments…</div>
           ) : assignments.length === 0 ? (
