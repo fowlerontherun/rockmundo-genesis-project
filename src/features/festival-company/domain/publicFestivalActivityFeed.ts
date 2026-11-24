@@ -19,6 +19,10 @@ const eventStatuses = new Set<PublicFestivalStageEventStatus>([
 ]);
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// The runtime emits offset-aware instants. Date-only or offset-less timestamps
+// would be interpreted in the visitor's timezone and could leak another day's
+// announcement at the festival-local day boundary.
+const instant = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i;
 
 /**
  * A public feed is a canonical snapshot, not an appended client-side event log.
@@ -47,7 +51,7 @@ export function readPublicFestivalActivityFeed(
       typeof value.stageId !== "string" || !uuid.test(value.stageId) ||
       typeof value.scheduleItemId !== "string" || !uuid.test(value.scheduleItemId) ||
       typeof value.stageName !== "string" || verifiedStages.get(value.stageId) !== value.stageName ||
-      typeof value.observedAt !== "string") continue;
+      typeof value.observedAt !== "string" || !instant.test(value.observedAt)) continue;
     const timestamp = Date.parse(value.observedAt);
     if (!Number.isFinite(timestamp) || timestamp > now + 60_000 || timestamp < now - 26 * 60 * 60_000) continue;
     try {
@@ -63,7 +67,7 @@ export function readPublicFestivalActivityFeed(
       id: value.id, stageId: value.stageId, stageName: value.stageName,
       scheduleItemId: value.scheduleItemId, observedAt: value.observedAt,
       status: value.status as PublicFestivalStageEventStatus,
-      artistName: act?.stageName === value.stageName ? act.artistName : null,
+      artistName: act?.stageName === value.stageName && act.festivalDate === currentDay ? act.artistName : null,
     });
   }
   return events.sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt) || b.id.localeCompare(a.id)).slice(0, 20);

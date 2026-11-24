@@ -44,7 +44,8 @@ export function FestivalGroundsMap({ stages, selectedStageId, onSelectStage, vis
   const facility = facilities.find((item) => item.key === selectedFacility);
   const rows = Math.ceil(stages.length / 3);
   const height = Math.max(565, 265 + rows * 142 + 55);
-  const night = localHour !== undefined && (localHour >= 20 || localHour < 6);
+  const knownLocalHour = localHour !== undefined && Number.isFinite(localHour) && localHour >= 0 && localHour < 24;
+  const night = typeof localHour === "number" && knownLocalHour && (localHour >= 20 || localHour < 6);
 
   return (
     <section className="space-y-3" aria-label="Interactive Festival grounds illustration">
@@ -64,7 +65,7 @@ export function FestivalGroundsMap({ stages, selectedStageId, onSelectStage, vis
           aria-label="Illustrated stage and published facility hotspots"
           className="block h-auto w-full"
         >
-          <rect width="960" height={height} fill={night ? "#101b35" : "#183b39"} />
+          <rect width="960" height={height} fill={!knownLocalHour ? "#29394a" : night ? "#101b35" : "#183b39"} />
           <path d={`M 0 105 H 960 M 45 105 V ${height - 25} M 920 105 V ${height - 25}`} stroke="#94a3b8" strokeOpacity="0.26" strokeWidth="14" fill="none" strokeDasharray="26 22" />
           <path d={`M 75 120 H 884 V ${height - 36} H 75 Z`} stroke="#a7f3d0" strokeOpacity="0.4" strokeWidth="3" fill="none" strokeDasharray="7 12" />
           <text x="36" y="38" fontSize="17" fill="#e2e8f0" fontWeight="700">FESTIVAL GROUNDS</text>
@@ -108,7 +109,7 @@ export function FestivalGroundsMap({ stages, selectedStageId, onSelectStage, vis
         </svg>
       </div>
       <p className="text-xs text-muted-foreground">
-        {night ? "Night" : "Day"} colours reflect the festival's local clock, not measured light levels. Crowd bands appear only from current verified edition snapshots.
+        {knownLocalHour ? `${night ? "Night" : "Day"} colours reflect the festival's local clock, not measured light levels.` : "Neutral colours: no current verified festival day is available."} Crowd bands appear only from current verified edition snapshots.
       </p>
       <div role="group" aria-label="Explore Festival facility information" className="flex flex-wrap gap-2">
         {facilities.map((item) => (

@@ -58,4 +58,11 @@ describe("interactive illustrated Festival grounds", () => {
     expect(screen.getByText(/Night colours reflect/)).toBeInTheDocument();
     expect(screen.queryByText("250 people onsite")).toBeNull();
   });
+
+  it("uses neutral styling when the current festival clock is not verified", () => {
+    render(<FestivalGroundsMap {...base} />);
+    expect(screen.getByText(/Neutral colours: no current verified festival day/)).toBeVisible();
+    expect(screen.queryByText(/Day colours reflect/)).toBeNull();
+    expect(screen.queryByText(/Night colours reflect/)).toBeNull();
+  });
 });
