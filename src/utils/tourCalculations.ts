@@ -179,7 +179,10 @@ export function calculateTourCostEstimate(
   
   // Tour bus costs (if using tour bus)
   const tourBusCosts = state.travelMode === 'tour_bus' 
-    ? calculateTourBusCost(state.durationDays || 30, state.tourBusDailyCost)
+    ? calculateTourBusCost(
+        calculateTourDurationDays(venues.length, state.consecutiveShowCount, state.minRestDays),
+        state.tourBusDailyCost,
+      )
     : 0;
   
   // If using tour bus, travel costs are just fuel (already low in tour_bus mode)
@@ -219,19 +222,33 @@ export function calculateTourCostEstimate(
   };
 }
 
-// Generate tour schedule with rest days
+// Rest blocks are inserted only after a full run of consecutive gigs, never
+// after the final gig. All dates are calendar dates (UTC) to avoid DST shifts.
+export function calculateTourDurationDays(
+  showCount: number,
+  consecutiveShowCount: number,
+  restDays: number,
+): number {
+  if (showCount <= 0) return 0;
+  const gigsPerRun = Math.max(1, Math.trunc(consecutiveShowCount));
+  return showCount + Math.floor((showCount - 1) / gigsPerRun) * Math.max(0, restDays);
+}
+
+// Generate an itinerary from a target number of gig dates, not calendar days.
 export function generateTourSchedule(
   startDate: Date,
   showCount: number,
-  minRestDays: number
+  consecutiveShowCount: number,
+  restDays: number,
 ): Date[] {
   const dates: Date[] = [];
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
+  const gigsPerRun = Math.max(1, Math.trunc(consecutiveShowCount));
   
   for (let i = 0; i < showCount; i++) {
     dates.push(new Date(currentDate));
-    // Add show day + rest days
-    currentDate.setDate(currentDate.getDate() + 1 + minRestDays);
+    const restAfterThisGig = (i + 1) % gigsPerRun === 0 && i < showCount - 1;
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1 + (restAfterThisGig ? Math.max(0, restDays) : 0));
   }
   
   return dates;
@@ -241,10 +258,12 @@ export function generateTourSchedule(
 export function calculateTourEndDate(
   startDate: Date,
   showCount: number,
-  minRestDays: number
+  consecutiveShowCount: number,
+  restDays: number,
 ): Date {
-  const daysNeeded = showCount + (showCount - 1) * minRestDays;
   const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + daysNeeded - 1);
+  endDate.setUTCDate(endDate.getUTCDate() + Math.max(0,
+    calculateTourDurationDays(showCount, consecutiveShowCount, restDays) - 1,
+  ));
   return endDate;
 }
