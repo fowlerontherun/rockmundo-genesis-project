@@ -277,7 +277,7 @@ export const useSongAuctions = (userId?: string) => {
   const completeSale = useMutation({
     mutationFn: async ({ listingId }: { listingId: string }) => {
       if (!userId) throw new Error("Not authenticated");
-      return settleSongPurchase(supabase.rpc as Parameters<typeof settleSongPurchase>[0], listingId, profileId);
+      return settleSongPurchase(supabase.rpc as unknown as Parameters<typeof settleSongPurchase>[0], listingId, profileId);
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });
