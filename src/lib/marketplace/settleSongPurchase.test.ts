@@ -7,32 +7,34 @@ const validReceipt = {
 };
 
 describe("character-scoped server-authoritative song buying", () => {
-  it("sends only the listing, selected character and buy action, never a browser price or buyer ID", async () => {
+  it("passes the buyer-approved price as an equality guard, not settlement authority", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: validReceipt, error: null });
-    await expect(settleSongPurchase(rpc, "listing-1", "character-1"))
+    await expect(settleSongPurchase(rpc, "listing-1", "character-1", "account-1", 1700))
       .resolves.toEqual(validReceipt);
     expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenCalledWith("settle_song_marketplace_sale_atomic", {
-      p_listing_id: "listing-1", p_actor_profile_id: "character-1", p_action: "buy",
+    expect(rpc).toHaveBeenCalledWith("complete_song_sale", {
+      p_listing_id: "listing-1", p_buyer_user_id: "account-1", p_sale_price: 1700,
     });
-    expect(Object.values(rpc.mock.calls[0][1])).not.toContain(validReceipt.sale_price);
   });
 
   it("blocks unresolved character/listing identity before reaching the money RPC", async () => {
     const rpc = vi.fn();
-    await expect(settleSongPurchase(rpc, "listing-1", null)).rejects.toThrow("active character");
-    await expect(settleSongPurchase(rpc, "", "character-1")).rejects.toThrow("Select a song listing");
+    await expect(settleSongPurchase(rpc, "listing-1", null, "account-1", 1700)).rejects.toThrow("active character");
+    await expect(settleSongPurchase(rpc, "", "character-1", "account-1", 1700)).rejects.toThrow("Select a song listing");
+    await expect(settleSongPurchase(rpc, "listing-1", "character-1", null, 1700)).rejects.toThrow("Sign in");
+    await expect(settleSongPurchase(rpc, "listing-1", "character-1", "account-1", 0)).rejects.toThrow("price is invalid");
     expect(rpc).not.toHaveBeenCalled();
   });
 
   it("does not claim a purchase on RPC errors or malformed receipts", async () => {
     const errorRpc = vi.fn().mockResolvedValue({ data: null, error: { message: "song_sale_insufficient_cash" } });
-    await expect(settleSongPurchase(errorRpc, "listing-1", "character-1"))
+    await expect(settleSongPurchase(errorRpc, "listing-1", "character-1", "account-1", 1700))
       .rejects.toThrow("song_sale_insufficient_cash");
     for (const data of [null, {}, { ...validReceipt, success: false },
-      { ...validReceipt, sale_price: 0 }, { ...validReceipt, sale_price: "1700" }]) {
+      { ...validReceipt, sale_price: 0 }, { ...validReceipt, sale_price: "1700" },
+      { ...validReceipt, sale_price: 1900 }]) {
       const malformedRpc = vi.fn().mockResolvedValue({ data, error: null });
-      await expect(settleSongPurchase(malformedRpc, "listing-1", "character-1"))
+      await expect(settleSongPurchase(malformedRpc, "listing-1", "character-1", "account-1", 1700))
         .rejects.toThrow("receipt could not be verified");
     }
   });

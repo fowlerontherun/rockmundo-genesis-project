@@ -35,7 +35,7 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
   const handleBuyNow = (listing: MarketplaceListing) => {
     const price = listing.buyout_price || listing.asking_price;
     if (!confirm(`Buy "${listing.songs?.title}" for $${price.toLocaleString()}?`)) return;
-    completeSale.mutate({ listingId: listing.id });
+    completeSale.mutate({ listingId: listing.id, salePrice: price });
   };
 
   if (listingsLoading) {

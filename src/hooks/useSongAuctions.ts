@@ -272,12 +272,12 @@ export const useSongAuctions = (userId?: string) => {
     },
   });
 
-  // Fixed-price buy-now or auction buyout only. The SQL RPC derives price,
-  // ownership and buyer identity; seller acceptance of unescrowed bids is off.
+  // Fixed-price buy-now or auction buyout only. SQL derives canonical price,
+  // ownership and active buyer, then rejects changes from the confirmed price.
   const completeSale = useMutation({
-    mutationFn: async ({ listingId }: { listingId: string }) => {
+    mutationFn: async ({ listingId, salePrice }: { listingId: string; salePrice: number }) => {
       if (!userId) throw new Error("Not authenticated");
-      return settleSongPurchase(supabase.rpc as unknown as Parameters<typeof settleSongPurchase>[0], listingId, profileId);
+      return settleSongPurchase(supabase.rpc as unknown as Parameters<typeof settleSongPurchase>[0], listingId, profileId, userId, salePrice);
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });

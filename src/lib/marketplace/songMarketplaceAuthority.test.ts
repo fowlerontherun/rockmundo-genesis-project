@@ -33,7 +33,8 @@ describe("marketplace sale authority (#4229)", () => {
     );
     expect(migration).toContain("revoke insert on public.marketplace_transactions");
     expect(migration).toContain("revoke insert on public.marketplace_bids");
-    // The buy-now UI now uses the newer character-scoped server-priced RPC.
+    // The buy-now UI uses the secured, price-consent-checked server RPC via a
+    // receipt-verifying helper rather than a raw unvalidated mutation.
     expect(client).toContain("settleSongPurchase(");
     expect(client).not.toContain('supabase.rpc("complete_song_sale"');
     expect(client).not.toContain("p_buyer_user_id:");
