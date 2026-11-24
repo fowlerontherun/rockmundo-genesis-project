@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
+import { buildSongStylePrompt, prepareSongLyricsForModel } from "../_shared/songSoundPrompt.ts"
 import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 import { getGenerationBlock } from "../_shared/songRegenerationPolicy.ts"
 
@@ -210,6 +210,7 @@ serve(async (req) => {
           lyrics,
           creative_brief,
           genres,
+          instruments,
           chord_progression_id,
           theme_id,
           quality_score,
@@ -390,82 +391,24 @@ serve(async (req) => {
     
     console.log(`[generate-song-audio] Final Lyrics: ${rawLyrics ? rawLyrics.length + ' chars' : 'using placeholder'}`)
 
-    // Build style prompt for MiniMax Music-1.5
-    let styleParts: string[] = []
-
-    // Primary generation genre
-    styleParts.push(primaryGenre)
-    if (isAcousticVersion) {
-      styleParts.push(
-        'stripped-back acoustic arrangement',
-        'acoustic guitar-led',
-        'minimal organic instrumentation',
-        'intimate live performance',
-        'no heavy electronic production',
-      )
-    }
-
-    // Add gender-based vocal style
-    const genderVocalStyle = getGenderVocalStyle(creatorGender)
-    if (genderVocalStyle) {
-      styleParts.push(genderVocalStyle)
-    }
-
-    // Add chord progression context
-    if (chordProgression) {
-      styleParts.push(`${chordName || chordProgression}`)
-    }
-
-    // Keep the band's normal sound for standard/remix generation. Acoustic
-    // versions skip this so heavy-production descriptors cannot override the
-    // stripped-back acoustic prompt.
-    if (bandSoundDescription && !isAcousticVersion) {
-      const truncatedDesc = bandSoundDescription.substring(0, 100).trim()
-      styleParts.push(truncatedDesc)
-    }
-
-    // Add theme and mood
-    if (themeName) {
-      styleParts.push(themeName)
-    }
-    if (themeMood) {
-      styleParts.push(`${themeMood} mood`)
-    }
-
-    // Add mood palette (limit to first 2)
-    if (Array.isArray(moodPalette) && moodPalette.length > 0) {
-      styleParts.push(moodPalette.slice(0, 2).join(', '))
-    }
-
-    // Add quality descriptors
-    if (quality >= 80) {
-      styleParts.push('polished production')
-    } else if (quality >= 60) {
-      styleParts.push('clean mix')
-    } else if (quality >= 40) {
-      styleParts.push('demo quality')
-    } else {
-      styleParts.push('lo-fi')
-    }
-
-    // Add energy based on genre
-    const highEnergyGenres = ['rock', 'punk', 'metal', 'edm', 'dance', 'hip-hop', 'electronic']
-    const lowEnergyGenres = ['ambient', 'classical', 'jazz', 'folk', 'acoustic', 'ballad']
-    
-    if (highEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-      styleParts.push('high energy')
-    } else if (lowEnergyGenres.some(g => primaryGenre.toLowerCase().includes(g))) {
-      styleParts.push('mellow')
-    }
-
-    // MiniMax uses comma-separated style description
-    const styleDetails = normalizeMiniMaxStylePrompt(['complete song around 110 seconds, recurring chorus, bridge and outro', ...styleParts].join(', '), primaryGenre)
+    // Both generation paths use this version-aware composer. Selected songwriting
+    // instruments, mood, and sound profile now actually reach the provider.
+    const styleDetails = buildSongStylePrompt({
+      model: generationModel, genre: primaryGenre, creatorGender,
+      chordProgression: chordName || chordProgression,
+      bandSoundDescription, themeName, themeMood, quality,
+      instruments: project?.instruments, creativeBrief,
+      isAcousticVersion,
+    })
     const stylePrompt = styleDetails.prompt
-    console.log(`[generate-song-audio] MiniMax style length ${styleDetails.finalLength}/300; truncated=${styleDetails.wasTruncated}; embeddedLyricsRemoved=${styleDetails.removedEmbeddedLyrics}`)
+    console.log(`[generate-song-audio] MiniMax style length ${styleDetails.finalLength}; model=${generationModel}; truncated=${styleDetails.wasTruncated}; embeddedLyricsRemoved=${styleDetails.removedEmbeddedLyrics}`)
     console.log(`[generate-song-audio] Validated style: "${stylePrompt}"`)
 
     // Format lyrics for MiniMax Music - standard section markers work fine
-    const formattedLyrics = formatLyricsForMiniMax(compactLyricsForShortAudio(rawLyrics), cleanedSongTitle, primaryGenre, 600)
+    const providerLyrics = generationModel === 'music-1.5'
+      ? compactLyricsForShortAudio(rawLyrics)
+      : prepareSongLyricsForModel(rawLyrics, generationModel, creativeBrief?.sound_profile?.arrangement)
+    const formattedLyrics = formatLyricsForMiniMax(providerLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
     console.log(`[generate-song-audio] Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
@@ -716,7 +659,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     .replace(/\((?:Intro|Outro)\s*[-–—].*?\)/gi, '')
 
   // Check if there are section markers
-  const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus)\]/i.test(normalized)
+  const hasMarkers = /\[(Verse|Chorus|Bridge|Outro|Intro|Hook|Pre-Chorus|Post-Chorus|Solo|Inst|Build Up|Drop|Interlude|Break|Transition)\]/i.test(normalized)
 
   if (!hasMarkers) {
     // No markers - add basic structure
@@ -736,7 +679,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   // MiniMax Music requires lyrics within the selected model's character limit — ALWAYS enforce this limit
   if (normalized.length > maxCharacters) {
     console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
-    const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
+    const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus|Solo|Inst|Build Up|Drop|Interlude|Break|Transition))/i)
     let truncated = ''
     for (const section of sections) {
       if ((truncated + section).length <= maxCharacters) {
