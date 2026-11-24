@@ -30,6 +30,9 @@ describe("character-scoped server-authoritative song buying", () => {
     const errorRpc = vi.fn().mockResolvedValue({ data: null, error: { message: "song_sale_insufficient_cash" } });
     await expect(settleSongPurchase(errorRpc, "listing-1", "character-1", "account-1", 1700))
       .rejects.toThrow("song_sale_insufficient_cash");
+    const rejectedRpc = vi.fn().mockResolvedValue({ data: { success: false, error: "Listing has expired" }, error: null });
+    await expect(settleSongPurchase(rejectedRpc, "listing-1", "character-1", "account-1", 1700))
+      .rejects.toThrow("Listing has expired");
     for (const data of [null, {}, { ...validReceipt, success: false },
       { ...validReceipt, sale_price: 0 }, { ...validReceipt, sale_price: "1700" },
       { ...validReceipt, sale_price: 1900 }]) {

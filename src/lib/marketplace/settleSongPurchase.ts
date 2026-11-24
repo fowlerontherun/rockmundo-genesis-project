@@ -42,7 +42,10 @@ export async function settleSongPurchase(
     throw new Error("The song purchase receipt could not be verified");
   }
   const receipt = data as Record<string, unknown>;
-  if (receipt.success !== true || typeof receipt.transaction_id !== "string" ||
+  if (receipt.success !== true) {
+    throw new Error(typeof receipt.error === "string" ? receipt.error : "The song purchase receipt could not be verified");
+  }
+  if (typeof receipt.transaction_id !== "string" ||
       typeof receipt.sale_price !== "number" || !Number.isSafeInteger(receipt.sale_price) ||
       receipt.sale_price <= 0 || typeof receipt.marketplace_fee !== "number" ||
       typeof receipt.seller_payout !== "number" || receipt.sale_price !== expectedPrice) {
