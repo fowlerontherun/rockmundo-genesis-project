@@ -2,7 +2,7 @@ import { listBandFriendships, changeBandFriendship } from './friendshipApi';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { PlayTogetherPicker } from './PlayTogetherPicker';
+import { PlayTogetherPicker, type PlayTogetherCandidate } from './PlayTogetherPicker';
 import { getBandDiscoveryContext, setBandShortlisted } from './discoveryApi';
 vi.mock('./discoveryApi', () => ({ getBandDiscoveryContext: vi.fn(), setBandShortlisted: vi.fn() }));
 vi.mock('./friendshipApi', () => ({ listBandFriendships: vi.fn(), changeBandFriendship: vi.fn() }));
@@ -18,7 +18,7 @@ beforeEach(() => {
   ]);
   vi.mocked(setBandShortlisted).mockResolvedValue(undefined);
 });
-function setup(available = candidates) {
+function setup(available: PlayTogetherCandidate[] = candidates) {
   const onSelect = vi.fn();
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
     <PlayTogetherPicker bandId="a" candidates={available} onSelect={onSelect} />
