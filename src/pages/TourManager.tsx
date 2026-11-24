@@ -54,6 +54,7 @@ import {
   Loader2,
   ChevronLeft,
   Star,
+  History,
   Sparkles,
   XCircle,
   ListMusic,
