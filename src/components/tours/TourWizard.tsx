@@ -26,7 +26,7 @@ import { moveTourWizard, TOUR_WIZARD_FLOW, wizardFlowPosition, type TourPlanning
 interface TourWizardProps {
   bandId: string;
   initialRouteCityIds?: string[];
-  onComplete?: () => void;
+  onComplete?: (tour: { id: string; name: string }) => void;
   onCancel?: () => void;
 }
 
@@ -36,6 +36,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
   const [mode, setMode] = useState<TourPlanningMode>('quick');
   const [quickDefaultsApplied, setQuickDefaultsApplied] = useState(false);
   const wizard = useTourWizard({ bandId, initialRouteCityIds, quickMode: mode === 'quick' });
+  const { band: wizardBand, maxAllowedCapacity, updateState } = wizard;
   const visibleStep = wizardFlowPosition(mode, wizard.currentStep) + 1;
   const visibleStepCount = TOUR_WIZARD_FLOW[mode].length;
   const progress = (visibleStep / visibleStepCount) * 100;
@@ -44,9 +45,9 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
     : wizard.stepNames[wizard.currentStep];
 
   useEffect(() => {
-    if (mode !== 'quick' || !wizard.band || quickDefaultsApplied) return;
-    wizard.updateState({
-      maxVenueCapacity: wizard.maxAllowedCapacity,
+    if (mode !== 'quick' || !wizardBand || quickDefaultsApplied) return;
+    updateState({
+      maxVenueCapacity: maxAllowedCapacity,
       venueTypes: [...VENUE_TYPES],
       selectedVenueIds: [],
       customTicketPrice: null,
@@ -55,7 +56,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
       vehicleTier: 'rusty_van',
     });
     setQuickDefaultsApplied(true);
-  }, [mode, quickDefaultsApplied, wizard.band, wizard.maxAllowedCapacity, wizard.updateState]);
+  }, [mode, quickDefaultsApplied, wizardBand, maxAllowedCapacity, updateState]);
 
   const changeMode = (nextMode: TourPlanningMode) => {
     if (nextMode === mode) return;
@@ -70,7 +71,9 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
 
   const handleBook = () => {
     wizard.bookTour(undefined, {
-      onSuccess: () => onComplete?.(),
+      onSuccess: (tour) => {
+        if (tour) onComplete?.({ id: tour.id, name: tour.name });
+      },
     });
   };
 
