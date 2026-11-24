@@ -164,8 +164,9 @@ const isCanonicalDjTierUnlocked = (skillSlug: string, progress: SkillProgressRec
   return Number(prerequisiteProgress?.current_level ?? 0) >= 20;
 };
 
-export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Element => {
+export const SkillSystemProvider = ({ children, profileId }: PropsWithChildren<{ profileId?: string | null }>): JSX.Element => {
   const { profile } = useGameData();
+  const activeProfileId = profileId === undefined ? profile?.id : profileId;
   const [progress, setProgress] = useState<SkillProgressRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,8 +175,9 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
   const relationships = useMemo(() => [...SKILL_RELATIONSHIPS], []);
 
   const refreshProgress = useCallback(async () => {
-    if (!profile) {
+    if (!activeProfileId) {
       setProgress([]);
+      setLoading(false);
       return;
     }
 
@@ -185,7 +187,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
     const { data, error: queryError } = await supabase
       .from("skill_progress")
       .select("*")
-      .eq("profile_id", profile.id);
+      .eq("profile_id", activeProfileId);
 
     if (queryError) {
       console.error("Failed to load skill progress", queryError);
@@ -198,7 +200,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
     const rows = (data ?? []) as SkillProgressRow[];
     setProgress(rows.map(mapProgressRow));
     setLoading(false);
-  }, [profile]);
+  }, [activeProfileId]);
 
   useEffect(() => {
     void refreshProgress();
@@ -206,7 +208,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
 
   const updateSkillProgress = useCallback(
     async (input: UpdateSkillProgressInput) => {
-      if (!profile) {
+      if (!activeProfileId) {
         const message = "No active profile selected";
         setError(message);
         return null;
@@ -236,7 +238,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
       } as Record<string, unknown>;
 
       const payload: SkillProgressInsert = {
-        profile_id: profile.id,
+        profile_id: activeProfileId,
         skill_slug: input.skillSlug,
         current_level: nextLevel,
         current_xp: nextXp,
@@ -265,7 +267,7 @@ export const SkillSystemProvider = ({ children }: PropsWithChildren): JSX.Elemen
 
       return mapped;
     },
-    [profile, progress],
+    [activeProfileId, progress],
   );
 
   const value = useMemo<SkillSystemContextValue>(
