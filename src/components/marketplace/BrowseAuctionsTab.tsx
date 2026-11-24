@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Music, DollarSign, Clock, Gavel, ShoppingCart, Users, Package, Gift } from "lucide-react";
-import { useSongAuctions } from "@/hooks/useSongAuctions";
+import { useSongAuctions, type MarketplaceListing } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining, calculateMinimumBid } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +15,10 @@ interface BrowseAuctionsTabProps {
 
 export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
   const { activeListings, listingsLoading, placeBid, completeSale } = useSongAuctions(userId);
-  const [bidDialogListing, setBidDialogListing] = useState<any>(null);
+  const [bidDialogListing, setBidDialogListing] = useState<MarketplaceListing | null>(null);
   const [bidAmount, setBidAmount] = useState(0);
 
-  const handleOpenBid = (listing: any) => {
+  const handleOpenBid = (listing: MarketplaceListing) => {
     const minBid = calculateMinimumBid(listing.current_bid, listing.asking_price);
     setBidAmount(minBid);
     setBidDialogListing(listing);
@@ -32,7 +32,7 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
     );
   };
 
-  const handleBuyNow = (listing: any) => {
+  const handleBuyNow = (listing: MarketplaceListing) => {
     const price = listing.buyout_price || listing.asking_price;
     if (!confirm(`Buy "${listing.songs?.title}" for $${price.toLocaleString()}?`)) return;
     completeSale.mutate({ listingId: listing.id, salePrice: price });
@@ -91,7 +91,7 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
                     Quality: {listing.songs?.quality_score || 0}
                   </Badge>
                   {(() => {
-                    const src = (listing.songs as any)?.acquisition_source ?? "written";
+                    const src = listing.songs?.acquisition_source ?? "written";
                     if (src === "blind_box") return <Badge variant="outline" className="text-[10px] gap-1 bg-purple-500/20 text-purple-300 border-purple-500/30"><Package className="h-3 w-3" />Blind Box</Badge>;
                     if (src === "gift") return <Badge variant="outline" className="text-[10px] gap-1 bg-pink-500/15 text-pink-300 border-pink-500/30"><Gift className="h-3 w-3" />Gifted</Badge>;
                     return null;
@@ -189,9 +189,9 @@ export const BrowseAuctionsTab = ({ userId }: BrowseAuctionsTabProps) => {
             </div>
 
             <div className="rounded-lg bg-warning/10 border border-warning/20 p-3 text-sm">
-              <p className="font-medium text-warning">⚠ Bidding is a commitment</p>
+              <p className="font-medium text-warning">⚠ Provisional auction bid</p>
               <p className="text-xs text-muted-foreground mt-1">
-                If you win, the amount will be deducted from your cash balance. Anti-sniping: bids in the last 5 minutes extend the auction.
+                Bids do not reserve cash. Winning-bid purchases remain unavailable until secure escrow is introduced. You can still use an auction buyout to purchase immediately. Bids in the last 5 minutes extend the auction.
               </p>
             </div>
           </div>
