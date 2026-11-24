@@ -40,8 +40,10 @@ describe("compact radio edit lyrics", () => {
   it("requests longer complete source performances for both generation flows", () => {
     for (const path of ["supabase/functions/generate-song-audio/index.ts", "supabase/functions/admin-generate-song-audio/index.ts"]) {
       const file = readFileSync(resolve(process.cwd(), path), "utf8");
-      expect(file).toContain("complete song around 110 seconds");
+      expect(file).toContain("buildSongStylePrompt({");
       expect(file).toContain("const durationSeconds = 110");
     }
+    const shared = readFileSync(resolve(process.cwd(), "supabase/functions/_shared/songSoundPrompt.ts"), "utf8");
+    expect(shared).toContain("complete song around 110 seconds");
   });
 });
