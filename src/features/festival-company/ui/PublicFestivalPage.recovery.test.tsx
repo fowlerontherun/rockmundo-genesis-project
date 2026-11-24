@@ -19,7 +19,10 @@ vi.mock("../attendance/useFestivalAttendance", () => ({
   useMyFestivalMemorabilia: () => ({ data: [], isPending: false }),
   useCheckInToFestival: () => ({ isPending: false }), useLeaveFestivalEarly: () => ({ isPending: false }),
 }));
-vi.mock("./FestivalGrounds", () => ({ FestivalGrounds: () => null }));
+vi.mock("./FestivalGrounds", () => ({
+  FestivalGrounds: ({ onViewTimetable }: { onViewTimetable: () => void }) =>
+    <button type="button" onClick={onViewTimetable}>Grounds timetable shortcut</button>,
+}));
 vi.mock("@/features/shareable-moments/ShareMomentSheet", () => ({ ShareMomentSheet: () => null }));
 vi.mock("@/features/shareable-moments/referralDestination", () => ({ referralAwareDestination: vi.fn() }));
 const festival = {
@@ -52,6 +55,28 @@ describe("public festival recovery with real query hooks", () => {
     expect(await screen.findByRole("tabpanel", { name: "Information" })).toBeVisible();
     expect(screen.getByRole("tablist", { name: "Festival sections" })).toBeInTheDocument();
   });
+  it("moves keyboard focus from Grounds into Timetable instead of losing it when the panel unmounts", async () => {
+    render(page("/world/festivals/festival?tab=grounds"));
+    fireEvent.click(await screen.findByRole("button", { name: "Grounds timetable shortcut" }));
+    expect(await screen.findByRole("tabpanel", { name: "Timetable" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Timetable" })).toHaveFocus();
+  });
+  it("moves keyboard focus from the visitor guide's ticket shortcut", async () => {
+    render(page("/world/festivals/festival?tab=information"));
+    const information = await screen.findByRole("tabpanel", { name: "Information" });
+    fireEvent.click(within(information).getByText("Tickets & refunds", { selector: "span" }));
+    fireEvent.click(within(information).getByRole("button", { name: "Review tickets" }));
+    expect(await screen.findByRole("tabpanel", { name: "Tickets" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Tickets" })).toHaveFocus();
+  });
+  it("moves keyboard focus from the visitor guide's timetable shortcut", async () => {
+    render(page("/world/festivals/festival?tab=information"));
+    const guide = await screen.findByRole("tabpanel", { name: "Information" });
+    fireEvent.click(within(guide).getByText("Opening times", { selector: "span" }));
+    fireEvent.click(within(guide).getByRole("button", { name: "View the published timetable" }));
+    expect(await screen.findByRole("tabpanel", { name: "Timetable" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Timetable" })).toHaveFocus();
+  });
   it("does not advertise available tickets after the edition is cancelled", async () => {
     mocks.festival.mockResolvedValue({ ...festival, launchStatus: "cancelled_before_event" });
     render(page());
@@ -62,8 +87,16 @@ describe("public festival recovery with real query hooks", () => {
     mocks.festival.mockRejectedValueOnce(new Error("network")); render(page());
     expect(await screen.findByText("Festival details could not be loaded.")).toBeVisible();
     expect(screen.queryByText("Festival not found.")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Browse other festivals" })).toHaveAttribute("href", "/world/festivals");
     fireEvent.click(screen.getByRole("button", { name: "Retry festival details" }));
     expect(await screen.findByRole("heading", { name: "Recovery Festival" })).toBeVisible();
+  });
+  it("offers the canonical directory without suggesting that a missing festival can be purchased", async () => {
+    mocks.festival.mockResolvedValue(null);
+    render(page());
+    expect(await screen.findByText("Festival not found.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Browse other festivals" })).toHaveAttribute("href", "/world/festivals");
+    expect(screen.queryByRole("button", { name: "Confirm purchase" })).not.toBeInTheDocument();
   });
   it("hides cached tickets on failed verification, then recovers on retry", async () => {
     mocks.wallet.mockResolvedValue([ticket]); render(page()); const wallet = await openWallet();
