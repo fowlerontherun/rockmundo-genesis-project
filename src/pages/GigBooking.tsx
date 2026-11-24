@@ -962,7 +962,7 @@ const GigBooking = () => {
                             <Link to={appearanceDetailHref(appearance)}>Festival details</Link>
                           </Button>
                           <Button asChild size="sm" variant="outline" className="border-fuchsia-400/50 bg-background/50">
-                            <Link to="/festival-opportunities">My festival bookings</Link>
+                            <Link to="/festival-opportunities">Manage or cancel booking</Link>
                           </Button>
                         </div>
                       </div>
@@ -1078,11 +1078,16 @@ const GigBooking = () => {
                   <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-fuchsia-500" />Festival appearances</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {pastFestivals.map((appearance) => (
-                      <Link to={appearanceDetailHref(appearance)} key={appearance.bookingId}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3 hover:bg-fuchsia-500/10">
-                        <span className="font-semibold">{appearance.festivalName}</span>
-                        <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
-                      </Link>
+                      <div key={appearance.bookingId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3">
+                        <Link to={appearanceDetailHref(appearance)} className="flex flex-1 flex-wrap items-center justify-between gap-2 hover:underline">
+                          <span className="font-semibold">{appearance.festivalName}</span>
+                          <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
+                        </Link>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to="/festival-opportunities">Manage or cancel booking</Link>
+                        </Button>
+                      </div>
                     ))}
                   </CardContent>
                 </Card>
