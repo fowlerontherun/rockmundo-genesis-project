@@ -2,7 +2,7 @@ import { listBandFriendships, changeBandFriendship } from './friendshipApi';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { PlayTogetherPicker } from './PlayTogetherPicker';
+import { PlayTogetherPicker, type PlayTogetherCandidate } from './PlayTogetherPicker';
 import { getBandDiscoveryContext, setBandShortlisted } from './discoveryApi';
 vi.mock('./discoveryApi', () => ({ getBandDiscoveryContext: vi.fn(), setBandShortlisted: vi.fn() }));
 vi.mock('./friendshipApi', () => ({ listBandFriendships: vi.fn(), changeBandFriendship: vi.fn() }));
@@ -18,10 +18,10 @@ beforeEach(() => {
   ]);
   vi.mocked(setBandShortlisted).mockResolvedValue(undefined);
 });
-function setup() {
+function setup(available: PlayTogetherCandidate[] = candidates) {
   const onSelect = vi.fn();
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-    <PlayTogetherPicker bandId="a" candidates={candidates} onSelect={onSelect} />
+    <PlayTogetherPicker bandId="a" candidates={available} onSelect={onSelect} />
   </QueryClientProvider>);
   return onSelect;
 }
@@ -38,6 +38,17 @@ it('filters eligible bands by private shortlist and active label membership', as
   expect(screen.queryByText('unavailable')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Remove from shortlist' }));
   await waitFor(() => expect(setBandShortlisted).toHaveBeenCalledWith('a','c',false));
+});
+
+it('recommends eligible bands with more tour date coverage before connection tiebreakers', async () => {
+  setup([
+    { id: 'b', name: 'Label Band', fame: 100, detail: '1 open date', eligibleShows: 1 },
+    { id: 'c', name: 'Saved Band', fame: 200, detail: '4 open dates', eligibleShows: 4 },
+  ]);
+  await screen.findByText('Same label');
+  expect(screen.getAllByRole('link', { name: /profile \(opens in a new tab\)/ })[0]).toHaveTextContent('Saved Band');
+  fireEvent.change(screen.getByRole('combobox', { name: 'Sort available bands' }), { target: { value: 'dates' } });
+  expect(screen.getAllByRole('link', { name: /profile \(opens in a new tab\)/ })[0]).toHaveTextContent('Saved Band');
 });
 it('keeps eligible results usable and reports unavailable recommendations', async () => {
   vi.mocked(getBandDiscoveryContext).mockRejectedValue(new Error('offline'));

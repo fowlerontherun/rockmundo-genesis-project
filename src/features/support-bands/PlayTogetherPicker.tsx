@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { getBandDiscoveryContext, setBandShortlisted } from './discoveryApi';
 
-export type PlayTogetherCandidate = { id: string; name: string; fame: number; detail: string };
+export type PlayTogetherCandidate = { id: string; name: string; fame: number; detail: string; eligibleShows?: number };
 type Filter = 'all' | 'shortlist' | 'labelmates' | 'friends';
 
 /** Candidates must come from the authoritative gig/tour eligibility query. */
@@ -41,12 +41,15 @@ export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, p
       if (sort === 'recommended' && (a.id === preferredId || b.id === preferredId)) return Number(b.id === preferredId) - Number(a.id === preferredId);
       if (sort === 'fame') return b.fame-a.fame || a.name.localeCompare(b.name);
       if (sort === 'name') return a.name.localeCompare(b.name);
-      const score = (id: string) => Number(!!byId.get(id)?.shortlisted)*4 + Number(friendshipById.get(id)?.status === 'accepted')*2 + Number(!!byId.get(id)?.labelmate);
-      return score(b.id)-score(a.id) || a.name.localeCompare(b.name);
+      const connectionScore = (id: string) => Number(!!byId.get(id)?.shortlisted)*4 + Number(friendshipById.get(id)?.status === 'accepted')*2 + Number(!!byId.get(id)?.labelmate);
+      if (sort === 'dates') return (b.eligibleShows ?? 0) - (a.eligibleShows ?? 0) || connectionScore(b.id) - connectionScore(a.id) || a.name.localeCompare(b.name);
+      // Availability first for tours, then trusted relationships. Standalone
+      // gig matching has no eligibleShows and retains connection-first sorting.
+      return (b.eligibleShows ?? 0) - (a.eligibleShows ?? 0) || connectionScore(b.id)-connectionScore(a.id) || a.name.localeCompare(b.name);
     });
 
   return <div className="space-y-3">
-    <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Search available bands" placeholder="Search available bands…" value={search} onChange={event => setSearch(event.target.value)} /><label className="flex shrink-0 items-center gap-2 text-sm">Sort<select aria-label="Sort available bands" className="rounded-md border bg-background p-2" value={sort} onChange={event => setSort(event.target.value)}><option value="recommended">Your connections first</option><option value="fame">Highest fame</option><option value="name">Band name</option></select></label></div>
+    <div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Search available bands" placeholder="Search available bands…" value={search} onChange={event => setSearch(event.target.value)} /><label className="flex shrink-0 items-center gap-2 text-sm">Sort<select aria-label="Sort available bands" className="rounded-md border bg-background p-2" value={sort} onChange={event => setSort(event.target.value)}><option value="recommended">Recommended matches</option>{candidates.some(candidate => candidate.eligibleShows !== undefined) && <option value="dates">Most tour dates</option>}<option value="fame">Highest fame</option><option value="name">Band name</option></select></label></div>
     <div className="flex flex-wrap gap-2">
       {(['all', 'shortlist', 'friends', 'labelmates'] as const).map(value => <Button key={value} size="sm" variant={filter === value ? 'default' : 'outline'}
         disabled={value === 'friends' ? !friends.isSuccess : value !== 'all' && !context.isSuccess} aria-pressed={filter === value} onClick={() => setFilter(value)}>
@@ -69,7 +72,7 @@ export function PlayTogetherPicker({ bandId, candidates, onSelect, selectedId, p
             <Button size="sm" disabled={disabled} aria-pressed={selectedId === band.id} onClick={() => onSelect(band.id)}>{selectedId === band.id ? 'Selected' : actionLabel}</Button>
             <Button size="sm" variant="outline" disabled={!context.isSuccess || shortlist.isPending} aria-pressed={!!relation?.shortlisted}
               onClick={() => shortlist.mutate({ id: band.id, saved: !relation?.shortlisted })}>{relation?.shortlisted ? 'Remove from shortlist' : 'Shortlist'}</Button>
-            {friend ? <Badge variant="outline">{friend.status === 'accepted' ? 'Band friends' : friend.incoming ? 'Friend request received — reply in Gig booking → Play Together → Friends' : 'Friend request sent'}</Badge>
+            {friend ? <Badge variant="outline">{friend.status === 'accepted' ? 'Band friends' : friend.incoming ? 'Friend request received — reply in Play Together → Friends' : 'Friend request sent'}</Badge>
               : <Button size="sm" variant="outline" disabled={!friends.isSuccess || friendship.isPending} onClick={() => friendship.mutate(band.id)}>Request friendship</Button>}
           </div>
         </div>;

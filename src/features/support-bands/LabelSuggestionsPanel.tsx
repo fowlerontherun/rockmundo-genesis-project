@@ -82,6 +82,7 @@ export function LabelSuggestionsPanel(props: Props) {
           <Button disabled={change.isPending || !suggestion.roster_current || ownResponse === 'interested'} onClick={() => change.mutate({ id: suggestion.id, response: 'interested' })}>Interested &amp; shortlist</Button>
           <Button variant="outline" disabled={change.isPending || ownResponse === 'declined'} onClick={() => change.mutate({ id: suggestion.id, response: 'declined' })}>Decline suggestion</Button>
           {isHeadliner && !suggestion.tour_id && !suggestion.gig_id && suggestion.roster_current && suggestion.headliner_response === 'interested' && suggestion.support_response === 'interested' && <Button variant="secondary" onClick={() => props.onFindSupport?.(suggestion.support_band_id)}>Find Support dates</Button>}
+          {isHeadliner && !suggestion.tour_id && !suggestion.gig_id && suggestion.roster_current && suggestion.headliner_response === 'interested' && suggestion.support_response === 'interested' && <Button asChild variant="outline"><a href={`/tour-manager?inviteBand=${suggestion.support_band_id}`}>Invite to a tour</a></Button>}
         </div>}
       </div>;
     })}
