@@ -5,6 +5,10 @@ interface InternalSchedulerClient {
   rpc(name: string, args: Record<string, string>): PromiseLike<{ data: unknown; error: unknown }>;
 }
 
+// A scheduler secret is a short Vault-managed token. Do not forward arbitrary
+// multi-megabyte HTTP headers to a privileged database verifier.
+const MAX_INTERNAL_CRON_SECRET_LENGTH = 4_096;
+
 export async function verifyInternalCronRequest(
   req: Request,
   client: InternalSchedulerClient,
@@ -17,7 +21,7 @@ export async function verifyInternalCronRequest(
   }
   const secret = req.headers.get("x-cron-secret");
   // Missing credentials are denied without even invoking a privileged RPC.
-  if (!secret) {
+  if (!secret || secret.length > MAX_INTERNAL_CRON_SECRET_LENGTH) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -1,0 +1,101 @@
+name: Protected scheduler Edge cutover
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: "Exact reviewed Supabase production project ref"
+        type: string
+        required: true
+      confirmation:
+        description: "Type DEPLOY_SIX_PROTECTED_SCHEDULERS after staging certification"
+        type: string
+        required: true
+      staging_receipt:
+        description: "Reviewed staging security/concurrency test receipt or run URL"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: privileged-scheduler-edge-production
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: >-
+      ${{ github.ref == 'refs/heads/main' &&
+          inputs.project_ref == 'yztogmdixmchsmimtent' &&
+          inputs.confirmation == 'DEPLOY_SIX_PROTECTED_SCHEDULERS' &&
+          inputs.staging_receipt != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install pinned repository dependencies
+        run: npm ci
+      - name: Verify protected worker source and negative/concurrency contracts
+        run: >-
+          npx vitest run
+          src/test/internalJobAuthorization.test.ts
+          src/test/sixInternalPrivilegedSchedulers.contract.test.ts
+          src/test/universityAutoAttendanceAuthority.test.ts
+      - name: Check types
+        run: npm run typecheck
+
+  deploy:
+    needs: preflight
+    runs-on: ubuntu-latest
+    # Maintainers must configure required reviewers on this environment.
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PROJECT_REF: ${{ inputs.project_ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require approved private deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_URL"
+          test "$PROJECT_REF" = 'yztogmdixmchsmimtent'
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.81.3
+      - name: Verify existing Vault-backed schedules and exclusive job claims
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/privileged_job_scheduler_harness.sql
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/university_auto_scheduler_and_class_window_harness.sql
+      - name: Deploy six existing scheduler functions with fail-closed internal auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The jobs use Vault-backed x-cron-secret; JWT verification stays
+          # disabled only because the handler itself authenticates the request.
+          # Do not deploy all functions, prune, or invoke the live global jobs.
+          for slug in \
+            generate-gig-offers \
+            generate-pr-offers \
+            generate-radio-invitations \
+            complete-release-manufacturing \
+            process-tour-travel \
+            auto-complete-gigs
+          do
+            supabase functions deploy "$slug" --project-ref "$PROJECT_REF" --no-verify-jwt
+          done
+      - name: Inspect version inventory without invoking privileged jobs
+        run: supabase functions list --project-ref "$PROJECT_REF"
+      - name: Record operator follow-up gates
+        run: |
+          echo 'Six protected scheduler deployments requested from this main commit.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Do not close #4255 until deployed source, unauthenticated 401, scheduled job outcomes and per-record idempotency are certified.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Check docs/operations/PRIVILEGED_SCHEDULER_EDGE_CUTOVER.md before final sign-off.' >> "$GITHUB_STEP_SUMMARY"
