@@ -1,4 +1,5 @@
 import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
+import { requireGigOfferSources } from "./gigOfferPrerequisites.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -46,11 +47,12 @@ serve(async (req) => {
     });
 
     // Generate offers for all active bands with sufficient fame
-    const { data: bands } = await supabaseClient
+    const { data: bands, error: bandsError } = await supabaseClient
       .from('bands')
       .select('id, fame, genre, fan_sentiment_score, media_intensity, reputation_score, morale')
       .gte('fame', 100)
       .limit(50);
+    if (bandsError) throw bandsError;
 
     if (!bands || bands.length === 0) {
       await completeJobRun({
@@ -69,36 +71,39 @@ serve(async (req) => {
       );
     }
 
+    // Query and validate the offer sources once per run. In production, no
+    // promoters are currently configured; dereferencing a random undefined
+    // promoter previously threw for every band while the run reported success.
+    const { data: eligiblePromoters, error: promotersError } = await supabaseClient
+      .from('promoters')
+      .select('id, name')
+      .eq('active', true)
+      .limit(5);
+    if (promotersError) throw promotersError;
+    const { data: eligibleVenues, error: venuesError } = await supabaseClient
+      .from('venues')
+      .select('id, name, economy_factor')
+      .limit(10);
+    if (venuesError) throw venuesError;
+    const { promoters, venues } = requireGigOfferSources(eligiblePromoters, eligibleVenues);
+
     for (const band of bands) {
       try {
         bandsProcessed++;
         
         // Check if band already has pending offers
-        const { count } = await supabaseClient
+        const { count, error: pendingError } = await supabaseClient
           .from('gig_offers')
           .select('id', { count: 'exact', head: true })
           .eq('band_id', band.id)
           .eq('status', 'pending');
+        if (pendingError) throw pendingError;
 
         if (count && count >= 3) continue; // Max 3 pending offers per band
 
         // Generate 1-2 offers per band
         const numOffers = Math.floor(Math.random() * 2) + 1;
         
-        // Get random promoters and venues
-        const { data: promoters } = await supabaseClient
-          .from('promoters')
-          .select('*')
-          .eq('active', true)
-          .limit(5);
-
-        const { data: venues } = await supabaseClient
-          .from('venues')
-          .select('*')
-          .limit(10);
-
-        if (!promoters || !venues) continue;
-
         for (let i = 0; i < numOffers; i++) {
           const promoter = promoters[Math.floor(Math.random() * promoters.length)];
           const venue = venues[Math.floor(Math.random() * venues.length)];
@@ -110,22 +115,22 @@ serve(async (req) => {
           const slotType = band.fame > 5000 ? 'headline' : band.fame > 2000 ? 'support' : 'opening';
 
           // === SENTIMENT/MEDIA GIG OFFER MODIFIERS (v1.0.947) ===
-          const sentimentScore = (band as any).fan_sentiment_score ?? 0;
-          const mediaIntensity = (band as any).media_intensity ?? 0;
+          const sentimentScore = band.fan_sentiment_score ?? 0;
+          const mediaIntensity = band.media_intensity ?? 0;
           const sentimentT = (Math.max(-100, Math.min(100, sentimentScore)) + 100) / 200;
           const ticketDemandMod = parseFloat((0.6 + sentimentT * 0.8).toFixed(2)); // 0.6 to 1.4
           const mediaCoverageMod = parseFloat((0.8 + (Math.min(100, mediaIntensity) / 100) * 0.4).toFixed(2)); // 0.8 to 1.2
 
           // === REPUTATION GIG OFFER MODIFIER (v1.0.957) ===
           // Toxic bands get fewer/worse offers; beloved bands get premium payouts
-          const repScore = (band as any).reputation_score ?? 0;
+          const repScore = band.reputation_score ?? 0;
           const repT = (Math.max(-100, Math.min(100, repScore)) + 100) / 200; // 0 to 1
           const repPayoutMod = parseFloat((0.7 + repT * 0.6).toFixed(2)); // 0.7x toxic → 1.3x iconic
           // Toxic reputation reduces offer chance (skip ~30% of offers for very bad rep)
           if (repScore <= -40 && Math.random() < 0.3) continue;
 
           // === MORALE MODIFIER: Low morale bands perform worse → lower payouts (v1.0.970) ===
-          const bandMorale = (band as any).morale ?? 50;
+          const bandMorale = band.morale ?? 50;
           const moraleT = Math.max(0, Math.min(100, bandMorale)) / 100; // 0 to 1
           const moraleMod = parseFloat((0.8 + moraleT * 0.4).toFixed(2)); // 0.8x demoralized → 1.2x energized
 
@@ -135,7 +140,7 @@ serve(async (req) => {
           const expiresAt = new Date();
           expiresAt.setDate(expiresAt.getDate() + 5);
 
-          await supabaseClient.from('gig_offers').insert({
+          const { error: insertError } = await supabaseClient.from('gig_offers').insert({
             band_id: band.id,
             venue_id: venue.id,
             promoter_id: promoter.id,
@@ -147,6 +152,7 @@ serve(async (req) => {
             offer_reason: `${promoter.name} has an opening at ${venue.name}`,
             metadata: { venue_name: venue.name, promoter_name: promoter.name },
           });
+          if (insertError) throw insertError;
 
           offersCreated++;
         }
@@ -154,6 +160,25 @@ serve(async (req) => {
         errorCount++;
         console.error(`Error processing band ${band.id}:`, error);
       }
+    }
+
+    // A dispatched cron request is not successful when every eligible band
+    // failed. Preserve partial failure evidence for operations and retries.
+    if (errorCount > 0) {
+      const summary = { offersCreated, bandsProcessed, errorCount };
+      await failJobRun({
+        jobName: "generate-gig-offers",
+        runId,
+        supabaseClient,
+        durationMs: Date.now() - startedAt,
+        processedCount: bandsProcessed,
+        errorCount,
+        error: new Error(`${errorCount} band offer generation(s) failed`),
+        resultSummary: summary,
+      });
+      return new Response(JSON.stringify({ success: false, ...summary }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500,
+      });
     }
 
     await completeJobRun({
@@ -167,7 +192,7 @@ serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true, offers_created: offersCreated, bands_processed: bandsProcessed }),
+      JSON.stringify({ success: true, offers_created: offersCreated, bands_processed: bandsProcessed, error_count: 0 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
