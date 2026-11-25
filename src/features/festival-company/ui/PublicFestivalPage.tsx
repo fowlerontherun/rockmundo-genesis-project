@@ -28,6 +28,7 @@ import { FestivalPublishedTimetable } from "./FestivalPublishedTimetable";
 import { FestivalVisitorGuide } from "./FestivalVisitorGuide";
 import { FestivalLineupPoster } from "./poster/FestivalLineupPoster";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
+import { festivalRoutes } from "@/features/festivals/routes";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
 import { FestivalBrandArtwork, FestivalLineupRibbon } from "./FestivalBrandArtwork";
@@ -109,6 +110,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const { data: festivalMemorabilia = [], isError: memorabiliaError, isPending: memorabiliaPending, refetch: retryMemorabilia } = useMyFestivalMemorabilia(Boolean(user));
   const { data: ticketWallet = [], isError: walletError, isPending: walletPending, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
+  const resetPurchase = buy.reset;
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
   const [now, setNow] = useState(() => Date.now());
@@ -129,11 +131,20 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [failedFestivalLogo, setFailedFestivalLogo] = useState<string | null>(null);
-  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id, profileId]);
+  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); resetPurchase(); }, [festivalCompanyIdentifier, publicSlug, f?.id, profileId, resetPurchase]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
-  if (isError) return <main className="space-y-3 p-8" role="alert"><p>Festival details could not be loaded.</p><Button type="button" variant="outline" onClick={() => void retryPublicFestival()}>Retry festival details</Button></main>;
-  if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
+  if (isError) return <main className="space-y-3 p-8" role="alert">
+    <p>Festival details could not be loaded.</p>
+    <div className="flex flex-wrap gap-3">
+      <Button type="button" variant="outline" onClick={() => void retryPublicFestival()}>Retry festival details</Button>
+      <Button asChild variant="secondary"><Link to={festivalRoutes.publicDirectory()}>Browse other festivals</Link></Button>
+    </div>
+  </main>;
+  if (!f) return <main className="space-y-3 p-8" role="status">
+    <p>Festival not found.</p>
+    <Button asChild variant="secondary"><Link to={festivalRoutes.publicDirectory()}>Browse other festivals</Link></Button>
+  </main>;
 
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt, now);
   const cancelled = f.launchStatus === "cancelled_before_event";
@@ -416,7 +427,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="grounds">
-            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable")} />
+            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable", true)} />
           </TabsContent>
 
           <TabsContent value="lineup">
@@ -604,8 +615,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
           <TabsContent value="information">
             <FestivalVisitorGuide edition={f} phase={eventPhase}
-              onViewTimetable={() => setActiveFestivalTab("timetable")}
-              onViewTickets={() => setActiveFestivalTab("tickets")} />
+              onViewTimetable={() => setActiveFestivalTab("timetable", true)}
+              onViewTickets={() => setActiveFestivalTab("tickets", true)} />
           </TabsContent>
         </Tabs>
       </div>

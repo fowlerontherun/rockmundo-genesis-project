@@ -179,3 +179,68 @@ it("hides cached events after a connection failure and replays a deduplicated of
     vi.unstubAllGlobals();
   }
 });
+
+it("never replays a previous festival-local day's stage or audience as current after midnight", async () => {
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const now = new Date().toISOString();
+  const oldDay = new Intl.DateTimeFormat("sv-SE", { timeZone: "Pacific/Auckland", dateStyle: "short" })
+    .format(new Date(Date.now() - 48 * 60 * 60_000));
+  const stageId = "00000000-0000-4000-8000-000000000031";
+  const launch = "00000000-0000-4000-8000-000000000032";
+  publicExperience.mockReset().mockResolvedValue({
+    festivalLaunchId: launch, editionId: "edition", runtimeStatus: "live", gatesStatus: "open",
+    currentDay: oldDay, updatedAt: now, attendanceBand: "full",
+    performances: [{ id: "00000000-0000-4000-8000-000000000033", stageId,
+      artistName: "Yesterday's artist", stageName: "Main Stage", status: "live", delayMinutes: 0,
+      scheduledStart: null, scheduledEnd: null, observedAt: now }],
+    stageCrowds: [{ stageId, stageName: "Main Stage", crowdBand: "full", mood: "engaged",
+      festivalDate: oldDay, lastCalculatedAt: now }],
+    messages: [{ id: "00000000-0000-4000-8000-000000000034", kind: "stage", status: "live",
+      stageId, stageName: "Main Stage", observedAt: now }],
+  });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <FestivalGrounds slug="previous-day" festivalLaunchId={launch} festivalEditionId="edition"
+        cancelled={false} stages={[{ id: stageId, name: "Main Stage", capacity: 5000 }]}
+        lineup={[]} timezone="Pacific/Auckland" onViewTimetable={() => {}}
+        visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }} />
+    </QueryClientProvider>,
+  );
+  try {
+    expect(await screen.findByText("No confirmed live performance")).toBeVisible();
+    expect(screen.getByText("No active festival-day feed. Published information is still available.")).toBeVisible();
+    expect(screen.getByText("No unambiguous stage crowd snapshot is available.")).toBeVisible();
+    expect(screen.queryByText("Yesterday's artist")).toBeNull();
+    expect(screen.queryByText("Reported crowd:")).toBeNull();
+    expect(publicExperience).toHaveBeenCalledOnce();
+  } finally {
+    view.unmount();
+    client.clear();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("does not fetch or render live observations for a cancelled edition", () => {
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+  publicExperience.mockReset();
+  const client = new QueryClient();
+  const view = render(
+    <QueryClientProvider client={client}>
+      <FestivalGrounds slug="cancelled" festivalLaunchId="launch" festivalEditionId="edition"
+        cancelled stages={[{ id: "main", name: "Main Stage", capacity: 5000 }]}
+        lineup={[]} timezone="Europe/London" onViewTimetable={() => {}}
+        visitorInformation={{ travel: null, camping: null, accessibility: null, foodAndDrink: null }} />
+    </QueryClientProvider>,
+  );
+  try {
+    expect(screen.getByText("This festival was cancelled; there is no live feed.")).toBeVisible();
+    expect(screen.getByText("This festival was cancelled. No performances are currently scheduled to take place.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Retry live festival updates" })).toBeNull();
+    expect(publicExperience).not.toHaveBeenCalled();
+  } finally {
+    view.unmount();
+    client.clear();
+    vi.unstubAllGlobals();
+  }
+});
