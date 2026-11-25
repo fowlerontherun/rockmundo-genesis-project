@@ -15,12 +15,8 @@ const harness = readFileSync(
 
 describe("university auto attendance server authority (#4228)", () => {
   it("authenticates the scheduler before reading payload, logging or processing XP", () => {
-    expect(worker).toContain('req.method !== "POST"');
-    expect(worker).toContain('"x-cron-secret"');
-    expect(worker).toContain('"verify_internal_cron_secret"');
-    expect(worker).toContain("authorized !== true");
-    expect(worker).toContain("status: 401");
-    const auth = worker.indexOf('"verify_internal_cron_secret"');
+    expect(worker).toContain('import { verifyInternalCronRequest } from "../_shared/trusted-scheduler.ts"');
+    const auth = worker.indexOf("await verifyInternalCronRequest(req, client, corsHeaders)");
     const parsed = worker.indexOf("await safeJson", auth);
     const logged = worker.indexOf("runId = await startJobRun", auth);
     const enrollment = worker.indexOf('.from("player_university_enrollments")', auth);
@@ -60,7 +56,8 @@ describe("university auto attendance server authority (#4228)", () => {
     expect(browser).not.toContain("functions.invoke");
     expect(browser).toContain('invalidateQueries({ queryKey: ["player-skills"] })');
     expect(scheduler).not.toContain("invoke('university-attendance')");
-    expect(scheduler).toContain("activity.activity_type === 'university') continue;");
+    expect(scheduler).toContain("case 'university':");
+    expect(scheduler).toContain("Trusted hourly attendance + atomic XP RPC own this completion");
     expect(worker).toContain("new Date(due.class_starts_at)");
     expect(worker).toContain("new Date(due.class_ends_at)");
   });

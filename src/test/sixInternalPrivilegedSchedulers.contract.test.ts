@@ -24,6 +24,7 @@ describe("six internal privileged schedulers (#4255)", () => {
     expect(helper).toContain('"claim_privileged_job_window"');
     expect(helper).toContain('claim?.claimed !== true');
     expect(helper).toContain("already_claimed");
+    expect(helper).toContain("await verifyInternalCronRequest(req, client, corsHeaders)");
     expect(helper.indexOf('"verify_internal_cron_secret"')).toBeLessThan(
       helper.indexOf('"claim_privileged_job_window"'),
     );

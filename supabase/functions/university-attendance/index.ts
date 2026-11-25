@@ -1,3 +1,4 @@
+import { verifyInternalCronRequest } from "../_shared/trusted-scheduler.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -68,28 +69,15 @@ function calculateLearningMultiplier(skillSlug: string, attributes: Record<strin
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
   const client = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } },
   );
-  // Only the Vault-authorised scheduler may run global attendance.
-  // Authenticate before parsing any client data or processing XP.
-  const { data: authorized, error: authError } = await client.rpc(
-    "verify_internal_cron_secret",
-    { p_secret: req.headers.get("x-cron-secret") },
-  );
-  if (authError || authorized !== true) {
-    console.warn("[university-attendance] Rejected unauthorized scheduler invocation");
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  // Only the Vault-authorised scheduler may process global XP. Reuse the
+  // fail-closed gate used by the other privileged jobs before body parsing.
+  const rejected = await verifyInternalCronRequest(req, client, corsHeaders);
+  if (rejected) return rejected;
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
@@ -167,7 +155,7 @@ serve(async (req) => {
           .single();
         if (playerError || !playerProfile) throw playerError ?? new Error("Profile not found");
 
-        const playerCity = (playerProfile.cities as any)?.name ?? null;
+        const playerCity = (playerProfile.cities as { name?: string } | null)?.name ?? null;
         const universityCity = university?.city ?? null;
         const isRemote = Boolean(playerCity && universityCity && playerCity !== universityCity);
 
@@ -285,8 +273,8 @@ serve(async (req) => {
               .single();
             if (band) {
               const moraleBoost = isCompleted ? 5 : 1;
-              const newMorale = Math.min(100, Number((band as any).morale ?? 50) + moraleBoost);
-              await client.from("bands").update({ morale: newMorale } as any).eq("id", membership.band_id);
+              const newMorale = Math.min(100, Number(band.morale ?? 50) + moraleBoost);
+              await client.from("bands").update({ morale: newMorale }).eq("id", membership.band_id);
               await client.from("band_health_events").insert({
                 band_id: membership.band_id,
                 event_type: "morale",
