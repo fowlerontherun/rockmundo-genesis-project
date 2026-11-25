@@ -47,6 +47,44 @@ describe("canonical public festival activity feed", () => {
     expect(read([{ ...original, observedAt: "2026-11-20T00:50:00+06:00" }])).toHaveLength(1);
   });
 
+  it("keeps multi-stage announcements isolated as an edition advances through three local days", () => {
+    const otherStageId = "123e4567-e89b-42d3-a456-426614174003";
+    const otherItemId = "123e4567-e89b-42d3-a456-426614174004";
+    const otherEventId = "123e4567-e89b-42d3-a456-426614174005";
+    const stages = [...stage, { id: otherStageId, name: "Second Stage", capacity: 300 }];
+    const acts = [...lineup, { ...lineup[0], id: otherItemId, artistName: "Second Artist", stageName: "Second Stage" }];
+    const secondStage = { ...original, id: otherEventId, stageId: otherStageId,
+      stageName: "Second Stage", scheduleItemId: otherItemId };
+    const dayOne = { ...original, observedAt: "2026-11-18T18:50:00Z" };
+    const dayThree = { ...secondStage, observedAt: "2026-11-20T18:50:00Z" };
+    expect(readPublicFestivalActivityFeed([dayOne, original, secondStage, dayThree], stages, acts,
+      "2026-11-19", "Europe/London", now)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stageId, artistName: "Published Act" }),
+      expect.objectContaining({ stageId: otherStageId, artistName: "Second Artist" }),
+    ]));
+    // Even a matching display name cannot disguise an event from an
+    // unpublished stage (or attach one stage's slot to another stage).
+    expect(readPublicFestivalActivityFeed([{ ...secondStage, scheduleItemId }], stages, acts,
+      "2026-11-19", "Europe/London", now)).toEqual([
+      expect.objectContaining({ stageId: otherStageId, artistName: null }),
+    ]);
+    expect(readPublicFestivalActivityFeed([secondStage], stage, acts,
+      "2026-11-19", "Europe/London", now)).toEqual([]);
+  });
+
+  it("accepts both repeated London clock-change hours without crossing a festival-day boundary", () => {
+    const before = "2026-10-25T00:30:00Z"; // 01:30 BST
+    const after = "2026-10-25T01:30:00Z"; // 01:30 GMT
+    const events = [{ ...original, observedAt: before },
+      { ...original, id: "123e4567-e89b-42d3-a456-426614174006", observedAt: after }];
+    const result = readPublicFestivalActivityFeed(events, stage, [{ ...lineup[0], festivalDate: "2026-10-25" }],
+      "2026-10-25", "Europe/London", Date.parse("2026-10-25T01:35:00Z"));
+    expect(result).toHaveLength(2);
+    expect(result.map((item) => item.observedAt)).toEqual([after, before]);
+    expect(readPublicFestivalActivityFeed(events, stage, lineup, "2026-10-26", "Europe/London",
+      Date.parse("2026-10-26T01:35:00Z"))).toEqual([]);
+  });
+
   it("sorts replayed events by source time and caps the rendering budget", () => {
     const messages = Array.from({ length: 30 }, (_, index) => ({ ...original,
       id: `123e4567-e89b-42d3-a456-${(426614174000 + index).toString().padStart(12, "0")}`,

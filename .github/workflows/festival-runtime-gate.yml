@@ -56,6 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      NODE_OPTIONS: --max-old-space-size=6144
       FESTIVAL_TEST_DATABASE_CONFIRMED: 'true'
       SUPABASE_CLI_VERSION: '2.31.8'
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -86,6 +87,7 @@ jobs:
       - name: Run Festival static certification
         run: |
           npm run test:festivals
+          npm run test:festivals:release-quality
           node scripts/festivals/certify-performance-effects-harness.mjs
           npm run test:festivals:routes
           npm run test:festivals:app-routes
@@ -93,6 +95,8 @@ jobs:
           npm run test:festivals:settlement
           npm run test:festivals:effects
           npm run test:festivals:performance-effects
+      - name: Verify Festival browser tests are discoverable
+        run: npx playwright test --config=playwright.festival.config.ts --list --project=chromium
       - name: Build
         run: npm run build
 
