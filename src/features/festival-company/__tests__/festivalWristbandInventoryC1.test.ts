@@ -52,7 +52,7 @@ describe("Festival C1 wristband inventory authority", () => {
   });
 
   it("refreshes and displays the same wristband in inventory and the festival ticket wallet", () => {
-    expect(launchHooks).toContain('queryKey:["festival-memorabilia"]');
+    expect(launchHooks).toContain('queryKey: ["festival-memorabilia"]');
     expect(publicFestivalPage).toContain("useMyFestivalTickets");
     expect(publicFestivalPage).toContain("useMyFestivalMemorabilia");
     expect(publicFestivalPage).toContain("My Festival Wallet");
