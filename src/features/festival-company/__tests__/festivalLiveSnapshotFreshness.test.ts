@@ -29,4 +29,11 @@ describe("canonical festival live snapshot freshness", () => {
   it("treats stopped gates as historical rather than live crowd information", () => {
     expect(festivalLiveSnapshotFreshness({ ...snapshot, runtimeStatus: "ready_to_open", currentDay: null }, now)).toBe("inactive");
   });
+  it("keeps a fresh paused edition distinct from an interrupted or cancelled one", () => {
+    expect(festivalLiveSnapshotFreshness({ ...snapshot, runtimeStatus: "paused" }, now)).toBe("current");
+    expect(festivalLiveSnapshotFreshness({ ...snapshot, runtimeStatus: "paused", updatedAt: "2026-10-28T22:00:00Z" }, now)).toBe("stale");
+    for (const runtimeStatus of ["interrupted", "cancelled", "runtime_complete"]) {
+      expect(festivalLiveSnapshotFreshness({ ...snapshot, runtimeStatus, currentDay: null }, now)).toBe("inactive");
+    }
+  });
 });

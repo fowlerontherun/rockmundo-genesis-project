@@ -3,6 +3,8 @@
 Status: implementation batch under review (not a declaration of production release).
 Issues: #4620 (booking/timetable cache), #4622 (loading/error vs empty), #4634 (low-end fallback), #4639 (shared-view freshness/reconnect), #4649 (accessibility), #4651–#4652 (QA), #4654 (visitor help/release).
 
+Player-facing guide: [Festival V2 visitor help](FESTIVAL_V2_PLAYER_HELP.md).
+
 **Production readiness check, 24 November 2026 (read-only):**
 `get_public_festival_edition_live_status(text)` exists; the additive
 `get_public_festival_edition_live_experience(text)` RPC and private canonical
@@ -86,9 +88,11 @@ stage events or exact attendance counts in public issue comments or traces.
 | Gate | Required verification |
 | --- | --- |
 | Unit | `npm run test:festivals` (includes freshness and invalidation contracts) |
+| Release scenarios | `npm run test:festivals:release-quality` (offline multi-day, DST, multi-stage, cancellation/interruption, read-probe failure/reconnect contracts) |
 | Types | `npm run typecheck` |
 | Lint | `npm run lint:ci` |
 | Visitor browser | `npm run test:e2e:festival:pr` (requires the test fixture/environment) |
+| Browser discovery | `npx playwright test --config=playwright.festival.config.ts --list --project=chromium`; the earlier default config silently excluded `tests/festivals` |
 | Reconnect | Simulate a stale active runtime >30 minutes old, missing `updatedAt`, RPC error and healthy refresh. Ensure no old live artist/crowd/weather indicator is shown. |
 | Cross-edition | Navigate between different festival slugs and characters; verify wallet, stage and lineup caches are isolated by their keys. |
 | User roles | Test anonymous visitor, signed-in attendee, artist and organiser. Only server-authorised data may be rendered. |
@@ -100,6 +104,50 @@ while a different slug has a separate cache entry. This is *not* a substitute
 for FEST-603 network load testing with concurrent authenticated/mobile clients
 or a live server tick. The previous-local-day Grounds regression similarly
 checks stale-state suppression in the browser, not DB settlement.
+
+### Staging-only network load/reconnect check (#4652)
+
+**Preflight:** identify a separate disposable/staging Supabase project with a
+published seeded annual edition, confirm its IANA timezone and an anonymous
+public RPC key. A test-only authenticated token may be supplied separately;
+never use a production user's session. The runner enforces an exact-host
+allowlist, HTTPS and explicit staging confirmation. It invokes only the
+read-only `get_public_festival_edition_live_status` projection and stops after
+at most 25 simulated viewers × 20 requests. It never starts a runtime tick.
+
+Set these environment variables in the staging job secret store (do **not**
+check their values into source or copy them into logs):
+
+| Variable | Value |
+| --- | --- |
+| `FESTIVAL_STAGING_URL` | `https://<isolated-staging-host>/` |
+| `FESTIVAL_STAGING_HOST` | Exact host from that URL |
+| `FESTIVAL_STAGING_PUBLISHABLE_KEY` | Staging publishable/anon key |
+| `FESTIVAL_STAGING_SLUG` | Published seeded festival slug |
+| `FESTIVAL_STAGING_TIMEZONE` | Edition IANA timezone, e.g. `Europe/London` |
+| `FESTIVAL_STAGING_CONFIRM` | `I_CONFIRM_STAGING_ONLY` |
+| `FESTIVAL_LOAD_VIEWERS`, `FESTIVAL_LOAD_CYCLES` | Optional, default 12 and 4; caps 25 viewers and 2–20 cycles |
+| `FESTIVAL_LOAD_REQUIRE_TICK_CHANGE` | `1` when a separate controlled staging runtime tick will run during the probe |
+| `FESTIVAL_STAGING_AUTH_TOKEN` | Optional, *staging-only* JWT to test authenticated reads; never a service-role token |
+
+Run `node scripts/festivals/probe-public-edition-load.mjs` against that
+pre-approved staging project. Record the JSON aggregate report and exact
+deployment/fixture identifiers separately. Exit code 1 means failure: HTTP
+errors, stale/mismatched edition or festival day, private response fields,
+reconnect failure, or response p95 above the 3-second default budget.
+For a controlled tick run, set `FESTIVAL_LOAD_REQUIRE_TICK_CHANGE=1` and have
+the authorised operator advance the seeded edition using the **existing**
+server-approved tick process. The read probe only verifies a change in the
+published update timestamp; inspect canonical tick/evidence receipts and
+retry/idempotency in separate DB tests. Do not use production for either step.
+
+**Scope of evidence:** these are HTTP client simulations with alternating
+mobile/desktop user agents and a configurable slow-client interval. They do
+not establish true Android/iOS rendering speed, WebSocket connection recovery,
+GPU performance, attendance/payout idempotency or authentic browser sessions.
+Run the actual desktop/mobile browser, permission and database lifecycle gates
+in the sign-off matrix before release. Never mark #4652's *live load test*
+complete based on offline mocked probe tests or its existence alone.
 
 An in-progress festival may have no runtime tick for a while; a snapshot older than 30 minutes is conservatively hidden rather than presented as current. If that policy causes misleading unavailability, calibrate its interval against real engine cadence before release rather than bypassing freshness checks.
 
