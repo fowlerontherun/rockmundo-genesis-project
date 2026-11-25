@@ -20,6 +20,18 @@ describe("shared internal scheduler authentication (#4228, #4255)", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("rejects a forged job origin, bearer-only request and oversized cron header without privileged reads", async () => {
+    const rpc = vi.fn();
+    const spoof = new Request("https://example.test/functions/v1/generate-gig-offers", {
+      method: "POST",
+      headers: { authorization: "Bearer forged", "x-triggered-by": "pg_cron", "x-request-id": "internal" },
+    });
+    const oversized = request("POST", "a".repeat(4_097));
+    expect((await authorizeInternalJob(spoof, { rpc }, "generate-gig-offers", headers))?.status).toBe(401);
+    expect((await authorizeInternalJob(oversized, { rpc }, "generate-gig-offers", headers))?.status).toBe(401);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("fails closed for invalid, errored, or thrown verification", async () => {
     const invalid = vi.fn().mockResolvedValue({ data: false, error: null });
     expect((await verifyInternalCronRequest(request("POST", "wrong"), { rpc: invalid }, headers))?.status).toBe(401);
@@ -63,6 +75,20 @@ describe("shared internal scheduler authentication (#4228, #4255)", () => {
       .mockResolvedValueOnce({ data: true, error: null })
       .mockRejectedValueOnce(new Error("network"));
     expect((await authorizeInternalJob(request("POST", "secret"), { rpc: thrown }, "generate-gig-offers", headers))?.status).toBe(503);
+  });
+
+  it("authorizes only one of two simultaneous requests for the same claimed job window", async () => {
+    let claims = 0;
+    const rpc = vi.fn(async (name: string) => name === "verify_internal_cron_secret"
+      ? { data: true, error: null }
+      : { data: { claimed: ++claims === 1 }, error: null });
+    const responses = await Promise.all([
+      authorizeInternalJob(request("POST", "secret"), { rpc }, "generate-gig-offers", headers),
+      authorizeInternalJob(request("POST", "secret"), { rpc }, "generate-gig-offers", headers),
+    ]);
+    expect(responses.filter((response) => response === null)).toHaveLength(1);
+    expect(responses.filter((response) => response?.status === 200)).toHaveLength(1);
+    expect(rpc.mock.calls.filter(([name]) => name === "claim_privileged_job_window")).toHaveLength(2);
   });
 });
 
