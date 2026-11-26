@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
 
-const migration = readFileSync('supabase/migrations/20300101011000_public_festival_launch_identity.sql', 'utf8');
+const migration = readFileSync('supabase/migrations/20261126090742_public_festival_launch_identity.sql', 'utf8');
 const launch = '11111111-1111-4111-8111-111111111111';
 const edition = '22222222-2222-4222-8222-222222222222';
 const company = '33333333-3333-4333-8333-333333333333';

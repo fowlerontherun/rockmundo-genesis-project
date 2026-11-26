@@ -78,7 +78,7 @@ describe("public Festival launch identity", () => {
   });
 
   it("exposes launch identity only through the public published-edition boundary", () => {
-    const sql = readFileSync("supabase/migrations/20300101011000_public_festival_launch_identity.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261126090742_public_festival_launch_identity.sql", "utf8");
     expect(sql).toContain("public.get_public_festival_guide(p_slug)");
     expect(sql).toContain("launch.id = (projection->>'id')::uuid");
     expect(sql).toContain("launch.public_slug = p_slug OR profile.public_slug = p_slug");

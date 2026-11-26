@@ -14,6 +14,10 @@ jobs:
     name: Frontend unit, lint, typecheck, build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # The complete app typecheck exceeds Node's default 2 GiB heap.
+    # Keep the release gate active rather than marking an OOM as a code failure.
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
