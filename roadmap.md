@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Festival guest solos: friendly same-edition bands invite and accept a named guest, protect booking locks, award completion-only XP and optional Twaater posts; test and update version.
+
 - [x] Seasonal festival stages: edition-date scenery, city seasonal weather and fresh runtime overrides; cosmetic only, with lightweight and reduced-motion support.
 - [x] Verify seasonal rules (30 tests), all four stage seasons and mobile view without page errors or overflow; version 1.1.819. Signed-in real edition weather unverified with the external account service.
 

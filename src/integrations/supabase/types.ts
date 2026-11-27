@@ -24526,6 +24526,137 @@ export type Database = {
           },
         ]
       }
+      festival_guest_solos: {
+        Row: {
+          booking_id: string
+          created_at: string
+          edition_id: string
+          guest_band_id: string
+          guest_profile_id: string
+          guest_share: boolean
+          host_band_id: string
+          host_profile_id: string
+          host_share: boolean
+          id: string
+          joined_at: string | null
+          rewarded_at: string | null
+          session_id: string | null
+          status: string
+          twaat_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          edition_id: string
+          guest_band_id: string
+          guest_profile_id: string
+          guest_share?: boolean
+          host_band_id: string
+          host_profile_id: string
+          host_share?: boolean
+          id?: string
+          joined_at?: string | null
+          rewarded_at?: string | null
+          session_id?: string | null
+          status?: string
+          twaat_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          edition_id?: string
+          guest_band_id?: string
+          guest_profile_id?: string
+          guest_share?: boolean
+          host_band_id?: string
+          host_profile_id?: string
+          host_share?: boolean
+          id?: string
+          joined_at?: string | null
+          rewarded_at?: string | null
+          session_id?: string | null
+          status?: string
+          twaat_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_guest_solos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "festival_artist_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_guest_band_id_fkey"
+            columns: ["guest_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_guest_profile_id_fkey"
+            columns: ["guest_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_host_band_id_fkey"
+            columns: ["host_band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_host_profile_id_fkey"
+            columns: ["host_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_host_profile_id_fkey"
+            columns: ["host_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "festival_performance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_guest_solos_twaat_id_fkey"
+            columns: ["twaat_id"]
+            isOneToOne: false
+            referencedRelation: "twaats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_insurance_policies: {
         Row: {
           active: boolean
@@ -78930,6 +79061,17 @@ export type Database = {
       }
       festival_equipment_preflight: {
         Args: { p_session_id: string }
+        Returns: Json
+      }
+      festival_guest_solo: {
+        Args: {
+          p_action?: string
+          p_booking_id: string
+          p_expected_version?: number
+          p_guest_profile_id?: string
+          p_invitation_id?: string
+          p_share?: boolean
+        }
         Returns: Json
       }
       festival_invitation_candidates: {
