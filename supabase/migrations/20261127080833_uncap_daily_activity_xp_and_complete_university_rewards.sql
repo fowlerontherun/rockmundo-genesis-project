@@ -55,6 +55,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE e public.player_university_enrollments%rowtype; c public.university_courses%rowtype;
  sp public.skill_progress%rowtype; v_attendance integer; v_bonus integer; v_inserted uuid;
  v_level integer; v_xp integer; v_max integer; v_required integer; v_user uuid;
+ v_skill_slug text;
 BEGIN
  SELECT * INTO e FROM public.player_university_enrollments WHERE id=p_enrollment_id FOR UPDATE;
  IF NOT FOUND THEN RETURN jsonb_build_object('completed',false,'reason','enrollment_missing'); END IF;
@@ -66,6 +67,12 @@ BEGIN
   RETURN jsonb_build_object('completed',true,'awarded',false,'reason','already_completed');
  END IF;
  SELECT * INTO STRICT c FROM public.university_courses WHERE id=e.course_id;
+ -- Older courses can still reference legacy skill names. The skill_progress
+ -- trigger normalises INSERTs to canonical slugs, so subsequent SELECTs must
+ -- use the same canonical value or the entire completion rolls back.
+ SELECT coalesce((SELECT alias.canonical_slug
+                  FROM private.skill_alias_resolution_20261026 alias
+                  WHERE alias.legacy_slug=c.skill_slug),c.skill_slug) INTO v_skill_slug;
  SELECT user_id INTO STRICT v_user FROM public.profiles WHERE id=e.profile_id FOR UPDATE;
  SELECT least(2147483647,coalesce(sum(greatest(0,xp_earned)),0))::integer
  INTO v_attendance FROM public.player_university_attendance
@@ -76,12 +83,12 @@ BEGIN
  ON CONFLICT(enrollment_id) DO NOTHING RETURNING enrollment_id INTO v_inserted;
  IF v_inserted IS NULL THEN RETURN jsonb_build_object('completed',true,'awarded',false); END IF;
  IF v_bonus>0 THEN
-  v_max:=public.progression_skill_max_level(c.skill_slug);
+  v_max:=public.progression_skill_max_level(v_skill_slug);
   INSERT INTO public.skill_progress(profile_id,skill_slug,current_level,current_xp,required_xp,last_practiced_at)
-  VALUES(e.profile_id,c.skill_slug,0,0,public.progression_skill_required_xp(0),now())
+  VALUES(e.profile_id,v_skill_slug,0,0,public.progression_skill_required_xp(0),now())
   ON CONFLICT(profile_id,skill_slug) DO NOTHING;
   SELECT * INTO STRICT sp FROM public.skill_progress
-    WHERE profile_id=e.profile_id AND skill_slug=c.skill_slug FOR UPDATE;
+    WHERE profile_id=e.profile_id AND skill_slug=v_skill_slug FOR UPDATE;
   v_level:=least(greatest(coalesce(sp.current_level,0),0),v_max);
   v_xp:=greatest(coalesce(sp.current_xp,0),0);
   v_required:=coalesce(nullif(sp.required_xp,0),public.progression_skill_required_xp(v_level));
@@ -106,7 +113,7 @@ BEGIN
     last_recalculated=now()
   WHERE profile_id=e.profile_id;
   INSERT INTO public.experience_ledger(user_id,profile_id,activity_type,xp_amount,skill_slug,metadata)
-  VALUES(v_user,e.profile_id,'university_completion',v_bonus,c.skill_slug,
+  VALUES(v_user,e.profile_id,'university_completion',v_bonus,v_skill_slug,
     jsonb_build_object('enrollment_id',e.id,'attendance_xp',v_attendance,
                        'bonus_rate',0.20,'xp_wallet_credited',true));
  END IF;
