@@ -3,7 +3,6 @@
 export interface DualXpConfig {
   daily_stipend_sxp: number;
   daily_stipend_ap: number;
-  daily_activity_xp_cap: number;
   streak_7_bonus_sxp: number;
   streak_7_bonus_ap: number;
   streak_14_bonus_sxp: number;
@@ -34,7 +33,6 @@ export interface StreakMilestone {
 export const DEFAULT_DUAL_XP_CONFIG: DualXpConfig = {
   daily_stipend_sxp: 500,
   daily_stipend_ap: 15, // Max AP — actual base is scaled by lifetime SXP
-  daily_activity_xp_cap: 400,
   streak_7_bonus_sxp: 150,
   streak_7_bonus_ap: 15,
   streak_14_bonus_sxp: 300,

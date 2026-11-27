@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
-const migration = readFileSync(fileURLToPath(new URL("../../../supabase/migrations/20261013120000_daily_activity_xp_atomic.sql", import.meta.url)), "utf8");
-const worker = readFileSync(fileURLToPath(new URL("../../../supabase/functions/process-daily-activity-xp/index.ts", import.meta.url)), "utf8");
+const migration = readFileSync("supabase/migrations/20261013120000_daily_activity_xp_atomic.sql", "utf8");
+const worker = readFileSync("supabase/functions/process-daily-activity-xp/index.ts", "utf8");
+const uncappedMigration = readFileSync("supabase/migrations/20261127080833_uncap_daily_activity_xp_and_complete_university_rewards.sql", "utf8");
 
 describe("daily activity XP settlement contracts", () => {
   it("#3873 uses a separate bonus ledger instead of dropped stipend grant columns", () => {
@@ -24,5 +23,15 @@ describe("daily activity XP settlement contracts", () => {
     expect(worker).toContain("offset += 500");
     expect(worker).toContain(".range(offset, offset + 499)");
     expect(worker).toContain("if (!page || page.length < 500) break");
+  });
+  it("pays all earned activity XP, still caps AP, and skips source-paid course XP", () => {
+    expect(worker).not.toContain("DAILY_ACTIVITY_XP_CAP");
+    expect(worker).toContain("const earnedSxp = summary.totalXp");
+    expect(worker).toContain("xp_wallet_credited === true");
+    expect(worker).toContain("verifyInternalCronRequest(req, client, corsHeaders)");
+    expect(worker).toContain("Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp)");
+    expect(uncappedMigration).not.toMatch(/p_xp NOT BETWEEN 1 AND 250/);
+    expect(uncappedMigration).toContain("xp_awarded >= 0");
+    expect(uncappedMigration).toContain("'xp_wallet_credited',true");
   });
 });
