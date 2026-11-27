@@ -76,3 +76,16 @@ export function calculateUniversityCourseXpRange(
     maximum: dailyMax * days,
   };
 }
+
+/** Total base XP for full attendance, including the server's 20% completion bonus. */
+export function calculateUniversityCourseTotalXpRange(
+  xpPerDayMin: number | null | undefined,
+  xpPerDayMax: number | null | undefined,
+  durationDays: number,
+) {
+  const attendance = calculateUniversityCourseXpRange(xpPerDayMin, xpPerDayMax, durationDays);
+  return {
+    minimum: attendance.minimum + Math.floor(attendance.minimum * 0.2),
+    maximum: attendance.maximum + Math.floor(attendance.maximum * 0.2),
+  };
+}

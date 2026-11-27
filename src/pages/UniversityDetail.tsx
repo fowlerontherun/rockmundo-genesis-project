@@ -23,7 +23,7 @@ import { FMPageSkeleton } from "@/components/fm/FMPageSkeleton";
 import {
   calculateUniversityCourseDuration,
   calculateUniversityCoursePrice,
-  calculateUniversityCourseXpRange,
+  calculateUniversityCourseTotalXpRange,
   getUniversityPrestigeBand,
   getUniversityQualityBand,
   normalizeUniversityRating,
@@ -95,11 +95,14 @@ interface CoursePrerequisite {
 export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const educationReturnPath = useLocation().pathname.startsWith("/mobile/") ? "/mobile/education" : "/education";
+  const location = useLocation();
+  const educationReturnPath = location.pathname.startsWith("/mobile/") ? "/mobile/education" : "/education";
+  const focusedCourseId = new URLSearchParams(location.search).get("course");
   const { toast } = useToast();
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
+  const [showAllCourses, setShowAllCourses] = useState(false);
 
   const { data: university, isLoading: universityLoading, isError: universityError, refetch: retryUniversity } = useQuery({
     queryKey: ["university", id],
@@ -259,7 +262,7 @@ export default function UniversityDetail() {
   });
 
   // Fetch every active enrollment; legacy players can have more than one.
-  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(() => new URLSearchParams(location.search).get("enrollment"));
   const { data: currentEnrollments = [] } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
     queryFn: async () => {
@@ -610,7 +613,7 @@ export default function UniversityDetail() {
       course.class_start_hour ?? 10,
       course.class_end_hour ?? 14,
     );
-    const totalXpRange = calculateUniversityCourseXpRange(
+    const totalXpRange = calculateUniversityCourseTotalXpRange(
       course.xp_per_day_min,
       course.xp_per_day_max,
       duration,
@@ -657,7 +660,7 @@ export default function UniversityDetail() {
                   {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
                 </span>
                 <span className="block text-xs text-muted-foreground">
-                  {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} expected total
+                  {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} XP including completion bonus
                 </span>
               </span>
             </div>
@@ -739,15 +742,18 @@ export default function UniversityDetail() {
   const filteredCourses = (() => {
     if (!courses) return [];
     let result = courses.filter((course) => isEducationSkillVisible(course.skill_slug, accessBySkill));
+    if (focusedCourseId) return result.filter(course => course.id === focusedCourseId);
     if (courseSearch.trim()) {
       const q = courseSearch.toLowerCase();
       result = result.filter(c =>
         c.name.toLowerCase().includes(q) ||
-        (c.description || "").toLowerCase().includes(q)
+        (c.description || "").toLowerCase().includes(q) ||
+        c.skill_slug.replace(/_/g, " ").includes(q)
       );
     }
     return result;
   })();
+  const displayedCourses = focusedCourseId || showAllCourses ? filteredCourses : filteredCourses.slice(0, 24);
 
   const courseFilterUI = (
     <div className="space-y-3 mb-4">
@@ -787,6 +793,28 @@ export default function UniversityDetail() {
   const qualityRating = normalizeUniversityRating(university.quality_of_learning);
   const prestigeBand = getUniversityPrestigeBand(prestigeRating);
   const qualityBand = getUniversityQualityBand(qualityRating);
+
+  const coursePicker = (
+    <>
+      {focusedCourseId ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <p className="text-sm font-medium">Your selected course is ready to review. Check the fee, class time and requirements, then enrol below.</p>
+          <Button variant="outline" size="sm" onClick={() => navigate(location.pathname)}>Choose a different course</Button>
+        </div>
+      ) : courseFilterUI}
+      {focusedCourseId && filteredCourses.length === 0 && (
+        <Alert role="alert"><AlertDescription>This course is no longer available or its skill tier is locked. Choose another course.</AlertDescription></Alert>
+      )}
+      <div className="grid gap-4 md:grid-cols-2">
+        {displayedCourses.map(renderCourseCard)}
+      </div>
+      {!focusedCourseId && !showAllCourses && filteredCourses.length > displayedCourses.length && (
+        <Button variant="outline" className="mt-4 w-full" onClick={() => setShowAllCourses(true)}>
+          Show all {filteredCourses.length} matching courses
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <FMPageScaffold
@@ -900,19 +928,13 @@ export default function UniversityDetail() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              {courseFilterUI}
-              <div className="grid gap-4 md:grid-cols-2">
-                {filteredCourses.map(renderCourseCard)}
-              </div>
+              {coursePicker}
             </CollapsibleContent>
           </Collapsible>
         ) : (
           <div>
             <h2 className="text-2xl font-bold mb-4">Available Courses</h2>
-            {courseFilterUI}
-            <div className="grid gap-4 md:grid-cols-2">
-              {filteredCourses.map(renderCourseCard)}
-            </div>
+            {coursePicker}
           </div>
         )}
       </div>

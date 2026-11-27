@@ -15,7 +15,10 @@ import { useBookReading } from "@/hooks/useBookReading";
 import { useSkillTierAccess, isEducationSkillVisible } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName, percentComplete } from "../utils/educationUi";
 import { EducationRecommendations } from "./EducationRecommendations";
+import { EducationLearningActions } from "./EducationLearningActions";
 import { visibleEducationActivities } from "../utils/educationActivityVisibility";
+
+const EMPTY_ACCESS = new Map<string, boolean>();
 
 export const EducationOverviewTab = () => {
   const isMobile = useLocation().pathname.startsWith("/mobile");
@@ -35,7 +38,7 @@ export const EducationOverviewTab = () => {
     ...completedEnrollments.map((enrollment) => enrollment.university_courses?.skill_slug),
   ];
   const tierAccess = useSkillTierAccess(profileId, relevantSkillSlugs);
-  const access = tierAccess.data ?? new Map<string, boolean>();
+  const access = tierAccess.data ?? EMPTY_ACCESS;
   const visibleBooks = visibleEducationActivities(activeBooks, (book) => book.skill_books?.skill_slug, access);
   const visibleEnrollments = visibleEducationActivities(activeEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
   const visibleCompleted = visibleEducationActivities(completedEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
@@ -46,7 +49,7 @@ export const EducationOverviewTab = () => {
     return (rawSkills ?? [])
       .filter((skill) => Number(skill.current_level) > 0 && isEducationSkillVisible(skill.skill_slug, access))
       .map((skill) => {
-        const progress = getSkillDisplayProgress(skill as any);
+        const progress = getSkillDisplayProgress(skill as Record<string, unknown>);
         const maxed = progress.current_level >= (maxBySlug.get(skill.skill_slug) ?? Number.POSITIVE_INFINITY);
         return { slug: skill.skill_slug, ...progress, ...(maxed ? { is_max_level: true, next_level: null, progress_percent: 100 } : {}) };
       });
@@ -72,10 +75,11 @@ export const EducationOverviewTab = () => {
       {hiddenActiveCount > 0 && !tierAccess.isLoading && !tierAccess.isError && (
         <Alert role="status"><AlertDescription>Some legacy learning activities need additional skill prerequisites before they can continue. You can manage existing reading or courses from Find Learning.</AlertDescription></Alert>
       )}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{skills.length}</p><p className="text-xs text-muted-foreground">Skills learned</p></CardContent></Card>
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{visibleBooks.length + visibleEnrollments.length}</p><p className="text-xs text-muted-foreground">In progress</p></CardContent></Card>
-        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-3 sm:p-4 text-center"><p className="break-words text-xl sm:text-2xl font-bold">+{yesterdayProgress.totalXp.toLocaleString()}</p><p className="text-xs text-muted-foreground">XP yesterday</p></CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{visibleCompleted.length}</p><p className="text-xs text-muted-foreground">Course certificates</p></CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4 text-center"><p className="break-words text-xl sm:text-2xl font-bold">+{yesterdayProgress.totalXp.toLocaleString()}</p><p className="text-xs text-muted-foreground">XP yesterday</p></CardContent></Card>
       </div>
 
       <section className="space-y-3" aria-label="Current learning">
@@ -174,13 +178,19 @@ export const EducationOverviewTab = () => {
         ...activeEnrollments.map((course) => course.university_courses?.skill_slug).filter((slug): slug is string => Boolean(slug)),
       ]} />
 
+      <EducationLearningActions
+        isMobile={isMobile}
+        canTeach={skills.some((skill) => skill.current_level >= 5)}
+        certificatesEarned={visibleCompleted.length}
+      />
+
       {visibleCompleted.length > 0 && (
         <section className="space-y-2" aria-label="Recent achievements">
-          <h2 className="font-semibold text-lg">Recent achievements</h2>
+          <h2 className="font-semibold text-lg">Course certificates</h2>
           {visibleCompleted.slice(0, 3).map((enrollment) => (
             <div key={enrollment.id} className="flex items-center gap-2 rounded-md border p-3 text-sm">
               <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-              <span className="flex-1">{enrollment.university_courses?.name ?? "Completed course"}</span>
+              <span className="flex-1">Completed: {enrollment.university_courses?.name ?? "University course"}</span>
               <span className="text-muted-foreground">+{enrollment.total_xp_earned} XP</span>
             </div>
           ))}
