@@ -5,15 +5,16 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const db = new PGlite();
 const migration = readFileSync("supabase/migrations/20261105171501_17310d55-d741-42d8-8bde-07102a23f5af.sql", "utf8");
+const repair = readFileSync("supabase/migrations/20261127080833_uncap_daily_activity_xp_and_complete_university_rewards.sql", "utf8");
 const profile = "00000000-0000-4000-8000-000000000001";
 const course = "00000000-0000-4000-8000-000000000002";
 let sequence = 10;
 
-async function enrollment(offset: string, xp = 1000, auto = true) {
+async function enrollment(offset: string, xp = 1000, auto = true, status: "in_progress" | "completed" = "in_progress") {
   const id = `00000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}`;
   await db.query(`INSERT INTO public.player_university_enrollments
     (id,profile_id,course_id,scheduled_end_date,status,total_xp_earned,auto_attend)
-    VALUES ($1,$2,$3,now()+$4::interval,'in_progress',$5,$6)`, [id, profile, course, offset, xp, auto]);
+    VALUES ($1,$2,$3,now()+$4::interval,$5::public.enrollment_status,$6,$7)`, [id, profile, course, offset, status, xp, auto]);
   if (xp > 0) await db.query("INSERT INTO public.player_university_attendance(enrollment_id,xp_earned,was_locked_out) VALUES($1,$2,false)", [id, xp]);
   return id;
 }
@@ -23,6 +24,7 @@ beforeAll(async () => {
     CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
     CREATE SCHEMA auth;
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT null::uuid $$;
+    CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$ SELECT 'service_role'::text $$;
     CREATE SCHEMA cron;
     CREATE FUNCTION cron.schedule(text,text,text) RETURNS integer LANGUAGE sql AS $$ SELECT 1 $$;
     CREATE TYPE public.enrollment_status AS ENUM('enrolled','in_progress','completed','dropped');
@@ -32,12 +34,16 @@ beforeAll(async () => {
     CREATE TABLE public.player_university_attendance(enrollment_id uuid,xp_earned integer,was_locked_out boolean);
     CREATE TABLE public.skill_progress(id uuid DEFAULT gen_random_uuid(),profile_id uuid,skill_slug text,current_level integer,current_xp integer,required_xp integer,last_practiced_at timestamptz,updated_at timestamptz,UNIQUE(profile_id,skill_slug));
     CREATE TABLE public.experience_ledger(user_id uuid,profile_id uuid,activity_type text,xp_amount integer,skill_slug text,metadata jsonb);
+    CREATE TABLE public.player_xp_wallet(profile_id uuid PRIMARY KEY,xp_balance integer DEFAULT 0,lifetime_xp integer DEFAULT 0,skill_xp_balance integer DEFAULT 0,skill_xp_lifetime integer DEFAULT 0,attribute_points_balance integer DEFAULT 0,attribute_points_lifetime integer DEFAULT 0,last_recalculated timestamptz);
+    CREATE TABLE public.profile_activity_xp_bonuses(profile_id uuid NOT NULL,grant_date date NOT NULL,xp_awarded integer NOT NULL CONSTRAINT profile_activity_xp_bonuses_xp_awarded_check CHECK(xp_awarded>0),ap_awarded integer NOT NULL CHECK(ap_awarded>=0),metadata jsonb NOT NULL DEFAULT '{}'::jsonb,PRIMARY KEY(profile_id,grant_date));
+    CREATE TABLE public.game_balance_config(key text PRIMARY KEY);
     CREATE FUNCTION public.progression_skill_max_level(text) RETURNS integer LANGUAGE sql AS $$ SELECT 20 $$;
     CREATE FUNCTION public.progression_skill_required_xp(integer) RETURNS integer LANGUAGE sql AS $$ SELECT 100 $$;
     INSERT INTO public.profiles(id,user_id) VALUES('${profile}','${profile}');
     INSERT INTO public.university_courses VALUES('${course}','guitar');
   `);
   await db.exec(migration);
+  await db.exec(repair);
 }, 30_000);
 afterAll(async () => { await db.close(); });
 
@@ -70,6 +76,32 @@ describe("university deadline completion and post-course XP", () => {
     await db.query("SELECT public.finalize_university_course($1)",[id]);
     const {rows} = await db.query<{awards:number;xp:number}>("SELECT count(*)::integer AS awards,sum(xp_amount)::integer AS xp FROM public.experience_ledger WHERE metadata->>'enrollment_id'=$1",[id]);
     expect(rows[0]).toEqual({awards:1,xp:200});
+    const wallet = await db.query<{xp_balance:number;skill_xp_balance:number}>("SELECT xp_balance,skill_xp_balance FROM public.player_xp_wallet WHERE profile_id=$1",[profile]);
+    expect(wallet.rows[0].xp_balance).toBeGreaterThanOrEqual(200);
+    expect(wallet.rows[0].skill_xp_balance).toBe(wallet.rows[0].xp_balance);
+    const receipt = await db.query<{credited:boolean}>("SELECT (metadata->>'xp_wallet_credited')::boolean AS credited FROM public.experience_ledger WHERE metadata->>'enrollment_id'=$1",[id]);
+    expect(receipt.rows).toEqual([{credited:true}]);
+  });
+  it("repairs an older completed course exactly once without moving its completion date", async () => {
+    const id = await enrollment("-2 days", 850, true, "completed");
+    await db.query("UPDATE public.player_university_enrollments SET actual_completion_date=scheduled_end_date WHERE id=$1", [id]);
+    const before = await db.query<{xp_balance:number}>("SELECT xp_balance FROM public.player_xp_wallet WHERE profile_id=$1",[profile]);
+    await db.query("SELECT public.finish_due_university_courses()");
+    await db.query("SELECT public.finish_due_university_courses()");
+    const receipts = await db.query<{count:number}>("SELECT count(*)::integer count FROM public.university_course_completions WHERE enrollment_id=$1",[id]);
+    expect(receipts.rows[0].count).toBe(1);
+    const wallet = await db.query<{xp_balance:number}>("SELECT xp_balance FROM public.player_xp_wallet WHERE profile_id=$1",[profile]);
+    expect(wallet.rows[0].xp_balance - before.rows[0].xp_balance).toBe(170);
+  });
+  it("settles uncapped activity XP and AP-only rows without repeat payouts", async () => {
+    const first = await db.query<{awarded:boolean}>("SELECT public.award_daily_activity_xp_atomic($1,'2026-11-20',1328,20,'{}'::jsonb) awarded",[profile]);
+    expect(first.rows[0].awarded).toBe(true);
+    const duplicate = await db.query<{awarded:boolean}>("SELECT public.award_daily_activity_xp_atomic($1,'2026-11-20',1328,20,'{}'::jsonb) awarded",[profile]);
+    expect(duplicate.rows[0].awarded).toBe(false);
+    const apOnly = await db.query<{awarded:boolean}>("SELECT public.award_daily_activity_xp_atomic($1,'2026-11-21',0,20,'{}'::jsonb) awarded",[profile]);
+    expect(apOnly.rows[0].awarded).toBe(true);
+    const grants = await db.query<{xp:number;ap:number}>("SELECT sum(xp_awarded)::integer xp,sum(ap_awarded)::integer ap FROM public.profile_activity_xp_bonuses WHERE profile_id=$1",[profile]);
+    expect(grants.rows).toEqual([{xp:1328,ap:40}]);
   });
   it("does not invent XP for courses with no attended classes", async () => {
     const id = await enrollment("-1 day", 0, false);
