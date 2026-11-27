@@ -52,6 +52,8 @@ export const useMyFestivalMemorabilia = (enabled = true) => {
     queryFn: getMyFestivalMemorabilia,
     enabled: enabled && !!profileId,
     staleTime: 30_000,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   });
 };
 

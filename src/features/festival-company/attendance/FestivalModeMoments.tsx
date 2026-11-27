@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
 import { FestivalConditionPanel } from "./FestivalConditionPanel";
+import { estimateFestivalServerTime } from "./festivalParticipation";
 import {
   useChooseFestivalMomentOption,
   useMyFestivalMoments,
@@ -14,13 +15,14 @@ import {
 const readableError = (error: Error) => error.message.replaceAll("_", " ");
 
 export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data, isLoading, isError, refetch } = useMyFestivalMoments(attendance.id);
+  const { data, dataUpdatedAt, isLoading, isError, refetch } = useMyFestivalMoments(attendance.id);
   const trigger = useTriggerFestivalMoment(attendance.id);
   const choose = useChooseFestivalMomentOption(attendance.id);
   const resolve = useResolveFestivalMomentOutcome(attendance.id);
   const [localNow, setLocalNow] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setLocalNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
-  const serverNow = data ? Date.parse(data.serverNow) + Math.max(0, localNow - Date.parse(data.serverNow)) : localNow;
+  const serverNow = data ? estimateFestivalServerTime(data.serverNow, dataUpdatedAt, localNow) : 0;
+  const correctAttendance = data?.attendanceId === attendance.id && data.festivalEditionId === attendance.festivalEditionId;
   const pending = data?.items.some((item) => item.status === "pending" || item.status === "choice_made") ?? false;
 
   return (
@@ -35,7 +37,7 @@ export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayer
         <Button
           className="mt-4"
           type="button"
-          disabled={trigger.isPending || pending || isError || isLoading}
+          disabled={trigger.isPending || pending || isError || isLoading || !correctAttendance}
           onClick={() => trigger.mutate({ idempotencyKey: crypto.randomUUID() })}
         >
           {trigger.isPending ? "Looking…" : pending ? "Finish your current moment" : "Find a moment"}
@@ -52,6 +54,8 @@ export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayer
             <p className="text-sm text-muted-foreground" role="status">Loading Festival moments…</p>
           ) : isError || !data ? (
             <p className="text-sm text-destructive" role="alert">Festival moments could not be loaded.</p>
+          ) : !correctAttendance ? (
+            <p className="text-sm text-destructive" role="alert">Festival moments are out of date for this attendance. <button type="button" className="underline" onClick={() => void refetch()}>Retry</button></p>
           ) : data.items.length === 0 ? (
             <p className="text-sm text-muted-foreground">No moments yet. Find one when you have some free time.</p>
           ) : data.items.map((moment) => {

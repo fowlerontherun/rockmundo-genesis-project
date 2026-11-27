@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FestivalPlayerAttendance } from "./festivalAttendance";
 import type { FestivalExecutableActivityType } from "./festivalConditions";
 import { FestivalConditionPanel } from "./FestivalConditionPanel";
+import { usePublicFestival } from "../application/useFestivalLaunch";
 import { useMyFestivalDayPlan, useResolveFestivalPlanActivity } from "./useFestivalDayPlanner";
 
 const hubConfig = {
   "food-drink": {
     title: "Food & Drink",
-    description: "Use the Eat and Drink blocks you planned for today. Commercial stalls, prices and alcohol choices arrive in a later economy slice.",
+    description: "Check the organiser's published food and drink guidance and complete Eat or Drink blocks from your day plan. Browsing does not purchase products or settle vendor sales.",
     types: new Set<FestivalExecutableActivityType>(["eat", "drink"]),
   },
   activities: {
@@ -42,6 +43,11 @@ export const FestivalModeActivityHub = ({
   const [clock, setClock] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const resolver = useResolveFestivalPlanActivity(attendance.id);
+  const publicFestival = usePublicFestival(kind === "food-drink" ? attendance.festivalSlug : undefined);
+  const publishedEdition = publicFestival.data?.editionId === attendance.festivalEditionId
+    && publicFestival.data.slug === attendance.festivalSlug ? publicFestival.data : null;
+  const foodGuidance = publishedEdition?.visitorGuide?.sections.foodAndDrink?.trim()
+    || publishedEdition?.information.foodAndDrink?.trim();
   const serverNow = plan ? Date.parse(plan.serverNow) + Math.max(0, clock - dataUpdatedAt) : 0;
   const relevantItems = (plan?.items || []).filter(
     (item) => config.types.has(item.activityType as FestivalExecutableActivityType) && item.status !== "cancelled",
@@ -56,6 +62,17 @@ export const FestivalModeActivityHub = ({
       </section>
 
       <FestivalConditionPanel attendanceId={attendance.id} />
+
+      {kind === "food-drink" && <Card>
+        <CardHeader><CardTitle className="text-base">Published food &amp; drink guide</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {publicFestival.isLoading ? <p role="status">Loading the current edition guide…</p>
+            : publicFestival.isError ? <p role="alert" className="text-destructive">The guide is unavailable. <button type="button" className="underline" onClick={() => void publicFestival.refetch()}>Retry</button></p>
+              : foodGuidance ? <p className="whitespace-pre-line">{foodGuidance}</p>
+                : <p className="text-muted-foreground">No food or drink details are published for this edition yet.</p>}
+          <p className="text-muted-foreground">Vendor availability, menu prices and merchandise checkout are not verified here. Sales and settlement must go through the server-authoritative economy.</p>
+        </CardContent>
+      </Card>}
 
       <Card>
         <CardHeader>
