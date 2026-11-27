@@ -8,6 +8,7 @@ import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate"
 import { useTravelLifecycleRefresh } from "@/mobile/hooks/useTravelLifecycleRefresh";
 import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { MobileShell } from "./MobileShell";
+import { LoginProgressRecap } from "@/features/progression/LoginProgressRecap";
 
 /**
  * Mobile-only layout. Skips DesktopOnlyGate so small viewports can render.
@@ -45,6 +46,7 @@ export default function MobileLayout() {
     <MobileShell>
       <NoActiveCharacterGate>
         <CharacterGate>
+          <LoginProgressRecap />
           <Outlet />
         </CharacterGate>
       </NoActiveCharacterGate>
