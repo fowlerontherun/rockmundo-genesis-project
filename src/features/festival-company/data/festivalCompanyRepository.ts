@@ -10,7 +10,7 @@ import { parseFestivalSitePlanResult, type FestivalSitePlanDraft, type FestivalS
 import { parseFestivalTicketPlanResult, type FestivalTicketPlanDraft, type FestivalTicketPlanResult } from "../domain/festivalTicketPlan";
 import { parseFestivalArtistProgrammeResult, type FestivalApplicationWindow, type FestivalArtistProgramme, type FestivalArtistProgrammeResult } from "../domain/festivalArtistProgramme";
 import {parseFestivalArtistActionResult,parseFestivalArtistCandidates,parseFestivalArtistOpportunities,type FestivalArtistActionResult} from "../domain/festivalArtistWorkflows";
-import {isFestivalUuid,parseFestivalLaunch,parseFestivalTicketProduct,parseFestivalTicketPurchase,parseFestivalTicketWallet,parsePublicFestival,type FestivalPublicProfile,type FestivalPublicTimetableEntry} from "../domain/festivalLaunch";
+import {isFestivalUuid,parseFestivalLaunch,parseFestivalTicketProduct,parseFestivalTicketPurchase,parseFestivalTicketWallet,parsePublicFestival,parsePublicFestivalWithIdentity,type FestivalPublicProfile,type FestivalPublicTimetableEntry} from "../domain/festivalLaunch";
 type UntypedRpc=(name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:{message?:string;code?:string}|null}>;
 const toJson = (value: unknown): Json => {
   if (value === null) return null;
@@ -334,14 +334,24 @@ export const beginFestivalLaunchReview=async(i:{festivalCompanyId:string;expecte
 export const launchFestival=async(i:{festivalCompanyId:string;expectedVersion:number;publicProfileVersion:number;idempotencyKey:string})=>{if(!validAction(i))throw new Error("festival_launch_review_required");return parseFestivalLaunch(await launchCall("launch_festival",{p_festival_company_id:i.festivalCompanyId,p_expected_version:i.expectedVersion,p_public_profile_version:i.publicProfileVersion,p_idempotency_key:i.idempotencyKey}))};
 const salesAction=async(name:string,i:{festivalCompanyId:string;expectedVersion:number;idempotencyKey:string;reason?:string})=>{if(!validAction(i))throw new Error("festival_ticket_purchase_stale");return parseFestivalLaunch(await launchCall(name,{p_festival_company_id:i.festivalCompanyId,p_expected_launch_version:i.expectedVersion,...(i.reason?{p_reason:i.reason}:{}),p_idempotency_key:i.idempotencyKey}))};
 export const openFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("open_festival_ticket_sales",i);export const pauseFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("pause_festival_ticket_sales",i);export const resumeFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("resume_festival_ticket_sales",i);export const closeFestivalTicketSales=(i:Parameters<typeof salesAction>[1])=>salesAction("close_festival_ticket_sales",i);
-export const getPublicFestival=async(slug:string)=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");const {data,error}=await launchRpc("get_public_festival_guide",{p_slug:slug});
-  if(!error)return parsePublicFestival(data);
-  // During a staged migration rollout the public page must remain accessible.
-  // Fall back ONLY if the new RPC is not installed, never on permission or data errors.
-  if(error.code==="PGRST202" || /Could not find the function.*get_public_festival_guide/i.test(error.message??"")){
-    return parsePublicFestival(await launchCall("get_public_festival",{p_slug:slug}));
+const isMissingPublicRpc = (error: { code?: string; message?: string }, name: string) =>
+  error.code === "PGRST202" || new RegExp(`Could not find the function.*${name}`, "i").test(error.message ?? "");
+export const getPublicFestival=async(slug:string)=>{
+  if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");
+  // This projection includes the launch UUID independently from the public
+  // edition UUID. Only a missing RPC may fall back; permission/data errors
+  // must never be hidden as a legacy response.
+  const verified = await launchRpc("get_public_festival_with_identity",{p_slug:slug});
+  if(!verified.error)return parsePublicFestivalWithIdentity(verified.data);
+  if(!isMissingPublicRpc(verified.error,"get_public_festival_with_identity"))throw normalizeLaunchError(verified.error);
+
+  const guide = await launchRpc("get_public_festival_guide",{p_slug:slug});
+  if(!guide.error)return parsePublicFestivalWithIdentity(guide.data);
+  if(isMissingPublicRpc(guide.error,"get_public_festival_guide")){
+    return parsePublicFestivalWithIdentity(await launchCall("get_public_festival",{p_slug:slug}));
   }
-  throw normalizeLaunchError(error)};
+  throw normalizeLaunchError(guide.error);
+};
 export const getPublicFestivalDirectory=async(filters:Record<string,unknown>={})=>{const v=await launchCall("get_public_festival_directory",{p_filters:filters});if(!Array.isArray(v))throw new Error("malformed_public_festival_result");return v.map(parsePublicFestival)};
 export const getPublicFestivalTimetable=async(slug:string)=>{if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error("malformed_public_festival_result");const v=await launchCall("get_public_festival_timetable",{p_slug:slug});if(!Array.isArray(v))throw new Error("malformed_public_festival_result");return v as FestivalPublicTimetableEntry[];}
 export const getPublicFestivalTicketProducts=async(launchId:string)=>{if(!isFestivalUuid(launchId))throw new Error("malformed_festival_ticket_product_result");const v=await launchCall("get_public_festival_ticket_products",{p_festival_launch_id:launchId});if(!Array.isArray(v))throw new Error("malformed_festival_ticket_product_result");return v.map(parseFestivalTicketProduct)};

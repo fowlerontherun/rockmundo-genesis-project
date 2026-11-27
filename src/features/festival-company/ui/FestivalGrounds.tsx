@@ -59,18 +59,19 @@ function prefersLightweightGrounds() {
 export function FestivalGrounds({ slug, festivalLaunchId, festivalEditionId, cancelled, stages, lineup, timezone, city, country, startsAt, endsAt, visitorInformation, onViewTimetable }: FestivalGroundsProps) {
   // A cancelled edition cannot have active live-stage observations. Keep the
   // historic programme while avoiding unnecessary runtime polling.
-  const live = usePublicFestivalLiveStatus(cancelled ? "" : slug);
-  const experience = usePublicFestivalLiveExperience(cancelled ? "" : slug);
+  const liveEnabled = Boolean(!cancelled && festivalLaunchId && festivalEditionId);
+  const live = usePublicFestivalLiveStatus(liveEnabled ? slug : "");
+  const experience = usePublicFestivalLiveExperience(liveEnabled ? slug : "");
   const raw = experience.data;
   const record = !experience.isError && raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
   const freshness = festivalLiveSnapshotFreshness(record, Date.now());
   const staleLive = freshness === "stale";
   const unverifiedLive = Boolean(record) && freshness === "unavailable";
   const suppressObservations = staleLive || unverifiedLive;
-  const verified = !cancelled && !live.isError && !suppressObservations && festivalEditionId !== null &&
+  const verified = liveEnabled && !live.isError && !suppressObservations &&
     record?.festivalLaunchId === festivalLaunchId && record?.editionId === festivalEditionId ? record : null;
   const verifiedLive = verified && live.data?.festivalLaunchId === festivalLaunchId ? live.data : null;
-  const livePending = !cancelled && (live.isPending || experience.isPending);
+  const livePending = liveEnabled && (live.isPending || experience.isPending);
   const liveFailed = live.isError || experience.isError;
   const [retrying, setRetrying] = useState(false);
   const showRefreshAction = !cancelled && (suppressObservations || liveFailed || retrying);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { attendanceForPublicFestival, wristbandForPublicFestival } from "../domain/festivalPublicIdentity";
 import { Share2 } from "lucide-react";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
@@ -160,9 +161,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const verifiedFestivalArtwork = f.heroImageReference &&
     isSafeSponsorLogoReference(f.heroImageReference) ? f.heroImageReference : verifiedFestivalLogo;
 
-  const myAttendance = (attendanceError ? [] : attendance)
-    .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
-    .sort((a, b) => Number(b.status === "attending") - Number(a.status === "attending"))[0];
+  const myAttendance = attendanceError ? undefined : attendanceForPublicFestival(f, attendance);
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
@@ -171,7 +170,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const canCheckIn = !attendanceError && !attendancePending && !eligibilityPending && !walletWaiting && canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
   const hasPurchasingCharacter = canStartFestivalTicketPurchase(Boolean(user), profileId);
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
-  const myWristband = memorabiliaError ? undefined : festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
+  const myWristband = memorabiliaError ? undefined : wristbandForPublicFestival(myAttendance, festivalMemorabilia);
   const hasAdmissionTicket = !walletError && !walletWaiting && hasIssuedFestivalAdmission(myFestivalTickets);
   const admissionOnSale = !cancelled && eventPhase !== "dates_ended" &&
     f.launchStatus === "tickets_on_sale" && !f.soldOut &&
@@ -427,7 +426,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
 
           <TabsContent value="grounds">
-            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.id} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable", true)} />
+            <FestivalGrounds key={f.id} slug={f.slug} festivalLaunchId={f.festivalLaunchId ?? ""} festivalEditionId={f.editionId} cancelled={cancelled} stages={f.stages} lineup={confirmedLineup} timezone={f.timezone} city={f.city} country={f.country} startsAt={f.startsAt} endsAt={f.endsAt} visitorInformation={f.information} onViewTimetable={() => setActiveFestivalTab("timetable", true)} />
           </TabsContent>
 
           <TabsContent value="lineup">
@@ -556,6 +555,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             {eventPhase === "dates_ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
             {cancelled && <p role="alert" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This edition was cancelled. No new tickets can be purchased. Any cancellation and refund details are shown only when published by the organiser.</p>}
             {!cancelled && eventPhase !== "dates_ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
+            {!f.festivalLaunchId && <p role="alert" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">Ticket purchasing is temporarily unavailable because this festival's launch identity could not be verified. Your existing wallet remains available. <button type="button" className="underline" onClick={() => void retryPublicFestival()}>Retry verification</button></p>}
             {user && !profileId && (
               <p role="status" className="mb-4 rounded-lg border p-3 text-sm">Select an active character from the Character menu before purchasing tickets.</p>
             )}
@@ -584,24 +584,24 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
-                    {!user && eventPhase !== "dates_ended" && f.launchStatus === "tickets_on_sale" && p.saleStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
+                    {!user && f.festivalLaunchId && eventPhase !== "dates_ended" && f.launchStatus === "tickets_on_sale" && p.saleStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
                       <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
                     )}
                     {user && <Button
-                      disabled={!hasPurchasingCharacter || buy.isPending || eventPhase === "dates_ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
+                      disabled={!hasPurchasingCharacter || !f.festivalLaunchId || buy.isPending || eventPhase === "dates_ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
-                        if (!hasPurchasingCharacter) return;
+                        if (!hasPurchasingCharacter || !f.festivalLaunchId) return;
                         buy.reset();
                         setActivePurchaseProductId(p.id);
                         buy.mutate({
-                          festivalLaunchId: f.id,
+                          festivalLaunchId: f.festivalLaunchId,
                           ticketProductId: p.id,
                           quantity: quantities[p.id] ?? 1,
                           idempotencyKey: crypto.randomUUID(),
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : !hasPurchasingCharacter ? "Select a character" : eventPhase === "dates_ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : !hasPurchasingCharacter ? "Select a character" : !f.festivalLaunchId ? "Sales verification pending" : eventPhase === "dates_ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
                     </Button>}
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
