@@ -4,6 +4,7 @@ import {
   calculateUniversityCourseDuration,
   calculateUniversityCoursePrice,
   calculateUniversityCourseXpRange,
+  calculateUniversityCourseTotalXpRange,
   getUniversityPrestigeBand,
   getUniversityQualityBand,
   normalizeUniversityRating,
@@ -42,6 +43,10 @@ describe("university balance helpers", () => {
     expect(calculateUniversityCourseXpRange(20, 32, 8)).toEqual({
       minimum: 160,
       maximum: 256,
+    });
+    expect(calculateUniversityCourseTotalXpRange(20, 32, 8)).toEqual({
+      minimum: 192,
+      maximum: 307,
     });
   });
 });

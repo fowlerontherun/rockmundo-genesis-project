@@ -145,8 +145,8 @@ Deno.serve(async (req) => {
         const durationMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / (1000 * 60))
         const durationHours = durationMinutes / 60
 
-        // Calculate XP and chemistry based on duration
-        const baseXpPerHour = 10 + Math.floor(Math.random() * 10)
+        // Character and instrument XP are awarded atomically by the completed-
+        // rehearsal database trigger. Keep the displayed amount in sync with it.
         
         // === MORALE → REHEARSAL EFFECTIVENESS (v1.0.985) ===
         // High morale = more productive rehearsals; low morale = distracted, less effective
@@ -158,7 +158,9 @@ Deno.serve(async (req) => {
           console.log(`Rehearsal morale: ${moraleVal} → effectiveness ${rehearsalMoraleMod}x`)
         } catch (_e) { /* non-critical */ }
         
-        const xpEarned = Math.floor(baseXpPerHour * durationHours * rehearsalMoraleMod)
+        const xpEarned = durationMinutes >= 30 && durationMinutes <= 360
+          ? Math.min(90, Math.max(5, Math.round(durationHours * 15)))
+          : 0
         const chemistryGain = Math.floor((durationHours * 2 + 1) * rehearsalMoraleMod)
 
         // Update rehearsal record - this will trigger the database trigger
@@ -282,34 +284,6 @@ Deno.serve(async (req) => {
               .eq('id', rehearsal.band_id)
             
             console.log(`Rehearsal morale: ${curMorale} → ${newMorale} (+${moraleBoost}) for band ${rehearsal.band_id}`)
-          }
-        }
-
-        // Award XP to band members
-        const { data: bandMembers } = await supabase
-          .from('band_members')
-          .select('user_id')
-          .eq('band_id', rehearsal.band_id)
-          .eq('member_status', 'active')
-
-        for (const member of bandMembers || []) {
-          if (member.user_id) {
-            await supabase.functions.invoke('progression', {
-              body: {
-                user_id: member.user_id,
-                action: 'award_action_xp',
-                amount: xpEarned,
-                category: 'practice',
-                action_key: 'rehearsal',
-                metadata: {
-                  rehearsal_id: rehearsal.id,
-                  band_id: rehearsal.band_id,
-                  duration_hours: durationHours,
-                  chemistry_gained: chemistryGain,
-                  auto_completed: true,
-                },
-              },
-            }).catch(err => console.error('Error awarding XP:', err))
           }
         }
 

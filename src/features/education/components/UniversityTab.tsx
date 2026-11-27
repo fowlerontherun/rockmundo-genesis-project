@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   calculateUniversityCourseDuration,
   calculateUniversityCoursePrice,
-  calculateUniversityCourseXpRange,
+  calculateUniversityCourseTotalXpRange,
   getUniversityPrestigeBand,
   getUniversityQualityBand,
   normalizeUniversityRating,
@@ -109,10 +109,10 @@ export const UniversityTab = () => {
   // Skill-first links should compare the full catalogue, not silently restrict to a city.
   const [selectedCity, setSelectedCity] = useState<string>(() => new URLSearchParams(window.location.search).get("skill") ? "all" : "current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
-  const [viewMode, setViewMode] = useState<"universities" | "courses">(() => new URLSearchParams(window.location.search).get("skill") ? "courses" : "universities");
+  const [viewMode, setViewMode] = useState<"universities" | "courses">("courses");
 
   // Fetch profile with current city
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["profile_with_city", profileId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -147,11 +147,16 @@ export const UniversityTab = () => {
           university_id,
           course_id,
           university_courses (
-            name
+            name,
+            base_duration_days
           ),
           universities (
             name
-          )
+          ),
+          days_attended,
+          total_xp_earned,
+          scheduled_end_date,
+          auto_attend
         `)
         .eq("profile_id", profile.id)
         .in("status", ["enrolled", "in_progress"])
@@ -168,7 +173,7 @@ export const UniversityTab = () => {
   const { data: professorVisits = [] } = useQuery({
     queryKey: ["active_professor_residencies"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("active_professor_residencies")
         .select("id,university_id,name,skill_family,ends_at");
       if (error) throw error;
@@ -194,13 +199,21 @@ export const UniversityTab = () => {
     },
   });
 
+  const globalSearchTerm = searchQuery.trim().replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim();
+  const globalSearchRequired = selectedCity === "all" && !focusedSkill && globalSearchTerm.length < 2;
   const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ["all_courses_with_unis", focusedSkill],
+    queryKey: ["all_courses_with_unis", focusedSkill, selectedCity, currentCityName, selectedCity === "all" ? searchQuery.trim() : ""],
     queryFn: async () => {
       const batchSize = 1000;
       const allCourses: CourseWithUniversity[] = [];
       let offset = 0;
       let hasMore = true;
+      const desiredCity = selectedCity === "current" ? currentCityName : selectedCity === "all" ? null : selectedCity;
+      const universityIds = desiredCity
+        ? (universities ?? []).filter((university) => university.city === desiredCity).map((university) => university.id)
+        : null;
+
+      if (universityIds && universityIds.length === 0) return [];
 
       while (hasMore) {
         let request = supabase
@@ -228,6 +241,14 @@ export const UniversityTab = () => {
         // Skill-first discovery should not download tens of thousands of
         // unrelated university courses before filtering them in the browser.
         if (focusedSkill) request = request.eq("skill_slug", focusedSkill);
+        if (selectedCity === "all" && !focusedSkill) {
+          // Global search is server-side to avoid transferring the full 33k+
+          // course catalogue on every visit. Avoid PostgREST filter syntax.
+          request = request.or(`name.ilike.%${globalSearchTerm}%,skill_slug.ilike.%${globalSearchTerm.replace(/ /g, "_")}%`);
+        }
+        // Most players need a local course. Filter on the server so visiting
+        // their local catalogue does not download the global 33k+ rows.
+        if (universityIds) request = request.in("university_id", universityIds);
         const { data, error } = await request
           .order("name")
           .order("id")
@@ -245,10 +266,11 @@ export const UniversityTab = () => {
 
       return allCourses;
     },
+    enabled: !!universities && !globalSearchRequired && (selectedCity !== "current" || !!currentCityName),
   });
 
   const tierAccess = useSkillTierAccess(profileId, (courses ?? []).map((course) => course.skill_slug));
-  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
+  const accessBySkill = useMemo(() => tierAccess.data ?? new Map<string, boolean>(), [tierAccess.data]);
 
   // Counts must reflect only courses this character is eligible to discover.
   const visibleCourseCounts = useMemo(() => {
@@ -376,25 +398,30 @@ export const UniversityTab = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Academic Routes</h2>
+        <h2 className="text-xl font-semibold">Find a Course</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Compare universities across the globe. Better quality means faster, higher-XP learning, while prestigious institutions charge more.
+          Search for the skill you want to learn, compare university quality and daily XP, then choose a course. Higher-quality universities offer stronger learning rewards.
         </p>
       </div>
 
       {tierAccess.isError && <Alert role="alert"><AlertDescription>Could not verify skill unlocks. Higher-tier courses are hidden until verification succeeds.</AlertDescription></Alert>}
       {currentEnrollments.length > 1 && <Alert role="alert"><AlertDescription>You have {currentEnrollments.length} active university enrollments. Review every course before enrolling again.</AlertDescription></Alert>}
       {currentEnrollment && (
-        <Alert className="border-primary/50 bg-primary/10">
-          <GraduationCap className="h-4 w-4" />
-          <AlertDescription>
-            You are currently enrolled in <strong>{currentEnrollment.university_courses?.name}</strong> at{" "}
-            <strong>{currentEnrollment.universities?.name}</strong>.{" "}
-            <Link to={`${universityBase}${currentEnrollment.university_id}`} className="underline hover:text-primary">
-              View enrollment details
-            </Link>
-          </AlertDescription>
-        </Alert>
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+            <div className="space-y-1">
+              <p className="flex items-center gap-2 text-sm font-semibold"><GraduationCap className="h-4 w-4" /> Your current course</p>
+              <p className="font-medium">{currentEnrollment.university_courses?.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {currentEnrollment.universities?.name} · {currentEnrollment.days_attended ?? 0} days attended · {(currentEnrollment.total_xp_earned ?? 0).toLocaleString()} XP earned
+                {currentEnrollment.auto_attend ? " · Auto-attend on" : " · Manual attendance"}
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link to={`${universityBase}${currentEnrollment.university_id}?enrollment=${currentEnrollment.id}`}>Manage course</Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {selectedCity === "current" && !currentCityName && <Alert role="alert"><AlertDescription>Your character city could not be loaded. Choose All Cities to browse worldwide.</AlertDescription></Alert>}
@@ -404,7 +431,7 @@ export const UniversityTab = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={viewMode === "universities" ? "Search universities..." : "Search courses by name, skill, university..."}
+              placeholder={viewMode === "universities" ? "Search universities..." : "What skill do you want to learn?"}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -440,32 +467,21 @@ export const UniversityTab = () => {
 
         {/* Higher-tier courses are never offered before unlock. */}
 
-        {/* Category filter chips — only show in courses view */}
+        {/* A single category chooser keeps mobile course discovery uncluttered. */}
         {viewMode === "courses" && (
-          <div className="flex flex-wrap gap-2">
-            {SKILL_CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
-              const count = cat.value === "all" ? undefined : categoryCounts[cat.value];
-              const isActive = selectedCategory === cat.value;
-              return (
-                <Button
-                  key={cat.value}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setSelectedCategory(cat.value)}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {cat.label}
-                  {count !== undefined && (
-                    <Badge variant={isActive ? "secondary" : "outline"} className="ml-1 px-1.5 py-0 text-[10px]">
-                      {count}
-                    </Badge>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
+          <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as SkillCategory)}>
+            <SelectTrigger className="w-full sm:w-[240px]" aria-label="Filter course category">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Skill category" />
+            </SelectTrigger>
+            <SelectContent>
+              {SKILL_CATEGORIES.map((cat) => (
+                <SelectItem value={cat.value} key={cat.value}>
+                  {cat.label}{cat.value !== "all" ? ` (${categoryCounts[cat.value] ?? 0})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
 
         {/* Active filters summary */}
@@ -502,11 +518,11 @@ export const UniversityTab = () => {
         <TabsList>
           <TabsTrigger value="universities" className="gap-2">
             <GraduationCap className="h-4 w-4" />
-            <span className="hidden sm:inline">Universities</span>
+            <span>Universities</span>
           </TabsTrigger>
           <TabsTrigger value="courses" className="gap-2">
             <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Browse Courses</span>
+            <span>Courses</span>
           </TabsTrigger>
         </TabsList>
 
@@ -597,14 +613,20 @@ export const UniversityTab = () => {
         </TabsContent>
 
         <TabsContent value="courses" className="mt-4">
-          {coursesLoading && (
+          {(coursesLoading || isLoading || profileLoading) && (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading courses...
             </div>
           )}
 
-          {!coursesLoading && filteredCourses.length === 0 && (
+          {globalSearchRequired && (
+            <div className="rounded-lg border bg-muted/20 p-5 text-sm text-muted-foreground">
+              Enter a skill or course name above to search universities worldwide, or choose a city to browse its complete catalogue.
+            </div>
+          )}
+
+          {!globalSearchRequired && !coursesLoading && !isLoading && !profileLoading && filteredCourses.length === 0 && (
             <div className="py-12 text-center text-muted-foreground">
               <Filter className="mx-auto h-12 w-12 opacity-50" />
               <p className="mt-4">No courses found{searchQuery ? ` matching "${searchQuery}"` : ""}.</p>
@@ -620,7 +642,7 @@ export const UniversityTab = () => {
             </div>
           )}
 
-          {!coursesLoading && filteredCourses.length > 0 && (
+          {!coursesLoading && !isLoading && filteredCourses.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
                 Found {filteredCourses.length} courses
@@ -631,9 +653,13 @@ export const UniversityTab = () => {
                 {filteredCourses
                   .slice()
                   .sort((a, b) => {
-                    const aLocked = !isEducationSkillVisible(a.skill_slug, accessBySkill);
-                    const bLocked = !isEducationSkillVisible(b.skill_slug, accessBySkill);
-                    return Number(aLocked) - Number(bLocked) || a.name.localeCompare(b.name);
+                    // Put the strongest local learning options first, so players
+                    // see meaningful quality differences before picking a course.
+                    const localDifference = Number(b.universities?.city === currentCityName) - Number(a.universities?.city === currentCityName);
+                    return localDifference
+                      || (b.universities?.quality_of_learning ?? 0) - (a.universities?.quality_of_learning ?? 0)
+                      || (b.xp_per_day_max ?? 0) - (a.xp_per_day_max ?? 0)
+                      || a.name.localeCompare(b.name);
                   })
                   .slice(0, 50)
                   .map((course) => {
@@ -646,7 +672,7 @@ export const UniversityTab = () => {
                     course.base_duration_days,
                     course.universities?.quality_of_learning,
                   );
-                  const totalXpRange = calculateUniversityCourseXpRange(
+                  const totalXpRange = calculateUniversityCourseTotalXpRange(
                     course.xp_per_day_min,
                     course.xp_per_day_max,
                     effectiveDuration,
@@ -678,6 +704,9 @@ export const UniversityTab = () => {
                               <TrendingUp className="h-3 w-3" />
                               {course.xp_per_day_min}-{course.xp_per_day_max} XP/day
                             </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              Quality {normalizeUniversityRating(course.universities?.quality_of_learning)}/100
+                            </Badge>
                             {course.required_skill_level != null && course.required_skill_level > 0 && (
                               <Badge variant="outline" className="text-xs text-muted-foreground">
                                 Lvl {course.required_skill_level}+
@@ -685,7 +714,7 @@ export const UniversityTab = () => {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Expected total: {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} XP
+                            Full attendance + completion: {totalXpRange.minimum.toLocaleString()}-{totalXpRange.maximum.toLocaleString()} XP
                           </div>
                           {course.universities && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -704,8 +733,8 @@ export const UniversityTab = () => {
                               Max the previous skill tier to unlock enrollment.
                             </div>
                           ) : (
-                            <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
-                              <Link to={`${universityBase}${course.university_id}`}>View University</Link>
+                            <Button asChild size="sm" className="mt-2 w-full">
+                              <Link to={`${universityBase}${course.university_id}?course=${course.id}`}>Choose this course</Link>
                             </Button>
                           )}
                         </div>

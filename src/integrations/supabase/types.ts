@@ -54559,6 +54559,7 @@ export type Database = {
           last_login_at: string | null
           last_retirement_prompt_age: number | null
           last_weekly_bonus_at: string | null
+          learning_goal: string
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
           legacy_social_capital: number
@@ -54642,6 +54643,7 @@ export type Database = {
           last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
+          learning_goal?: string
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           legacy_social_capital?: number
@@ -54725,6 +54727,7 @@ export type Database = {
           last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
+          learning_goal?: string
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
           legacy_social_capital?: number
