@@ -4493,6 +4493,55 @@ export type Database = {
           },
         ]
       }
+      band_rehearsal_learning_rewards: {
+        Row: {
+          awarded_at: string
+          profile_id: string
+          rehearsal_id: string
+          skill_slug: string | null
+          skill_xp_awarded: number
+          xp_awarded: number
+        }
+        Insert: {
+          awarded_at?: string
+          profile_id: string
+          rehearsal_id: string
+          skill_slug?: string | null
+          skill_xp_awarded?: number
+          xp_awarded: number
+        }
+        Update: {
+          awarded_at?: string
+          profile_id?: string
+          rehearsal_id?: string
+          skill_slug?: string | null
+          skill_xp_awarded?: number
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_rehearsal_learning_rewards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rehearsal_learning_rewards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_rehearsal_learning_rewards_rehearsal_id_fkey"
+            columns: ["rehearsal_id"]
+            isOneToOne: false
+            referencedRelation: "band_rehearsals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_rehearsal_participants: {
         Row: {
           attended_at: string | null
@@ -11250,6 +11299,67 @@ export type Database = {
           },
         ]
       }
+      company_closure_requests: {
+        Row: {
+          actor_profile_id: string
+          actor_user_id: string
+          company_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          request_hash: string
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_profile_id: string
+          actor_user_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          request_hash: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_profile_id?: string
+          actor_user_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          request_hash?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_closure_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_closure_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_closure_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_demand_log: {
         Row: {
           avg_unit_price: number | null
@@ -11786,6 +11896,67 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_financial_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_founding_requests: {
+        Row: {
+          actor_profile_id: string
+          actor_user_id: string
+          company_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          request_hash: string
+          result: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_profile_id: string
+          actor_user_id: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          request_hash: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_profile_id?: string
+          actor_user_id?: string
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          request_hash?: string
+          result?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_founding_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_founding_requests_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_founding_requests_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -12623,6 +12794,41 @@ export type Database = {
             foreignKeyName: "company_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_shareholders: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          shares: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          shares: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          shares?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_shareholders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
@@ -49702,6 +49908,48 @@ export type Database = {
           },
         ]
       }
+      player_login_progress_snapshots: {
+        Row: {
+          captured_at: string
+          character_level: number
+          profile_id: string
+          session_id: string
+          skills: Json
+          total_xp: number
+        }
+        Insert: {
+          captured_at?: string
+          character_level?: number
+          profile_id: string
+          session_id: string
+          skills?: Json
+          total_xp?: number
+        }
+        Update: {
+          captured_at?: string
+          character_level?: number
+          profile_id?: string
+          session_id?: string
+          skills?: Json
+          total_xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_login_progress_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_login_progress_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_master_discoveries: {
         Row: {
           discovered_at: string | null
@@ -54559,9 +54807,9 @@ export type Database = {
           last_login_at: string | null
           last_retirement_prompt_age: number | null
           last_weekly_bonus_at: string | null
-          learning_goal: string
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
+          learning_goal: string
           legacy_social_capital: number
           level: number
           mood: number
@@ -54643,9 +54891,9 @@ export type Database = {
           last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
-          learning_goal?: string
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
+          learning_goal?: string
           legacy_social_capital?: number
           level?: number
           mood?: number
@@ -54727,9 +54975,9 @@ export type Database = {
           last_login_at?: string | null
           last_retirement_prompt_age?: number | null
           last_weekly_bonus_at?: string | null
-          learning_goal?: string
           lawyer_expires_at?: string | null
           lawyer_hired_at?: string | null
+          learning_goal?: string
           legacy_social_capital?: number
           level?: number
           mood?: number
@@ -69084,6 +69332,7 @@ export type Database = {
           cancellation_date: string | null
           cancellation_refund_amount: number | null
           cancelled: boolean | null
+          consecutive_show_count: number
           created_at: string | null
           custom_ticket_price: number | null
           description: string | null
@@ -69135,6 +69384,7 @@ export type Database = {
           cancellation_date?: string | null
           cancellation_refund_amount?: number | null
           cancelled?: boolean | null
+          consecutive_show_count?: number
           created_at?: string | null
           custom_ticket_price?: number | null
           description?: string | null
@@ -69186,6 +69436,7 @@ export type Database = {
           cancellation_date?: string | null
           cancellation_refund_amount?: number | null
           cancelled?: boolean | null
+          consecutive_show_count?: number
           created_at?: string | null
           custom_ticket_price?: number | null
           description?: string | null
@@ -74376,6 +74627,17 @@ export type Database = {
         Args: { p_festival_company_id: string }
         Returns: Json
       }
+      _found_company_with_grant: {
+        Args: {
+          p_company_type: string
+          p_description?: string
+          p_headquarters_city_id?: string
+          p_idempotency_key?: string
+          p_name: string
+          p_parent_company_id?: string
+        }
+        Returns: Json
+      }
       _freeze_simplified_festival_finance_ledger: {
         Args: { p_result_id: string }
         Returns: string
@@ -76886,6 +77148,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_login_progress_summary: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       claim_lottery_prize_atomic: {
         Args: { p_profile_id: string; p_ticket_id: string }
         Returns: {
@@ -76989,6 +77255,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      close_company: {
+        Args: {
+          p_company_id: string
+          p_idempotency_key?: string
+          p_transfer_balance?: boolean
+        }
+        Returns: Json
       }
       close_expired_festival_ticket_sales: { Args: never; Returns: number }
       close_festival_ticket_sales: {
@@ -77553,6 +77827,7 @@ export type Database = {
           last_weekly_bonus_at: string | null
           lawyer_expires_at: string | null
           lawyer_hired_at: string | null
+          learning_goal: string
           legacy_social_capital: number
           level: number
           mood: number
@@ -79302,6 +79577,17 @@ export type Database = {
         Returns: boolean
       }
       flag_stale_ai_song_predictions: { Args: never; Returns: number }
+      found_company: {
+        Args: {
+          p_company_type: string
+          p_description?: string
+          p_headquarters_city_id?: string
+          p_idempotency_key?: string
+          p_name: string
+          p_parent_company_id?: string
+        }
+        Returns: Json
+      }
       found_festival_company: {
         Args: {
           p_company_name: string
@@ -80977,6 +81263,10 @@ export type Database = {
       is_user_traveling: { Args: { p_user_id: string }; Returns: boolean }
       is_valid_player_stage_appearance: {
         Args: { value: Json }
+        Returns: boolean
+      }
+      is_verified_rehearsal_learning_completion: {
+        Args: { p_rehearsal_id: string }
         Returns: boolean
       }
       join_jam_session: {
@@ -84730,6 +85020,10 @@ export type Database = {
       }
       snapshot_company_kpis: { Args: never; Returns: number }
       social_active_room_access: { Args: { p_room: string }; Returns: boolean }
+      songwriting_selected_instrument_bonus: {
+        Args: { p_instruments: string[]; p_profile_id: string }
+        Returns: number
+      }
       spend_attribute_points_atomic: {
         Args: { p_attribute: string; p_cost: number; p_profile_id: string }
         Returns: undefined
