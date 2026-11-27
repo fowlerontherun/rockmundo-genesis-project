@@ -8,13 +8,14 @@ const migration = readFileSync("supabase/migrations/20261105171501_17310d55-d741
 const repair = readFileSync("supabase/migrations/20261127080833_uncap_daily_activity_xp_and_complete_university_rewards.sql", "utf8");
 const profile = "00000000-0000-4000-8000-000000000001";
 const course = "00000000-0000-4000-8000-000000000002";
+const legacyCourse = "00000000-0000-4000-8000-000000000003";
 let sequence = 10;
 
-async function enrollment(offset: string, xp = 1000, auto = true, status: "in_progress" | "completed" = "in_progress") {
+async function enrollment(offset: string, xp = 1000, auto = true, status: "in_progress" | "completed" = "in_progress", courseId = course) {
   const id = `00000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}`;
   await db.query(`INSERT INTO public.player_university_enrollments
     (id,profile_id,course_id,scheduled_end_date,status,total_xp_earned,auto_attend)
-    VALUES ($1,$2,$3,now()+$4::interval,$5::public.enrollment_status,$6,$7)`, [id, profile, course, offset, status, xp, auto]);
+    VALUES ($1,$2,$3,now()+$4::interval,$5::public.enrollment_status,$6,$7)`, [id, profile, courseId, offset, status, xp, auto]);
   if (xp > 0) await db.query("INSERT INTO public.player_university_attendance(enrollment_id,xp_earned,was_locked_out) VALUES($1,$2,false)", [id, xp]);
   return id;
 }
@@ -23,6 +24,8 @@ beforeAll(async () => {
   await db.exec(`
     CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
     CREATE SCHEMA auth;
+    CREATE SCHEMA private;
+    CREATE TABLE private.skill_alias_resolution_20261026(legacy_slug text PRIMARY KEY,canonical_slug text NOT NULL);
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT null::uuid $$;
     CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS $$ SELECT 'service_role'::text $$;
     CREATE SCHEMA cron;
@@ -41,6 +44,8 @@ beforeAll(async () => {
     CREATE FUNCTION public.progression_skill_required_xp(integer) RETURNS integer LANGUAGE sql AS $$ SELECT 100 $$;
     INSERT INTO public.profiles(id,user_id) VALUES('${profile}','${profile}');
     INSERT INTO public.university_courses VALUES('${course}','guitar');
+    INSERT INTO public.university_courses VALUES('${legacyCourse}','basic_hip_hop');
+    INSERT INTO private.skill_alias_resolution_20261026 VALUES('basic_hip_hop','genres_basic_hip_hop');
   `);
   await db.exec(migration);
   await db.exec(repair);
@@ -92,6 +97,14 @@ describe("university deadline completion and post-course XP", () => {
     expect(receipts.rows[0].count).toBe(1);
     const wallet = await db.query<{xp_balance:number}>("SELECT xp_balance FROM public.player_xp_wallet WHERE profile_id=$1",[profile]);
     expect(wallet.rows[0].xp_balance - before.rows[0].xp_balance).toBe(170);
+  });
+  it("resolves legacy university skill names before creating skill progression", async () => {
+    const id = await enrollment("-1 day", 500, true, "completed", legacyCourse);
+    await db.query("SELECT public.finish_due_university_courses()");
+    const progress = await db.query<{skill_slug:string}>("SELECT skill_slug FROM public.skill_progress WHERE profile_id=$1 AND skill_slug IN ('basic_hip_hop','genres_basic_hip_hop')", [profile]);
+    expect(progress.rows).toEqual([{skill_slug:"genres_basic_hip_hop"}]);
+    const receipts = await db.query<{bonus_xp:number}>("SELECT bonus_xp FROM public.university_course_completions WHERE enrollment_id=$1",[id]);
+    expect(receipts.rows).toEqual([{bonus_xp:100}]);
   });
   it("settles uncapped activity XP and AP-only rows without repeat payouts", async () => {
     const first = await db.query<{awarded:boolean}>("SELECT public.award_daily_activity_xp_atomic($1,'2026-11-20',1328,20,'{}'::jsonb) awarded",[profile]);
