@@ -1,10 +1,11 @@
 import { serve } from "../_shared/deno/std@0.168.0/http/server.ts";
+import { verifyInternalCronRequest } from "../_shared/trusted-scheduler.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import type { Database } from "../../../src/types/database-fallback.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 // Activity type to AP rate mapping (40-60% of XP)
@@ -28,7 +29,6 @@ const ACTIVITY_AP_RATES: Record<string, number> = {
 };
 
 const DEFAULT_AP_RATE = 0.50;
-const DAILY_ACTIVITY_XP_CAP = 250;
 const DAILY_ACTIVITY_AP_CAP = 20; // Hard cap on AP from activities (stipend can add up to 30 more → 50 max total)
 
 function getApRateForActivity(activityType: string): number {
@@ -53,6 +53,8 @@ serve(async (req) => {
     const client = createClient<Database>(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    const rejected = await verifyInternalCronRequest(req, client, corsHeaders);
+    if (rejected) return rejected;
 
     // Calculate yesterday's date range
     const now = new Date();
@@ -68,11 +70,11 @@ serve(async (req) => {
     console.log(`[ProcessDailyActivityXp] Processing activities for ${grantDate}`);
 
     // Page the entire ledger; PostgREST defaults to a truncated 1,000-row result.
-    const activities: Array<{profile_id:string|null;activity_type:string|null;xp_amount:number|null}> = [];
+    const activities: Array<{profile_id:string|null;activity_type:string|null;xp_amount:number|null;metadata: Record<string, unknown>|null}> = [];
     for (let offset = 0; ; offset += 500) {
       const { data: page, error: activitiesError } = await client
         .from("experience_ledger")
-        .select("profile_id, activity_type, xp_amount")
+        .select("profile_id, activity_type, xp_amount, metadata")
         .gte("created_at", yesterday.toISOString())
         .lte("created_at", yesterdayEnd.toISOString())
         .order("created_at", { ascending: true })
@@ -98,24 +100,28 @@ serve(async (req) => {
       if (!activity.profile_id) continue;
 
       const existing = profileActivities.get(activity.profile_id);
-      const apAmount = Math.floor((activity.xp_amount || 0) * getApRateForActivity(activity.activity_type || ""));
+      const earnedXp = Math.max(0, activity.xp_amount || 0);
+      // Some activities (notably university completion) settle their XP at the
+      // source. Count their AP as usual, but never deposit the same XP twice.
+      const walletXp = activity.metadata?.xp_wallet_credited === true ? 0 : earnedXp;
+      const apAmount = Math.floor(earnedXp * getApRateForActivity(activity.activity_type || ""));
 
       if (existing) {
-        existing.totalXp += activity.xp_amount || 0;
+        existing.totalXp += walletXp;
         existing.totalAp += apAmount;
         existing.activities.push({
           type: activity.activity_type || "unknown",
-          xp: activity.xp_amount || 0,
+          xp: walletXp,
           ap: apAmount,
         });
       } else {
         profileActivities.set(activity.profile_id, {
           profileId: activity.profile_id,
-          totalXp: activity.xp_amount || 0,
+          totalXp: walletXp,
           totalAp: apAmount,
           activities: [{
             type: activity.activity_type || "unknown",
-            xp: activity.xp_amount || 0,
+            xp: walletXp,
             ap: apAmount,
           }],
         });
@@ -128,16 +134,19 @@ serve(async (req) => {
     let skipped = 0;
 
     for (const [profileId, summary] of profileActivities) {
-      const cappedSxp = Math.max(0, Math.min(DAILY_ACTIVITY_XP_CAP, summary.totalXp));
+      const earnedSxp = summary.totalXp;
       const cappedAp = Math.max(0, Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp));
-      if (cappedSxp === 0) { skipped++; continue; }
+      if (!Number.isSafeInteger(earnedSxp) || earnedSxp > 2147483647) {
+        throw new Error(`Activity XP total exceeds database storage range for ${profileId}`);
+      }
+      if (earnedSxp === 0 && cappedAp === 0) { skipped++; continue; }
 
       // One database transaction owns both the idempotency marker and
       // arithmetic wallet increment. No stale read/modify/write or double pay.
       const { data: awarded, error: awardError } = await client.rpc("award_daily_activity_xp_atomic", {
         p_profile_id: profileId,
         p_grant_date: grantDate,
-        p_xp: cappedSxp,
+        p_xp: earnedSxp,
         p_ap: cappedAp,
         p_metadata: {
           raw_xp: summary.totalXp,
