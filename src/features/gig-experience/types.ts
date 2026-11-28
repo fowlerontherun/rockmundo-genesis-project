@@ -91,6 +91,9 @@ export interface GigExperienceFinancesDTO {
   venueCost: ReportMetric<number>;
   totalCosts: ReportMetric<number>;
   netProfit: ReportMetric<number>;
+  cityIncomeTax?: ReportMetric<number>;
+  labelCut?: ReportMetric<number>;
+  bandPayout?: ReportMetric<number>;
   merchItemsSold: ReportMetric<number>;
 }
 
