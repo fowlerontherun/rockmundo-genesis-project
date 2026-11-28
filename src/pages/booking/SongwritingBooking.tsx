@@ -9,17 +9,20 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { PageErrorState } from "@/components/ui/page-state";
 import { addDurationHours, buildScheduledDateTime, validateBookingWindow } from "@/utils/activityBookingTime";
+import { getSongwritingProgressPercent, OPEN_SONGWRITING_PROJECT_STATUSES } from "@/lib/songwritingProgress";
 
 export default function SongwritingBooking() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
+  const queryClient = useQueryClient();
 
   const scheduledDate = location.state?.scheduledDate;
   const scheduledHour = location.state?.scheduledHour;
@@ -29,9 +32,10 @@ export default function SongwritingBooking() {
     scheduledHour !== undefined ? `${scheduledHour.toString().padStart(2, "0")}:00` : ""
   );
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch user's open songwriting projects
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading, error: projectsError, refetch: refetchProjects } = useQuery({
     queryKey: ["songwriting-projects", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -50,7 +54,7 @@ export default function SongwritingBooking() {
           updated_at
         `)
         .eq("profile_id", profileId)
-        .eq("status", "in_progress")
+        .in("status", [...OPEN_SONGWRITING_PROJECT_STATUSES])
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
@@ -60,7 +64,8 @@ export default function SongwritingBooking() {
   });
 
   const handleBookSession = async () => {
-    if (!date || !timeSlot || !selectedProjectId || !profileId) {
+    if (isSaving) return;
+    if (!date || !timeSlot || !selectedProjectId || !profileId || !userId) {
       toast({
         title: "Missing Information",
         description: "Please select a date, time slot, and project to work on.",
@@ -78,40 +83,42 @@ export default function SongwritingBooking() {
       return;
     }
 
-    // Get project details
-    const project = projects.find(p => p.id === selectedProjectId);
+    // The authoritative RPC validates character ownership and schedule
+    // conflicts, then creates both the writing session and calendar entry.
+    setIsSaving(true);
+    try {
+      const { error } = await (supabase as any).rpc("schedule_songwriting_session", {
+        p_profile_id: profileId,
+        p_project_id: selectedProjectId,
+        p_scheduled_start: scheduledStart.toISOString(),
+        p_effort_hours: 1,
+        p_session_type: "balanced",
+        p_idempotency_key: `schedule-${profileId}-${selectedProjectId}-${scheduledStart.toISOString()}-1`,
+      });
+      if (error) throw error;
 
-    const { error } = await (supabase as any).from("player_scheduled_activities").insert({
-      user_id: profileId,
-      profile_id: profileId,
-      activity_type: "songwriting",
-      scheduled_start: scheduledStart.toISOString(),
-      scheduled_end: scheduledEnd.toISOString(),
-      
-      status: "scheduled",
-      title: `Songwriting: ${project?.title || "Untitled"}`,
-      description: `Continue working on ${project?.title || "untitled song"}`,
-      metadata: {
-        project_id: selectedProjectId,
-        genres: project?.genres,
-      },
-    });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["weekly-schedule"] }),
+        queryClient.invalidateQueries({ queryKey: ["activity-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["getting-started"] }),
+      ]);
 
-    if (error) {
+      toast({
+        title: "Songwriting Session Booked",
+        description: `Scheduled for ${date.toLocaleDateString()} at ${timeSlot}`,
+      });
+      navigate("/schedule");
+    } catch (error) {
       toast({
         title: "Booking Failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unable to schedule this session.",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsSaving(false);
     }
-
-    toast({
-      title: "Songwriting Session Booked",
-      description: `Scheduled for ${date.toLocaleDateString()} at ${timeSlot}`,
-    });
-
-    navigate("/schedule");
   };
 
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
@@ -149,6 +156,8 @@ export default function SongwritingBooking() {
             <Label htmlFor="project">Select Project *</Label>
             {isLoading ? (
               <div className="text-sm text-muted-foreground">Loading projects...</div>
+            ) : projectsError ? (
+              <PageErrorState title="Could not load songwriting projects" description="Please try again before booking a session." onRetry={() => void refetchProjects()} />
             ) : projects.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-center">
                 <Music className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
@@ -176,7 +185,7 @@ export default function SongwritingBooking() {
                             </Badge>
                           )}
                           <Badge variant="secondary" className="text-xs">
-                            {Math.round(((project.music_progress + project.lyrics_progress) / 2))}% complete
+                            {getSongwritingProgressPercent(project)}% complete
                           </Badge>
                         </div>
                       </SelectItem>
@@ -195,7 +204,7 @@ export default function SongwritingBooking() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Progress:</span>
                     <span className="font-medium">
-                      {Math.round(((selectedProject.music_progress + selectedProject.lyrics_progress) / 2))}%
+                      {getSongwritingProgressPercent(selectedProject)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -266,10 +275,10 @@ export default function SongwritingBooking() {
             </Button>
             <Button
               onClick={handleBookSession}
-              disabled={!date || !timeSlot || !selectedProjectId}
+              disabled={!date || !timeSlot || !selectedProjectId || !userId || isSaving}
               className="flex-1"
             >
-              Book Session
+              {isSaving ? "Booking..." : "Book Session"}
             </Button>
           </div>
         </CardContent>

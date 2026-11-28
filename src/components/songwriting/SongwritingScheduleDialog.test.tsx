@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const dialogSource = readFileSync("src/components/songwriting/SongwritingScheduleDialog.tsx", "utf8");
+const bookingPageSource = readFileSync("src/pages/booking/SongwritingBooking.tsx", "utf8");
 const hookSource = readFileSync("src/hooks/useSongwritingData.tsx", "utf8");
 const scheduledSource = readFileSync("src/hooks/useScheduledActivities.ts", "utf8");
 const migrationSource = readFileSync("supabase/migrations/20260713143000_authoritative_songwriting_scheduling.sql", "utf8");
@@ -26,6 +27,10 @@ describe("authoritative songwriting scheduling flow", () => {
     expect(dialogSource).not.toContain("createScheduledActivity");
     expect(hookSource).toContain("rpc('start_songwriting_session'");
     expect(hookSource).toContain("p_idempotency_key");
+    expect(bookingPageSource).toContain('rpc("schedule_songwriting_session"');
+    expect(bookingPageSource).not.toContain('from("player_scheduled_activities").insert');
+    expect(bookingPageSource).toContain('OPEN_SONGWRITING_PROJECT_STATUSES');
+    expect(bookingPageSource).toContain('getSongwritingProgressPercent');
   });
 
   it("routes scheduled songwriting starts through the songwriting RPC lifecycle", () => {
