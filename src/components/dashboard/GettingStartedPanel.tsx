@@ -16,6 +16,7 @@ interface GettingStartedPanelProps {
 
 interface OnboardingSnapshot {
   skillRows: number;
+  projectCount: number;
   songCount: number;
   recordingCount: number;
   activityCount: number;
@@ -33,9 +34,10 @@ interface OnboardingStep {
 }
 
 export function buildSteps(profile: any, snapshot: OnboardingSnapshot): OnboardingStep[] {
-  const hasProfileBasics = Boolean(profile?.display_name || profile?.username) && Boolean(profile?.age || profile?.gender || profile?.city_id);
+  const hasProfileBasics = Boolean(profile?.display_name || profile?.username) && Boolean(profile?.age || profile?.gender || profile?.current_city_id || profile?.city_id);
   const hasSkills = snapshot.skillRows > 0;
   const hasSong = snapshot.songCount > 0;
+  const hasStartedSong = hasSong || snapshot.projectCount > 0;
   const hasBookedActivity = snapshot.activityCount > 0;
   const hasBand = snapshot.bandCount > 0;
   const hasRecording = snapshot.recordingCount > 0;
@@ -59,11 +61,11 @@ export function buildSteps(profile: any, snapshot: OnboardingSnapshot): Onboardi
     },
     {
       id: "song",
-      title: "Write your first song",
-      description: "Start a songwriting session so your career has material to rehearse, record, and release.",
-      href: "/booking/songwriting",
-      cta: "Start songwriting",
-      completed: hasSong,
+      title: "Start your first song",
+      description: "Create your first songwriting project. You can build it up over multiple sessions.",
+      href: "/songwriting",
+      cta: "Create a song",
+      completed: hasStartedSong,
     },
     {
       id: "activity",
@@ -75,7 +77,7 @@ export function buildSteps(profile: any, snapshot: OnboardingSnapshot): Onboardi
     },
   ];
 
-  if (hasBand || hasSong) {
+  if (hasBand || hasStartedSong) {
     steps.push({
       id: hasRecording ? "release" : "band",
       title: hasRecording ? "Prepare your first release" : "Join or create a band",
@@ -99,17 +101,19 @@ export function GettingStartedPanel({ profile, userId }: GettingStartedPanelProp
     enabled: !!userId && !!profileId,
     staleTime: 30_000,
     queryFn: async (): Promise<OnboardingSnapshot> => {
-      const [skillsResult, songsResult, recordingsResult, activitiesResult, bandsResult] = await Promise.all([
+      const [skillsResult, projectsResult, songsResult, recordingsResult, activitiesResult, bandsResult] = await Promise.all([
         (supabase as any).from("player_skills").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        (supabase as any).from("songwriting_projects").select("id", { count: "exact", head: true }).eq("profile_id", profileId),
         (supabase as any).from("songs").select("id", { count: "exact", head: true }).eq("profile_id", profileId).or("archived.is.null,archived.eq.false"),
         (supabase as any).from("songs").select("id", { count: "exact", head: true }).eq("profile_id", profileId).in("status", ["recorded", "released"]).or("archived.is.null,archived.eq.false"),
         (supabase as any).from("player_scheduled_activities").select("id", { count: "exact", head: true }).eq("profile_id", profileId),
         (supabase as any).from("band_members").select("band_id", { count: "exact", head: true }).eq("profile_id", profileId).eq("member_status", "active"),
       ]);
-      const failed = [skillsResult, songsResult, recordingsResult, activitiesResult, bandsResult].find((result: any) => result.error);
+      const failed = [skillsResult, projectsResult, songsResult, recordingsResult, activitiesResult, bandsResult].find((result: any) => result.error);
       if (failed?.error) throw failed.error;
       return {
         skillRows: skillsResult.count ?? 0,
+        projectCount: projectsResult.count ?? 0,
         songCount: songsResult.count ?? 0,
         recordingCount: recordingsResult.count ?? 0,
         activityCount: activitiesResult.count ?? 0,
@@ -118,13 +122,14 @@ export function GettingStartedPanel({ profile, userId }: GettingStartedPanelProp
     },
   });
 
-  const steps = useMemo(() => buildSteps(profile, data ?? { skillRows: 0, songCount: 0, recordingCount: 0, activityCount: 0, bandCount: 0 }), [data, profile]);
+  const steps = useMemo(() => buildSteps(profile, data ?? { skillRows: 0, projectCount: 0, songCount: 0, recordingCount: 0, activityCount: 0, bandCount: 0 }), [data, profile]);
   const requiredSteps = steps.filter((step) => !step.optional);
   const completedRequired = requiredSteps.filter((step) => step.completed).length;
   const isEstablished = (profile?.level ?? 1) >= 4 || (profile?.fame ?? 0) >= 100;
-  const isComplete = completedRequired === requiredSteps.length && (data?.songCount ?? 0) > 0 && ((data?.activityCount ?? 0) > 0 || isEstablished);
+  const hasStartedSong = (data?.projectCount ?? 0) > 0 || (data?.songCount ?? 0) > 0;
+  const isComplete = completedRequired === requiredSteps.length && hasStartedSong && ((data?.activityCount ?? 0) > 0 || isEstablished);
 
-  if (!profileId || isComplete || (isEstablished && (data?.songCount ?? 0) > 0)) return null;
+  if (!profileId || isComplete || (isEstablished && hasStartedSong)) return null;
   if (isLoading) return <PageLoadingState title="Loading first steps" description="Checking your character, skills, songs, band, and schedule progress..." />;
   if (error) return <PageErrorState title="First steps could not be loaded" description="You can still start with skills, songwriting, or the schedule from the dashboard links." onRetry={() => void refetch()} />;
 

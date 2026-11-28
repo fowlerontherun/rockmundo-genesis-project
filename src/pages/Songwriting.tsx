@@ -42,6 +42,7 @@ import {
   canWriteGenre,
 } from "@/utils/songQuality";
 import { getSongRating } from "@/data/songRatings";
+import { SONGWRITING_PROGRESS_TARGET } from "@/lib/songwritingProgress";
 import { AILyricsGenerator } from "@/components/songwriting/AILyricsGenerator";
 import { SongQualityBreakdown } from "@/components/songwriting/SongQualityBreakdown";
 import {
@@ -183,7 +184,7 @@ const SESSION_EFFORT_OPTIONS: SessionEffortOption[] = [
 ];
 
 const DEFAULT_EFFORT_OPTION = SESSION_EFFORT_OPTIONS[0];
-const PROGRESS_TARGET = SONG_RATING_RANGE.max * 2;
+const PROGRESS_TARGET = SONGWRITING_PROGRESS_TARGET;
 
 const DEFAULT_FORM_STATE: ProjectFormState = {
   title: "",

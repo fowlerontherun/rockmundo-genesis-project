@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target, UserPlus, Share2 } from "lucide-react";
+import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target, UserPlus, Share2, MessageSquareHeart } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -31,6 +31,7 @@ import { CharacterIdentityCard } from "@/components/character";
 import { ReputationCard } from "@/components/reputation";
 import { usePlayerSurvey } from "@/hooks/usePlayerSurvey";
 import { PlayerSurveyModal } from "@/components/survey/PlayerSurveyModal";
+import { SURVEY_REWARD } from "@/lib/playerSurvey";
 import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWidget";
 import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
 import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
@@ -299,6 +300,7 @@ const Dashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
+  const [surveyOpen, setSurveyOpen] = useState(false);
   const [surveyDismissed, setSurveyDismissed] = useState(false);
   const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   const { shouldShowSurvey, questions: surveyQuestions, surveyConfig, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
@@ -349,11 +351,12 @@ const Dashboard = () => {
     >
       <PlayerSurveyModal
         key={`${user?.id}:${surveyConfig?.round}:${surveyConfig?.questions_per_session}`}
-        open={shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0}
-        onClose={() => setSurveyDismissed(true)}
+        open={surveyOpen && shouldShowSurvey && surveyQuestions.length > 0}
+        onClose={() => { setSurveyOpen(false); setSurveyDismissed(true); }}
         questions={surveyQuestions}
         onSubmit={async (answers) => {
           await submitSurvey(answers);
+          setSurveyOpen(false);
           void refetch();
         }}
         isSubmitting={isSurveySubmitting}
@@ -412,6 +415,25 @@ const Dashboard = () => {
           <DashboardHero profile={profile} userId={user?.id} />
           <ReferralWelcomeCard profileId={profile?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />
+          {shouldShowSurvey && !surveyDismissed && surveyQuestions.length > 0 && (
+            <Card className="border-primary/20">
+              <CardContent className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <MessageSquareHeart className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">Help shape RockMundo</p>
+                    <p className="text-sm text-muted-foreground">
+                      Tell us what's working and what we should improve. Complete the optional survey for {SURVEY_REWARD.xp.toLocaleString()} XP and {SURVEY_REWARD.ap} Attribute Points.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setSurveyDismissed(true)}>Later</Button>
+                  <Button size="sm" onClick={() => setSurveyOpen(true)}>Give feedback</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <InviteFriendsCard profileId={profile?.id} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
             <TodaysBriefing profile={profile} userId={user?.id} />

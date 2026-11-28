@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { getSongwritingProgressPercent, OPEN_SONGWRITING_PROJECT_STATUSES } from "@/lib/songwritingProgress";
 
 interface DashboardHeroProps {
   profile: any;
@@ -45,7 +46,7 @@ interface NextBestAction {
   tone?: "danger" | "warning" | "info" | "success";
 }
 
-function buildNextActions(
+export function buildNextActions(
   profile: any,
   opts: {
     unread: number;
@@ -53,6 +54,7 @@ function buildNextActions(
     pendingGigsToday: number;
     pendingOffers: number;
     currentProject: any;
+    songCount: number | null;
   },
 ): NextBestAction[] {
   const energy = profile?.energy ?? 100;
@@ -115,12 +117,21 @@ function buildNextActions(
       icon: Bell,
       tone: "info",
     });
-  if (opts.currentProject && (opts.currentProject.progress ?? 0) < 100)
+  if (opts.currentProject)
     out.push({
-      label: `Continue"${opts.currentProject.title}"`,
-      description: `${Math.round(opts.currentProject.progress ?? 0)}% complete.`,
-      to: "/booking/songwriting",
-      cta: "Resume",
+      label: `Continue “${opts.currentProject.title || "your song"}”`,
+      description: `${getSongwritingProgressPercent(opts.currentProject)}% complete. Pick up where you left off.`,
+      to: "/songwriting",
+      cta: "Continue songwriting",
+      icon: Music2,
+      tone: "success",
+    });
+  if (!opts.currentProject && opts.songCount === 0)
+    out.push({
+      label: "Start your first song",
+      description: "Create a songwriting project to begin building your music career.",
+      to: "/songwriting",
+      cta: "Create a song",
       icon: Music2,
       tone: "success",
     });
@@ -266,16 +277,31 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     queryKey: ["dashboard-current-project", profileId],
     enabled: !!profileId,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("songwriting_projects")
-        .select("id, title, progress, status")
+        .select("id, title, music_progress, lyrics_progress, status")
         .eq("profile_id", profileId)
-        .in("status", ["in_progress", "active", "writing"])
+        .in("status", [...OPEN_SONGWRITING_PROJECT_STATUSES])
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
+  });
+
+  const { data: songCount = null } = useQuery({
+    queryKey: ["dashboard-song-count", profileId],
+    enabled: !!profileId,
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("songs")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", profileId!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 60_000,
   });
 
   const { data: recentAchievements = [] } = useQuery({
@@ -300,6 +326,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
         pendingGigsToday,
         pendingOffers,
         currentProject,
+        songCount,
       }),
     [
       profile,
@@ -308,6 +335,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
       pendingGigsToday,
       pendingOffers,
       currentProject,
+      songCount,
     ],
   );
   const primary = actions[0];
@@ -434,12 +462,12 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
           label="Project"
           value={currentProject?.title ?? "None"}
           subtle={
-            currentProject?.progress != null
-              ? `${Math.round(currentProject.progress)}%`
+            currentProject
+              ? `${getSongwritingProgressPercent(currentProject)}% complete`
               : "Start one"
           }
           tone="accent"
-          to={currentProject ? "/booking/songwriting" : "/booking/songwriting"}
+          to="/songwriting"
         />
         <StatTile
           icon={Bell}
