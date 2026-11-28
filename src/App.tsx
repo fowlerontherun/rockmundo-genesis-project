@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, matchPath, useLocation } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { useAuth } from "./hooks/use-auth-context";
+import { isTrackedGameRoute, recordPlayerOpen } from "./lib/playerEngagement";
 import { GameDataProvider, useGameData } from "./hooks/useGameData";
 import { StageEquipmentCatalogProvider } from "./features/stage-equipment/catalog-context";
 import { BandCrewCatalogProvider } from "./features/band-crew/catalog-context";
@@ -47,6 +49,18 @@ const AdminRouteBoundary = () => (
     <Outlet />
   </AdminRoute>
 );
+
+const PlayerVisitTracker = () => {
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (userId && isTrackedGameRoute(pathname)) recordPlayerOpen(userId);
+  }, [userId, pathname]);
+
+  return null;
+};
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
 const Modeling = lazyWithRetry(() => import("./pages/Modeling"));
@@ -514,6 +528,7 @@ function App() {
                       <Sonner />
                       <ChristmasDecorations />
                         <PageTitle />
+                        <PlayerVisitTracker />
               <ErrorBoundary>
                 <Suspense
                   fallback={
