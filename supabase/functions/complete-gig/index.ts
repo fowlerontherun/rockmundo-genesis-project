@@ -3,6 +3,7 @@ import { authorizeGigRequest } from "../_shared/authorize-gig-request.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { allocateFanTiers } from "../_shared/live-performance-progression.ts";
+import { calculateGigFinance } from "../_shared/gig-finance.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +49,7 @@ serve(async (req) => {
     // Get gig and outcome with venue and city info for proper country tracking
     const { data: gig, error: gigError } = await supabaseClient
       .from('gigs')
-      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(id, name, capacity, city_id, cities!venues_city_id_fkey(id, name, country)), ticket_operator_id')
+      .select('*, bands!gigs_band_id_fkey(*), venues!gigs_venue_id_fkey(id, name, capacity, city_id, band_revenue_share, venue_cut_percent, cities!venues_city_id_fkey(id, name, country)), ticket_operator_id')
       .eq('id', gigId)
       .single();
 
@@ -58,7 +59,7 @@ serve(async (req) => {
 
     const { data: outcome, error: outcomeError } = await supabaseClient
       .from('gig_outcomes')
-      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at, xp_breakdown')
+      .select('id, actual_attendance, ticket_revenue, overall_rating, net_profit, fame_gained, completed_at, xp_breakdown, production_breakdown')
       .eq('gig_id', gigId)
       .single();
 
@@ -71,6 +72,13 @@ serve(async (req) => {
     }
 
     if (gig.status === 'completed' || outcome.completed_at || gig.result_ready_at) {
+      // Reconcile a finance-v2 outcome if the Edge worker crashed after recording
+      // the result but before posting its atomic payout. Legacy outcomes do not
+      // carry this marker and must never be charged again on a retry.
+      if ((outcome.production_breakdown as any)?.finance_version === 'arena_stadium_v2') {
+        const { error: financeRetryError } = await supabaseClient.rpc('settle_gig_finance_v2', { p_gig_id: gigId });
+        if (financeRetryError) throw financeRetryError;
+      }
       if (gig.status !== 'completed') {
         await supabaseClient
           .from('gigs')
@@ -411,9 +419,7 @@ serve(async (req) => {
     const contractedBandBarRevenue = Number(commerce?.bar?.bandEntitlement || 0);
 
     // Calculate costs (ensure integers for database)
-    const crewCost = prepCrewCost; // Contracted salaries of accepted gig crew, calculated server-side.
-    const equipmentCost = Math.floor(avgEquipment * 2) + prepRentalCost + productionCost + soundcheckCost; // Wear, rentals, production and soundcheck
-    const totalCosts = crewCost + equipmentCost + merchCost;
+    const existingEquipmentCost = Math.floor(avgEquipment * 2) + prepRentalCost + productionCost + soundcheckCost;
 
     // === CITY ECONOMY MODIFIER (v1.0.932) ===
     // Apply dynamic city economic conditions to earnings
@@ -449,8 +455,21 @@ serve(async (req) => {
     const adjustedMerchRevenue = clampInt4(merchRevenue * economyMultiplier);
     // Bar is venue revenue by default. Only an exact confirmed booking share is
     // included in band results (and it was already credited atomically by RPC).
-    const totalRevenue = clampInt4(adjustedTicketRevenue + adjustedMerchRevenue + contractedBandBarRevenue);
-    const netProfit = clampInt4(totalRevenue - totalCosts);
+    const finance = calculateGigFinance({
+      adjustedTicketRevenue, merchandiseRevenue: adjustedMerchRevenue,
+      barEntitlement: contractedBandBarRevenue,
+      attendance: Number(outcome.actual_attendance),
+      capacity: Number(gig.venues?.capacity || 0),
+      venueBandRevenueShare: (gig.venues as any)?.band_revenue_share,
+      venueCutPercent: (gig.venues as any)?.venue_cut_percent,
+      contractedCrewCost: prepCrewCost,
+      existingEquipmentCost, merchandiseCost: merchCost,
+    });
+    const totalRevenue = clampInt4(finance.grossRevenue);
+    const crewCost = clampInt4(finance.crewCost);
+    const equipmentCost = clampInt4(finance.equipmentCost);
+    const totalCosts = clampInt4(finance.totalCosts);
+    const netProfit = clampInt4(finance.netProfit);
 
     // === MORALE PERFORMANCE MODIFIER (v1.0.958) ===
     // Band morale affects fame gain and fan conversion: 0.7x at 0 morale, 1.0x at 50, 1.2x at 100
@@ -566,6 +585,7 @@ serve(async (req) => {
         merch_revenue: merchRevenue,
         merch_items_sold: merchItemsSold,
         total_revenue: totalRevenue,
+        venue_cost: finance.venueShare,
         crew_cost: crewCost,
         equipment_cost: equipmentCost,
         total_costs: totalCosts,
@@ -581,7 +601,17 @@ serve(async (req) => {
         dedicated_fans_gained: dedicatedFans,
         superfans_gained: superfans,
         tout_attendance_reduction: toutAttendanceReduction,
-        production_breakdown: { score: Math.round(productionScore), setup_minutes: productionSetupMinutes, setup_access_minutes: venueSetupAccess, cost: productionCost, audience_modifier: audienceProductionBonus, complexity: productionComplexity },
+        production_breakdown: {
+          score: Math.round(productionScore), setup_minutes: productionSetupMinutes,
+          setup_access_minutes: venueSetupAccess, cost: productionCost,
+          audience_modifier: audienceProductionBonus, complexity: productionComplexity,
+          finance_version: 'arena_stadium_v2',
+          event_security: finance.eventSecurity, event_staffing: finance.eventStaffing,
+          insurance: finance.insurance, stage_infrastructure: finance.stageInfrastructure,
+          venue_ticket_share: finance.venueShare,
+          effective_band_ticket_share: finance.effectiveBandShare,
+          booking_fee_already_charged: Number(gig.booking_fee || 0),
+        },
         soundcheck_breakdown: { type: soundcheckType, cost: soundcheckCost, sound_modifier: soundcheckBonus, fatigue_penalty: fatiguePenalty },
         production_incidents: productionIncidents,
         xp_breakdown: {
@@ -594,6 +624,16 @@ serve(async (req) => {
       .eq('id', outcome.id);
 
     if (updateError) throw updateError;
+
+    // Settles the band payout, city income tax and 360-deal label share in one
+    // database transaction. A unique gig receipt prevents double payouts and
+    // a retried Edge invocation can safely finish a previously saved outcome.
+    const { data: financeReceipt, error: financialSettlementError } = await supabaseClient.rpc('settle_gig_finance_v2', {
+      p_gig_id: gigId,
+    });
+    if (financialSettlementError) throw financialSettlementError;
+    const bandPayout = Number(financeReceipt?.band_payout ?? netProfit);
+    const gigIncomeTax = Number(financeReceipt?.city_income_tax ?? 0);
 
     // Preserve the latest player-visible pre-gig forecast once for later forecast-vs-actual analytics.
     try {
@@ -618,7 +658,6 @@ serve(async (req) => {
     // Update band stats including total fans
     const newChemistry = Math.max(0, Math.min(100, (gig.bands.chemistry_level || 50) + chemistryChange));
     const newFame = clampInt4(Math.max(0, (gig.bands.fame || 0) + fameGained));
-    const newBalance = clampInt4((gig.bands.band_balance || 0) + netProfit);
     const newTotalFans = clampInt4(Math.max(0, (gig.bands.total_fans || 0) + newFansTotal));
     const newCasualFans = clampInt4(Math.max(0, (gig.bands.casual_fans || 0) + casualFans));
     const newDedicatedFans = clampInt4(Math.max(0, (gig.bands.dedicated_fans || 0) + dedicatedFans));
@@ -699,7 +738,6 @@ serve(async (req) => {
       .update({
         chemistry_level: newChemistry,
         fame: newFame,
-        band_balance: newBalance,
         performance_count: (gig.bands.performance_count || 0) + 1,
         total_fans: newTotalFans,
         casual_fans: newCasualFans,
@@ -882,100 +920,6 @@ serve(async (req) => {
     } catch (e) {
       console.log('gig_fan_conversions table may not exist, skipping');
     }
-
-    // ── City Income Tax on gig profits → routed to city treasury ──
-    let cityGigTax = 0;
-    let bandGigEarnings = netProfit;
-    try {
-      if (venueCityId && netProfit > 0) {
-        const { data: laws } = await supabaseClient
-          .from('city_laws')
-          .select('income_tax_rate')
-          .eq('city_id', venueCityId)
-          .is('effective_until', null)
-          .maybeSingle();
-        const taxRate = Math.max(0, Math.min(50, Number(laws?.income_tax_rate ?? 0))) / 100;
-        if (taxRate > 0) {
-          cityGigTax = Math.round(netProfit * taxRate);
-          bandGigEarnings = netProfit - cityGigTax;
-          if (cityGigTax > 0) {
-            await supabaseClient.rpc('credit_city_treasury', {
-              p_city_id: venueCityId,
-              p_amount: cityGigTax,
-              p_type: 'gig_income_tax',
-              p_description: `Gig income tax (${(taxRate * 100).toFixed(1)}%) from ${gig.bands?.name ?? 'band'}`,
-              p_reference_id: gigId,
-            });
-            console.log(`City tax: $${cityGigTax} (${(taxRate * 100).toFixed(1)}%) → ${venueCityName} treasury`);
-          }
-        }
-      }
-    } catch (e) {
-      console.log('Error applying city gig tax:', e);
-    }
-
-    // ── 360 Deal: Label takes a cut of touring/gig revenue ──
-    let labelGigCut = 0;
-    
-    try {
-      // Check if band has an active 360 deal
-      const { data: activeContract360 } = await supabaseClient
-        .from('artist_label_contracts')
-        .select('id, label_id, royalty_label_pct, deal_type_id, label_deal_types:deal_type_id(name)')
-        .eq('band_id', gig.band_id)
-        .eq('status', 'active')
-        .limit(1)
-        .maybeSingle();
-      
-      if (activeContract360 && bandGigEarnings > 0) {
-        const dealTypeName = (activeContract360 as any).label_deal_types?.name || '';
-        if (dealTypeName === '360 Deal') {
-          const labelPct = (activeContract360.royalty_label_pct || 20) / 100;
-          labelGigCut = Math.round(bandGigEarnings * labelPct);
-          bandGigEarnings = bandGigEarnings - labelGigCut;
-          
-          // Credit label
-          const { data: label } = await supabaseClient
-            .from('labels')
-            .select('balance')
-            .eq('id', activeContract360.label_id)
-            .single();
-          
-          if (label) {
-            await supabaseClient
-              .from('labels')
-              .update({ balance: (label.balance || 0) + labelGigCut })
-              .eq('id', activeContract360.label_id);
-          }
-          
-          await supabaseClient.from('label_financial_transactions').insert({
-            label_id: activeContract360.label_id,
-            transaction_type: 'revenue',
-            amount: labelGigCut,
-            description: `360 Deal touring cut from gig (${(labelPct * 100).toFixed(0)}%)`,
-            related_contract_id: activeContract360.id,
-            related_band_id: gig.band_id,
-          });
-          
-          console.log(`360 Deal: label takes $${labelGigCut} from gig (${(labelPct * 100).toFixed(0)}%)`);
-        }
-      }
-    } catch (e) {
-      console.log('Error checking 360 deal for gig:', e);
-    }
-
-    // Add earnings record
-    const { error: earningsError } = await supabaseClient
-      .from('band_earnings')
-      .insert({
-        band_id: gig.band_id,
-        source: 'gig_performance',
-        amount: bandGigEarnings,
-        description: `Gig performance earnings${cityGigTax > 0 ? ` (city tax: $${cityGigTax})` : ''}${labelGigCut > 0 ? ` (360 deal: $${labelGigCut} to label)` : ''}`,
-        metadata: { gig_id: gigId, outcome_id: outcome.id, label_cut: labelGigCut, city_tax: cityGigTax, city_id: venueCityId }
-      });
-
-    if (earningsError) console.error('Error adding earnings:', earningsError);
 
     // === EQUIPMENT DEGRADATION (v1.0.937) ===
     try {
@@ -1173,7 +1117,7 @@ serve(async (req) => {
           category: "gig_result",
           priority: avgRating >= 20 ? "high" : "normal",
           title: avgRating >= 16 ? `🎸 Great Show at ${venueName}!` : `Gig Complete: ${venueName}`,
-          message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Net Profit: $${netProfit.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}${merchWarning}`,
+          message: `${ratingStars} Performance Rating: ${avgRating.toFixed(1)}/25\n💰 Show Profit (before tax): $${netProfit.toLocaleString()}\n🏦 City Tax: $${gigIncomeTax.toLocaleString()}\n🎸 Band Payout: $${bandPayout.toLocaleString()}\n👥 New Fans: ${newFansTotal}\n🎤 Attendance: ${outcome.actual_attendance}${merchWarning}`,
           metadata: {
             gig_id: gigId,
             rating: avgRating,
@@ -1244,6 +1188,8 @@ serve(async (req) => {
         outcome: {
           overall_rating: avgRating,
           net_profit: netProfit,
+          city_income_tax: gigIncomeTax,
+          band_payout: bandPayout,
           fame_gained: fameGained,
           chemistry_change: chemistryChange,
           new_fans: newFansTotal,
